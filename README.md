@@ -1,72 +1,195 @@
-# LocaleSmith（译匠）
+<!-- markdownlint-disable MD013 MD033 MD041 -->
 
-LocaleSmith，中文名“译匠”，是一款面向 Minecraft Java 模组、材质包和光影包的 Windows 原生翻译工作台。当前仓库包含可构建的 Rust 原生扫描核心、.NET 10 业务与安全基础设施、WinUI 3 MVVM 桌面界面、独立 MCP stdio 进程和 x64 MSIX Packaging Project。
+<div align="center">
+  <img
+    src="./packaging/JaxI18n.Package/Assets/Square150x150Logo.png"
+    width="132"
+    alt="LocaleSmith 标志"
+  />
 
-## 当前实现
+  <h1>LocaleSmith · 译匠</h1>
 
-- Rust `cdylib` 通过稳定 C ABI 输出类型化 JSON 清单；扫描 JAR/ZIP 的安全路径、Fabric/Forge/NeoForge/Quilt/legacy Forge 元数据、`modId`、语言资源、签名证据和 Java `ldc`/`ldc_w` 字符串引用。
-- .NET 通过 `LibraryImport` 直接调用原生 DLL，并以事务工作区处理 JAR、ZIP 和展开后的材质包/光影包目录。目录输入先生成经过 metadata 与 SHA-256 复核的不可变快照。
-- 翻译流水线读取 `.json`、`.lang`、`pack.txt` 和受支持的 `.mcmeta` 文本，按内容哈希增量复用。每个队列作业只生成用户所选的正式版或语气版单一产物；另一风格可另行入队，并复用相同原文哈希下已缓存的风格译文。普通条目按字符目标分批；超过该目标的单条文本不会被拒绝、拆分或压缩，而会原样单独交给 provider，真实上下文超限会作为 provider 错误返回。现代 Minecraft 输出使用小写 `zh_cn` 资源名。
-- Ollama、OpenAI-compatible Chat Completions 和 Anthropic Messages 适配器实现统一 `IModelService`；网络向导内置 DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM、Kimi 八个可编辑预设及自定义入口，模型源可在界面中新增、编辑、删除、测试并即时切换。Ollama 默认地址为 `http://127.0.0.1:11434`。
-- OpenAI-compatible `tool_calls`、Anthropic `tool_use` 和 Ollama `tool_calls` 已接入统一、有轮次/调用数上限的 provider-native 工具循环。Kimi K3 返回的私有 `reasoning_content` 只在同一 Kimi 工具循环内有界、原样回放，不并入用户可见内容，也不会跨 provider 发送。模型侧只暴露只读 `system_context` 与只提出命令的 `cli_propose`；执行命令不属于工具循环。
-- 云端 API Key 独立保存在 Windows Credential Manager。非密钥应用配置使用 AES-256-GCM 加密，随机 256 位主密钥同样由 Credential Manager 托管。模型源保存/删除与凭据变更采用补偿式事务，失败时恢复旧凭据，并清零临时可变缓冲。
-- 增量缓存键隔离输入包身份、目标语言、已捕获的模型源和翻译契约版本；旧缓存会安全 miss。输出目录在每次作业开始时从最新 `WorkspacePath` 配置解析，并写入其 `LocaleSmith.Output` 子目录。
-- WinUI 3 包含首次使用引导、翻译队列、双语助手、模型源管理、设置和 CLI 风险确认界面；Presentation 层采用 CommunityToolkit.Mvvm，视图不直接访问 HTTP、密钥或 Rust。助手不修剪或为用户消息/历史设定人工字符门槛；完整 UI 会话会交给选中 provider，上下文超限由其或工具编排安全包络显式报错，不假设 Chat Completions 会自动压缩。机器上下文、HTTP 响应/错误体及工具调用仍有安全上限。
-- 独立 `JaxI18n.McpHost` 实现有界、限流的 MCP stdio 服务。stdio 名称为 `system.context`、`cli.propose`；模型适配层映射为 provider 可接受的 `system_context`、`cli_propose`。`cli.execute` 不出现在工具列表中。
-- CLI 基础设施包含命令绑定的一次性确认 token、动态可执行文件白名单、绝对正则黑名单、沙箱工作目录、30 秒上限、JSONL 审计，以及 Windows Low IL restricted token、私有 desktop、挂入 Job 后才恢复执行的受限子进程启动器。Windows drive-root-relative 路径（如 `/Windows/...`）、junction 和 malformed path 均 fail closed；含 `api-key`、`token`、`secret`、`password` 或 `credential` 标记的参数在批准前拒绝。允许启动的命令必须先成功写入带 correlation id 的 `Started` 审计，审计不可用则不启动。
+  <p><strong>为 Minecraft Java 内容打造的 Windows 原生 AI 本地化工作台</strong></p>
+  <p>安全扫描模组与资源包，连接本地或云端模型，以可验证、可回滚的流水线生成本地化产物。</p>
 
-## 必须明确的边界
+  <p>
+    <a href="./LICENSE"><img alt="Apache License 2.0" src="https://img.shields.io/badge/License-Apache%202.0-D22128?style=flat-square&logo=apache&logoColor=white" /></a>
+    <a href="./global.json"><img alt=".NET 10.0" src="https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet&logoColor=white" /></a>
+    <a href="./rust-toolchain.toml"><img alt="Rust 1.97.1" src="https://img.shields.io/badge/Rust-1.97.1-000000?style=flat-square&logo=rust&logoColor=white" /></a>
+    <img alt="Windows 10 1809+" src="https://img.shields.io/badge/Windows-10%201809%2B-0078D4?style=flat-square" />
+    <img alt="WinUI 3" src="https://img.shields.io/badge/UI-WinUI%203-0078D4?style=flat-square" />
+  </p>
 
-- **字节码外部化不是通用改写器。** 只改写经结构证明的精确模式：紧邻的 `ldc`/`ldc_w` 字符串与 Mojang `Component.literal(String):MutableComponent` 静态调用；它保持指令长度、改为精确 `translatable(String)` 引用，并生成 `assets/<modid>/lang/en_us.json` 原文 fallback 和本作业所选风格的目标语言条目。分支/异常边界、未知 opcode、混淆或任何不精确模式都不改写；提交前重新扫描验证，失败整作业回滚。尚未用真实 Minecraft/loader 兼容矩阵证明游戏内语义。
-- **Low IL 不是 AppContainer。** 当前受限 token 会禁用最大权限并启用 LUA 限制，设置 Low integrity SID `S-1-16-4096`，使用私有 desktop、显式继承的标准流管道和带进程数/内存/CPU/UI/kill-on-close 限制的 Job Object；进程先以 suspended 创建，成功挂入 Job 后才 `ResumeThread`。这仍不能阻止读取当前用户 ACL 原本允许的文件，也不默认阻断网络。`WorkingDirectory`/参数路径校验是应用策略，不是内核文件系统沙箱；Low IL 的写入还取决于目标目录的 Mandatory Integrity Control 标签。没有 unrestricted fallback。
-- **CLI 执行永远不由模型授权。** provider-native 循环只允许读取安全上下文和校验/记录命令提议。主界面随后展示完整命令，用户必须勾选“我已知晓风险”并确认，应用重新运行策略并签发一次性 token 后才可执行。
-- **重打包不是字节级无损。** 原输入始终保留不动，清单与关键元数据会校验，事务失败会回滚；但 ZIP 会重新压缩，原压缩流、extra field 字节/顺序和逐条目注释等不保证完全一致。数字签名修改默认阻断，可选 unsigned copy 会移除签名文件；重新签名尚未实现。
-- **修改签名 JAR 必然使原签名失效。** 本项目保留原输入与签名证据，但不能在没有原作者私钥的情况下维持原签名；当前只支持阻断修改或显式生成 unsigned copy，不提供重签实现。
-- **MSIX 尚不是生产发布件。** 当前 `0.1.0.1` 开发包已完成 payload/PRI/MCP、密码学签名和 loose AppsFolder 启动验证；但证书 `CN=JaxI18n Development` 是自签根、未受信任且无 timestamp，四个检查的 Root/TrustedPeople store 均没有匹配证书。生产前仍必须替换发布身份/证书，并完成可信时间戳和干净机正式安装、升级、卸载矩阵。
+  <p>
+    <a href="#项目概览">项目概览</a> ·
+    <a href="#核心能力">核心能力</a> ·
+    <a href="#快速开始">快速开始</a> ·
+    <a href="#安全边界">安全边界</a> ·
+    <a href="#开源许可">开源许可</a>
+  </p>
+</div>
 
-## 仓库结构
+> [!IMPORTANT]
+> LocaleSmith 目前是**源码可构建的开发预览版**。现有 MSIX 使用自签名开发证书，尚未完成生产签名、可信时间戳与干净机安装矩阵，请勿将其视为正式发布件。
+
+## 项目概览
+
+LocaleSmith（译匠）面向 Minecraft: Java Edition 模组、资源包与光影包，将**安全扫描、增量翻译、结构验证和事务重建**整合进一个 Windows 原生桌面工作台。
+
+项目采用 Rust 原生扫描核心与 .NET 10 / WinUI 3 桌面应用：Rust 负责 JAR、ZIP、Loader 元数据和受支持字节码模式的解析，.NET 负责归档事务、模型接入、安全存储、翻译队列与用户界面。
+
+## 核心能力
+
+| 能力 | 说明 |
+| --- | --- |
+| **安全归档扫描** | 识别路径穿越、Loader 元数据、语言资源、签名证据与受支持的 Java 字符串引用。 |
+| **增量翻译流水线** | 按内容哈希复用译文，校验占位符与结构，并在失败时回滚整个作业。 |
+| **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
+| **原生桌面体验** | 提供首次引导、翻译队列、双语助手、模型源管理、设置和 CLI 风险确认。 |
+| **凭据与配置保护** | API Key 存入 Windows Credential Manager，其他配置使用 AES-256-GCM 加密。 |
+| **受控 MCP / CLI** | 模型只能读取安全上下文并提出命令；执行必须经过策略复核和用户明确确认。 |
+
+## 支持范围
+
+| 类别 | 当前支持 |
+| --- | --- |
+| 输入 | JAR、ZIP、展开后的资源包或光影包目录 |
+| Loader 元数据 | Fabric、Forge、NeoForge、Quilt、Legacy Forge |
+| 文本资源 | Minecraft 语言 JSON、Legacy `.lang`、`pack.txt`、受支持的 `pack.mcmeta` 显示文本 |
+| 字节码 | 经结构证明的 `Component.literal(String)` 精确模式；其他候选仅报告、不改写 |
+| 模型接口 | Ollama、OpenAI-compatible Chat Completions、Anthropic Messages |
+| 模型预设 | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM、Kimi，以及自定义入口 |
+| 输出 | 当前作业选择的正式版或语气版；现代 Minecraft 资源名使用小写 `zh_cn` |
+| 平台 | Windows x64，最低 Windows 10 1809 |
+
+## 处理流程
+
+```mermaid
+flowchart LR
+    A["导入<br/>JAR / ZIP / 文件夹"] --> B["安全扫描<br/>路径 / 元数据 / 资源"]
+    B --> C["提取与规划<br/>增量缓存"]
+    C --> D["模型翻译<br/>正式版 / 语气版"]
+    D --> E["验证与重建<br/>事务回滚"]
+    E --> F["输出<br/>LocaleSmith.Output"]
+```
+
+每个作业只生成用户选择的一种翻译风格。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
+
+## 快速开始
+
+### 环境要求
+
+| 依赖 | 版本或说明 |
+| --- | --- |
+| 操作系统 | Windows 10 1809 或更高版本；WinUI 开发建议 Windows 11 |
+| .NET SDK | `10.0.302`，由 `global.json` 固定 |
+| Rust | 仓库工具链 `1.97.1`（MSVC），包含 `rustfmt` 与 `clippy` |
+| Windows SDK | `10.0.26100`，并安装 MSVC / C++ 构建工具 |
+| UI 依赖 | Windows App SDK `2.3.1`、CommunityToolkit.Mvvm `8.4.2`，由 NuGet 还原 |
+| MSIX 构建 | 需要包含 Desktop Bridge / WAP targets 的 Visual Studio Developer PowerShell |
+
+### 构建
+
+先生成 Rust release DLL，再还原并构建 .NET solution：
+
+```powershell
+git clone https://github.com/DZXH-TX/LocaleSmith.git
+Set-Location LocaleSmith
+
+cargo build --manifest-path native/jax_i18n_core/Cargo.toml --release
+dotnet restore JaxI18n.slnx
+dotnet build JaxI18n.slnx -c Release
+```
+
+> [!NOTE]
+> `dotnet build JaxI18n.slnx` 不会生成 WAP / MSIX；打包工程位于 `packaging/JaxI18n.Package`，需要在具备对应 Visual Studio targets 的开发环境中单独构建。
+
+<details>
+<summary><strong>运行完整验证门</strong></summary>
+
+```powershell
+cargo fmt --manifest-path native/jax_i18n_core/Cargo.toml --all -- --check
+cargo clippy --manifest-path native/jax_i18n_core/Cargo.toml --all-targets --all-features -- -D warnings
+cargo test --manifest-path native/jax_i18n_core/Cargo.toml --all-targets
+
+dotnet test JaxI18n.slnx -c Release
+dotnet format JaxI18n.slnx --verify-no-changes --no-restore
+```
+
+</details>
+
+## 源码结构
 
 ```text
 native/jax_i18n_core/       Rust ZIP/JAR、metadata 与 classfile 扫描核心
 src/JaxI18n.Core/           领域模型和统一服务契约
 src/JaxI18n.NativeInterop/  C ABI 投影、DLL 解析与类型化清单
 src/JaxI18n.Application/    翻译编排、增量计划、队列与事务边界
-src/JaxI18n.Archive/        安全快照、提取、所选单风格重建、验证与回滚
-src/JaxI18n.Infrastructure/ provider、Credential Manager、AES-GCM、CLI 与环境检测
-src/JaxI18n.Mcp/            MCP JSON-RPC/stdio 协议与工具目录
+src/JaxI18n.Archive/        安全快照、提取、重建、验证与回滚
+src/JaxI18n.Infrastructure/ 模型适配、凭据、加密、CLI 与环境检测
+src/JaxI18n.Mcp/            MCP JSON-RPC / stdio 协议与工具目录
 src/JaxI18n.McpHost/        独立 MCP 控制台宿主
 src/JaxI18n.Presentation/   可测试的 MVVM ViewModel 与 UI 契约
 src/JaxI18n.App/            WinUI 3 视图、组合根和本地应用服务
 tests/                      八个 .NET 测试项目和受限 CLI probe
-packaging/                  x64 WAP/MSIX manifest、双语 PRI 资源和图标
-design-system/              UI/UX Pro Max 设计系统与页面约束
-docs/                       架构、威胁模型、路线图与验证记录
+packaging/                  x64 WAP / MSIX manifest、双语资源和图标
 ```
 
-## 构建要求
+## 安全边界
 
-- Windows 10 1809 或更高版本；WinUI 开发建议 Windows 11。
-- .NET SDK 10.0.302，由 `global.json` 固定。
-- Rust 1.97.1 MSVC 工具链及 `rustfmt`、`clippy`，由 `rust-toolchain.toml` 固定。
-- Windows SDK 10.0.26100 和 MSVC/C++ 构建工具。
-- Windows App SDK 2.3.1 与 CommunityToolkit.Mvvm 8.4.2，由 NuGet 还原。
-- 生成 MSIX 还需要含 Desktop Bridge/WAP targets 的 Visual Studio Developer PowerShell；普通 `dotnet` CLI 不构建 WAP 工程。
+以下原则是产品行为的一部分，而不是可选配置：
 
-先构建 Rust release DLL，再构建 .NET：
+- **模型不能授权命令执行。** Provider 工具循环只允许读取安全上下文和提出命令，完整命令仍需用户查看、勾选风险确认并批准。
+- **签名 JAR 默认禁止修改。** 没有原作者私钥就无法保持原签名；项目只会阻断修改，或在用户明确选择后生成 unsigned copy。
+- **Low IL 不等于 AppContainer。** 受限 token、私有 desktop 与 Job Object 会缩小执行面，但不会自动阻断网络，也不能阻止读取当前用户 ACL 已允许的文件。
 
-```powershell
-cargo build --manifest-path native/jax_i18n_core/Cargo.toml --release
-dotnet restore JaxI18n.slnx
-dotnet build JaxI18n.slnx -c Release
-```
+<details>
+<summary><strong>字节码外部化的精确范围</strong></summary>
 
-运行验证门：
+当前只改写经结构证明、紧邻出现的 `ldc` / `ldc_w` 字符串与 Mojang `Component.literal(String):MutableComponent` 静态调用，并转换为精确的 `translatable(String)` 引用。实现会保持指令长度，在提交前重新扫描验证；分支或异常边界、未知 opcode、混淆代码及任何不精确模式都不会被改写。这不是通用 Java 字节码重写器，也尚未覆盖真实 Minecraft / Loader 兼容矩阵。
 
-```powershell
-cargo fmt --manifest-path native/jax_i18n_core/Cargo.toml --all -- --check
-cargo clippy --manifest-path native/jax_i18n_core/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/jax_i18n_core/Cargo.toml --all-targets
-dotnet test JaxI18n.slnx -c Release
-```
+</details>
 
-当前源码验证基线为 .NET Release **260/260**、0 warnings/0 errors，`dotnet format` clean；Rust **26/26**；应用 `zh-CN`/`en-US` `.resw` 各 **332** 个且 key 对齐。最终源码安全审计为 **FINAL GREEN（P0/P1/P2 均为 0）**；这是源码审计结果，不替代外部渗透测试或文档中列出的残余风险。当前开发 MSIX 为 `0.1.0.1`、36,244,251 bytes、SHA-256 `D809405DABCB632AFC0ECF5B8CFA2EAA9B35D162F6D35A73034758691AC276D1`；完整验证和非生产信任边界见 `docs/verification.md`。
+<details>
+<summary><strong>归档重建与签名</strong></summary>
+
+原输入始终保持不动，关键 metadata 与清单会复核，事务失败会回滚。不过 ZIP / JAR 会被重新压缩，因此不保证压缩流、extra field、条目注释或顺序在字节级完全一致。对签名归档的修改会使原签名失效；当前不提供重新签名功能。
+
+</details>
+
+<details>
+<summary><strong>模型工具与 CLI 隔离</strong></summary>
+
+MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.execute`。允许执行的命令必须通过动态白名单、绝对拒绝规则、工作目录与敏感参数检查，并绑定一次性确认 token；启动前审计不可写时不会启动进程。Kimi 的私有 `reasoning_content` 仅在同一 Kimi 工具循环内有界回放，不进入用户可见内容，也不会发送给其他 Provider。
+
+</details>
+
+<details>
+<summary><strong>MSIX 开发包状态</strong></summary>
+
+当前 manifest 版本为 `0.1.0.1`，开发包已完成 payload、PRI、MCP Host、开发签名和 loose AppsFolder 启动验证。但其证书为未受信任、无可信时间戳的自签名开发证书，尚未完成生产证书替换及干净机安装、升级、修复和卸载验证。
+
+</details>
+
+## 验证快照
+
+以下数字是当前源码记录的验证基线，不是实时 CI 状态：
+
+| 检查项 | 基线 |
+| --- | --- |
+| .NET Release | `260 / 260` tests，`0` warnings，`0` errors |
+| Rust | `26 / 26` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
+| 双语资源 | `zh-CN` / `en-US` 各 `332` 个 key，完全对齐 |
+| 源码安全审计 | FINAL GREEN，P0 / P1 / P2 均为 `0` |
+
+这些结果证明当前自动化覆盖的源码行为，不替代外部渗透测试、真实 Provider 验证或 Minecraft / Loader 运行时兼容测试。
+
+## 参与贡献
+
+欢迎提交 Pull Request。提交代码前，请至少运行与改动相关的 Rust / .NET 验证门，并清楚说明目标 Minecraft 版本、Loader、输入类型和模型来源。
+
+## 开源许可
+
+本项目依据 [Apache License 2.0](./LICENSE) 开源。
+
+Copyright © 2026 **DZXH-TX（道泽星河-天仙）**（版权所有者与许可人）。
