@@ -1,0 +1,111 @@
+<Page
+    x:Class="LocaleSmith.App.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behaviors="using:LocaleSmith.App.Behaviors"
+    NavigationCacheMode="Required">
+    <Grid Padding="24" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <ScrollViewer HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="760" HorizontalAlignment="Left" Spacing="20">
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Uid="SettingsTitle"
+                        AutomationProperties.HeadingLevel="Level1"
+                        Style="{ThemeResource PageTitleStyle}" />
+                    <TextBlock x:Uid="SettingsSubtitle" TextWrapping="WrapWholeWords" />
+                </StackPanel>
+                <InfoBar
+                    x:Uid="SettingsError"
+                    AutomationProperties.LiveSetting="Assertive"
+                    behaviors:AppMotion.StatusFeedback="True"
+                    IsOpen="{Binding HasError}"
+                    IsClosable="False"
+                    Message="{Binding ErrorMessage}"
+                    Severity="Error" />
+                <InfoBar
+                    x:Uid="SettingsStatus"
+                    AutomationProperties.LiveSetting="Polite"
+                    behaviors:AppMotion.StatusFeedback="True"
+                    IsOpen="{Binding HasStatus}"
+                    IsClosable="False"
+                    Message="{Binding StatusMessage}"
+                    Severity="Success" />
+                <Border Style="{ThemeResource CardBorderStyle}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="AppearanceSectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
+                        <ComboBox
+                            x:Uid="LanguageSelector"
+                            ItemsSource="{Binding LanguageOptions}"
+                            SelectedItem="{Binding Language, Mode=TwoWay}"
+                            SelectionChanged="OnLanguageChanged" />
+                        <TextBlock x:Uid="LanguageRestartHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                        <ComboBox
+                            x:Uid="ThemeSelector"
+                            ItemsSource="{Binding ThemeOptions}"
+                            SelectedItem="{Binding Theme, Mode=TwoWay}"
+                            SelectionChanged="OnThemeChanged" />
+                        <ToggleSwitch
+                            x:Uid="ForceAppAnimationsToggle"
+                            IsOn="{Binding ForceAppAnimations, Mode=TwoWay}"
+                            Toggled="OnForceAppAnimationsToggled" />
+                        <TextBlock
+                            x:Uid="ForceAppAnimationsHelp"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{ThemeResource CardBorderStyle}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="WorkspaceSectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
+                        <TextBox
+                            x:Uid="SettingsWorkspacePath"
+                            Text="{Binding WorkspacePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock
+                            x:Uid="SettingsWorkspaceHelp"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{ThemeResource CardBorderStyle}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="LogDirectorySectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                x:Uid="SettingsLogDirectoryPath"
+                                Text="{Binding LogDirectoryPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button
+                                x:Uid="BrowseLogDirectoryButton"
+                                Grid.Column="1"
+                                VerticalAlignment="Bottom"
+                                Click="OnBrowseLogDirectoryClicked" />
+                        </Grid>
+                        <TextBlock
+                            x:Uid="SettingsLogDirectoryHelp"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{ThemeResource CardBorderStyle}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="SecuritySectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
+                        <TextBox
+                            x:Uid="SettingsSandboxPath"
+                            Text="{Binding SandboxPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock x:Uid="SettingsSecurityHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                        <TextBlock x:Uid="McpCliDisabledHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+                <Button
+                    x:Uid="SaveSettingsButton"
+                    behaviors:AppMotion.ButtonFeedback="True"
+                    HorizontalAlignment="Left"
+                    Command="{Binding SaveCommand}"
+                    Style="{ThemeResource AccentButtonStyle}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

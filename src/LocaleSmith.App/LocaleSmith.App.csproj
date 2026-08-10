@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>LocaleSmith.App</RootNamespace>
+    <AssemblyName>LocaleSmith.App</AssemblyName>
+    <AssemblyTitle>LocaleSmith | 译匠</AssemblyTitle>
+    <Product>LocaleSmith | 译匠</Product>
+    <Description>LocaleSmith | 译匠 — Minecraft 模组与资源包本地化工作台</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKBootstrapAutoInitializeOptions_OnPackageIdentity_NoOp>true</WindowsAppSDKBootstrapAutoInitializeOptions_OnPackageIdentity_NoOp>
+    <DefaultLanguage>zh-CN</DefaultLanguage>
+    <NativeCoreDll>$(MSBuildThisFileDirectory)..\..\native\localesmith_core\target\release\localesmith_core.dll</NativeCoreDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LocaleSmith.Application\LocaleSmith.Application.csproj" />
+    <ProjectReference Include="..\LocaleSmith.Archive\LocaleSmith.Archive.csproj" />
+    <ProjectReference Include="..\LocaleSmith.Core\LocaleSmith.Core.csproj" />
+    <ProjectReference Include="..\LocaleSmith.Infrastructure\LocaleSmith.Infrastructure.csproj" />
+    <ProjectReference Include="..\LocaleSmith.Mcp\LocaleSmith.Mcp.csproj" />
+    <ProjectReference Include="..\LocaleSmith.NativeInterop\LocaleSmith.NativeInterop.csproj" />
+    <ProjectReference Include="..\LocaleSmith.Presentation\LocaleSmith.Presentation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LocaleSmith.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('$(NativeCoreDll)')">
+    <None Include="$(NativeCoreDll)" Link="localesmith_core.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="EnsureNativeCoreExists" BeforeTargets="Build" Condition="!Exists('$(NativeCoreDll)')">
+    <Error Text="The x64 Rust native core is missing. Run 'cargo build --manifest-path native/localesmith_core/Cargo.toml --release' before building LocaleSmith.App." />
+  </Target>
+</Project>

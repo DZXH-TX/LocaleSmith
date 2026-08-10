@@ -1,0 +1,85 @@
+<Window
+    x:Class="LocaleSmith.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:LocaleSmith.App"
+    Title="LocaleSmith | 译匠">
+    <Grid
+        x:Name="RootSurface"
+        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+        Loaded="OnRootSurfaceLoaded">
+        <NavigationView
+            x:Name="RootNavigation"
+            x:Uid="RootNavigation"
+            Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="True"
+            IsPaneToggleButtonVisible="True"
+            PaneDisplayMode="Auto"
+            ItemInvoked="OnNavigationItemInvoked">
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Uid="DashboardNavigationItem" Tag="Dashboard">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE9D9;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="AssistantNavigationItem" Tag="Assistant">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE99A;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="ModelSourcesNavigationItem" Tag="ModelSources">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE950;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem x:Uid="LogsNavigationItem" Tag="Logs">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7BA;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+            <Frame
+                x:Name="ContentFrame"
+                Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+                HorizontalContentAlignment="Stretch"
+                VerticalContentAlignment="Stretch" />
+        </NavigationView>
+        <Grid
+            x:Name="FatalErrorPanel"
+            Padding="32"
+            Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+            Visibility="Collapsed">
+            <StackPanel MaxWidth="640" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <FontIcon
+                    Glyph="&#xE783;"
+                    FontSize="32"
+                    Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                <TextBlock x:Uid="StartupErrorTitle" Style="{ThemeResource TitleTextBlockStyle}" />
+                <TextBlock x:Name="FatalErrorText" TextWrapping="WrapWholeWords" />
+            </StackPanel>
+        </Grid>
+        <Grid
+            Width="0"
+            Height="0"
+            IsHitTestVisible="False">
+            <Border
+                x:Name="TitleBarBackgroundProbe"
+                Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" />
+            <TextBlock
+                x:Name="TitleBarForegroundProbe"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+            <Border
+                x:Name="TitleBarHoverProbe"
+                Background="{ThemeResource SubtleFillColorSecondaryBrush}" />
+            <Border
+                x:Name="TitleBarPressedProbe"
+                Background="{ThemeResource SubtleFillColorTertiaryBrush}" />
+            <TextBlock
+                x:Name="TitleBarInactiveForegroundProbe"
+                Foreground="{ThemeResource TextFillColorDisabledBrush}" />
+        </Grid>
+    </Grid>
+</Window>
