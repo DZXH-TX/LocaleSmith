@@ -17,7 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
-using Windows.Globalization;
+using Microsoft.Windows.Globalization;
 
 namespace LocaleSmith.App;
 
@@ -42,26 +42,35 @@ public partial class App : Microsoft.UI.Xaml.Application
         {
             var currentLocalAppData = System.Environment.GetFolderPath(
                 System.Environment.SpecialFolder.LocalApplicationData);
-            var unredirectedLocalAppData = LegacyAppDataLocator
-                .GetUnredirectedLocalApplicationDataPath();
-            var currentAppDataRoot = Path.Combine(currentLocalAppData, "LocaleSmith");
-            var currentCredentialStore = new WindowsCredentialSecretStore("LocaleSmith");
-            var legacyCredentialStore = new WindowsCredentialSecretStore("JaxI18n");
-            foreach (var legacyAppDataRoot in LegacyAppDataLocator.FindLegacyRoots(unredirectedLocalAppData))
+            if (string.IsNullOrWhiteSpace(currentLocalAppData))
             {
-                var migrator = new LegacyAppDataMigrator(
-                    legacyAppDataRoot,
-                    currentAppDataRoot,
-                    legacyCredentialStore,
-                    currentCredentialStore);
-                await migrator.MigrateAsync().ConfigureAwait(true);
+                throw new InvalidOperationException("The per-user application-data directory is unavailable.");
             }
 
-            _host = BuildHost(currentAppDataRoot, currentCredentialStore, legacyCredentialStore);
+            var currentAppDataRoot = Path.Combine(Path.GetFullPath(currentLocalAppData), "LocaleSmith");
+            var currentCredentialStore = new WindowsCredentialSecretStore("LocaleSmith");
+            var legacyCredentialStore = new WindowsCredentialSecretStore("JaxI18n");
+            var legacyAppDataRoots = await LegacyAppDataMigrationCoordinator
+                .MigrateAsync(
+                    currentAppDataRoot,
+                    legacyCredentialStore,
+                    currentCredentialStore)
+                .ConfigureAwait(true);
+            var legacyTranslationMemoryPaths = legacyAppDataRoots
+                .Select(static root => Path.Combine(root, "translation-memory"))
+                .ToArray();
+
+            _host = BuildHost(
+                currentAppDataRoot,
+                currentCredentialStore,
+                legacyCredentialStore,
+                legacyTranslationMemoryPaths);
             await _host.StartAsync().ConfigureAwait(true);
             var state = _host.Services.GetRequiredService<SecureAppStateService>();
             await state.InitializeAsync().ConfigureAwait(true);
             var configuration = await state.LoadAsync().ConfigureAwait(true);
+            // This unpackaged app must set its process-wide MRT Core language before DI resolves
+            // WinUiTextProvider or MainWindow and their localized resources are constructed.
             ApplicationLanguages.PrimaryLanguageOverride = configuration.Language;
             _host.Services.GetRequiredService<AppMotionService>()
                 .SetForceAppAnimations(configuration.ForceAppAnimations);
@@ -81,7 +90,8 @@ public partial class App : Microsoft.UI.Xaml.Application
     private static IHost BuildHost(
         string appDataRoot,
         WindowsCredentialSecretStore currentCredentialStore,
-        WindowsCredentialSecretStore legacyCredentialStore)
+        WindowsCredentialSecretStore legacyCredentialStore,
+        IReadOnlyList<string> legacyTranslationMemoryPaths)
     {
         var builder = Host.CreateApplicationBuilder();
         var configPath = Path.Combine(
@@ -89,8 +99,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             LegacyAppDataMigrator.CurrentConfigurationFileName);
         var translationMemoryPath = Path.Combine(appDataRoot, "translation-memory");
         var auditPath = Path.Combine(appDataRoot, "logs", "cli-audit.jsonl");
-        var defaultSandbox = Path.Combine(Path.GetTempPath(), "LocaleSmith", "Sandbox");
-        Directory.CreateDirectory(defaultSandbox);
+        var defaultSandbox = CliSandboxDirectory.CreateUnderAppDataRoot(appDataRoot);
 
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddSingleton<AppMotionService>();
@@ -119,10 +128,11 @@ public partial class App : Microsoft.UI.Xaml.Application
 
         builder.Services.AddSingleton<IArchiveWorkspaceBackend, ArchiveWorkspaceBackend>();
         builder.Services.AddSingleton<ITranslationMemoryStore>(_ =>
-            new FileTranslationMemoryStore(translationMemoryPath));
+            new FileTranslationMemoryStore(translationMemoryPath, legacyTranslationMemoryPaths));
         builder.Services.AddSingleton<ITranslationEngine, ModelTranslationEngine>();
         builder.Services.AddSingleton<TranslationPipeline>();
         builder.Services.AddSingleton<IPipelineJobScheduler, PipelineJobScheduler>();
+        builder.Services.AddSingleton<TranslationLogService>();
         builder.Services.AddSingleton<ITranslationQueueService, PipelineTranslationQueueService>();
         builder.Services.AddSingleton<IOutputPathStrategy, DefaultOutputPathStrategy>();
         builder.Services.AddSingleton<IUiTextProvider, WinUiTextProvider>();
@@ -136,10 +146,15 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<IPrivilegeContext, WindowsPrivilegeContext>();
         builder.Services.AddSingleton<ICliApprovalService, CliApprovalService>();
         builder.Services.AddSingleton<ICliAuditSink>(_ => new JsonLinesCliAuditSink(auditPath));
-        builder.Services.AddSingleton(_ => new SafeCliCommandPolicy(
-            TrustedCliExecutableDiscovery.FindInstalled(),
-            [defaultSandbox],
-            maximumTimeout: TimeSpan.FromSeconds(30)));
+        builder.Services.AddSingleton(_ =>
+        {
+            var validatedSandbox = CliSandboxDirectory.ValidateExisting(appDataRoot, defaultSandbox);
+            return new SafeCliCommandPolicy(
+                TrustedCliExecutableDiscovery.FindInstalled(),
+                [validatedSandbox],
+                temporaryRoot: validatedSandbox,
+                maximumTimeout: TimeSpan.FromSeconds(30));
+        });
         builder.Services.AddSingleton<ICliCommandPolicy>(static services =>
             services.GetRequiredService<SafeCliCommandPolicy>());
         builder.Services.AddSingleton<ICliSandboxRootManager>(static services =>
@@ -157,14 +172,12 @@ public partial class App : Microsoft.UI.Xaml.Application
             _.GetRequiredService<ITerminalEnvironmentDetector>(),
             auditPath,
             _.GetRequiredService<IUiTextProvider>()));
-        builder.Services.AddSingleton<ICliDiagnosticRequestFactory>(static services =>
-            services.GetRequiredService<CliConfirmationViewModelFactory>());
-
         builder.Services.AddSingleton<ShellViewModel>();
         builder.Services.AddSingleton<OnboardingViewModel>();
         builder.Services.AddSingleton<DashboardViewModel>();
         builder.Services.AddSingleton<AssistantViewModel>();
         builder.Services.AddSingleton<ModelSourcesViewModel>();
+        builder.Services.AddSingleton<TranslationLogsViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();
 
         return builder.Build();
@@ -176,6 +189,22 @@ public partial class App : Microsoft.UI.Xaml.Application
         if (host is null)
         {
             return;
+        }
+
+        using (var flushTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(8)))
+        {
+            try
+            {
+                host.Services
+                    .GetRequiredService<SettingsViewModel>()
+                    .FlushPendingChangesAsync(flushTimeout.Token)
+                    .GetAwaiter()
+                    .GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                // A stalled settings write must not keep the application process alive indefinitely.
+            }
         }
 
         ShutdownHostAsync(host).GetAwaiter().GetResult();

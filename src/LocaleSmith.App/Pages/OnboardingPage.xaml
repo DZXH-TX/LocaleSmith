@@ -26,6 +26,7 @@
 
                 <InfoBar
                     x:Uid="OnboardingError"
+                    AutomationProperties.LiveSetting="Assertive"
                     behaviors:AppMotion.StatusFeedback="True"
                     IsOpen="{Binding HasError}"
                     IsClosable="False"
@@ -33,6 +34,7 @@
                     Severity="Error" />
                 <InfoBar
                     x:Uid="OnboardingStatus"
+                    AutomationProperties.LiveSetting="Polite"
                     behaviors:AppMotion.StatusFeedback="True"
                     IsOpen="{Binding HasStatus}"
                     IsClosable="False"
@@ -190,6 +192,24 @@
                             x:Uid="SandboxPathInput"
                             Text="{Binding SandboxPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock x:Uid="SandboxHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                x:Uid="OnboardingLogDirectoryPath"
+                                Text="{Binding LogDirectoryPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button
+                                x:Uid="OnboardingBrowseLogDirectoryButton"
+                                Grid.Column="1"
+                                VerticalAlignment="Bottom"
+                                Click="OnBrowseLogDirectoryClicked" />
+                        </Grid>
+                        <TextBlock
+                            x:Uid="OnboardingLogDirectoryHelp"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            TextWrapping="WrapWholeWords" />
                     </StackPanel>
                 </Border>
 
@@ -222,7 +242,8 @@
                                 x:Uid="OnboardingNetworkPresetSelector"
                                 DisplayMemberPath="DisplayName"
                                 ItemsSource="{Binding NetworkPresetOptions}"
-                                SelectedItem="{Binding SelectedNetworkPreset, Mode=TwoWay}" />
+                                SelectedItem="{Binding SelectedNetworkPreset, Mode=OneWay}"
+                                SelectionChanged="OnNetworkPresetSelectionChanged" />
                             <TextBox
                                 x:Uid="OnboardingNetworkEndpointInput"
                                 Text="{Binding NetworkEndpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -233,8 +254,8 @@
                                 x:Uid="OnboardingNetworkTokenLimitParameter"
                                 DisplayMemberPath="DisplayName"
                                 ItemsSource="{Binding NetworkTokenLimitParameterOptions}"
-                                SelectedValue="{Binding NetworkTokenLimitParameter, Mode=TwoWay}"
-                                SelectedValuePath="Value" />
+                                SelectedItem="{Binding NetworkTokenLimitParameterOption, Mode=OneWay}"
+                                SelectionChanged="OnNetworkTokenLimitParameterSelectionChanged" />
                             <TextBlock
                                 x:Uid="OnboardingNetworkTokenLimitParameterHelp"
                                 Style="{ThemeResource CaptionTextBlockStyle}"
@@ -261,10 +282,14 @@
                     Style="{ThemeResource CardBorderStyle}"
                     Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <StackPanel Spacing="16">
-                        <TextBlock x:Uid="SummaryTitle" Style="{ThemeResource PageTitleStyle}" />
+                        <TextBlock
+                            x:Uid="SummaryTitle"
+                            AutomationProperties.HeadingLevel="Level2"
+                            Style="{ThemeResource PageTitleStyle}" />
                         <TextBlock x:Uid="SummaryBody" TextWrapping="WrapWholeWords" />
-                        <TextBlock Text="{Binding WorkspacePath}" TextWrapping="WrapWholeWords" />
-                        <TextBlock Text="{Binding SandboxPath}" TextWrapping="WrapWholeWords" />
+                        <TextBlock IsTextSelectionEnabled="True" Text="{Binding WorkspacePath}" TextWrapping="Wrap" />
+                        <TextBlock IsTextSelectionEnabled="True" Text="{Binding SandboxPath}" TextWrapping="Wrap" />
+                        <TextBlock IsTextSelectionEnabled="True" Text="{Binding LogDirectoryPath}" TextWrapping="Wrap" />
                         <StackPanel
                             Spacing="4"
                             Visibility="{Binding IsLocalConfigurationEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -287,35 +312,36 @@
                     </StackPanel>
                 </Border>
 
-                <Grid ColumnSpacing="12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Button
                         x:Uid="OnboardingExitButton"
                         Command="{Binding ExitCommand}" />
-                    <Button
-                        Grid.Column="2"
-                        x:Uid="OnboardingBackButton"
-                        Command="{Binding BackCommand}" />
-                    <Button
-                        Grid.Column="3"
-                        x:Uid="OnboardingNextButton"
-                        behaviors:AppMotion.ButtonFeedback="True"
-                        Command="{Binding NextCommand}"
-                        Style="{ThemeResource AccentButtonStyle}"
-                        Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}" />
-                    <Button
-                        Grid.Column="3"
-                        x:Uid="OnboardingCompleteButton"
-                        behaviors:AppMotion.ButtonFeedback="True"
-                        Command="{Binding CompleteCommand}"
-                        CommandParameter="{Binding Password, ElementName=OnboardingNetworkApiKeyInput}"
-                        Style="{ThemeResource AccentButtonStyle}"
-                        Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <StackPanel
+                        Grid.Row="1"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal"
+                        Spacing="12">
+                        <Button
+                            x:Uid="OnboardingBackButton"
+                            Command="{Binding BackCommand}" />
+                        <Button
+                            x:Uid="OnboardingNextButton"
+                            behaviors:AppMotion.ButtonFeedback="True"
+                            Command="{Binding NextCommand}"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}" />
+                        <Button
+                            x:Uid="OnboardingCompleteButton"
+                            behaviors:AppMotion.ButtonFeedback="True"
+                            Command="{Binding CompleteCommand}"
+                            CommandParameter="{Binding Password, ElementName=OnboardingNetworkApiKeyInput}"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </StackPanel>
                 </Grid>
             </StackPanel>
         </ScrollViewer>

@@ -10,22 +10,8 @@ public sealed class CliConfirmationViewModelFactory(
     ICliRunner runner,
     ITerminalEnvironmentDetector terminalEnvironmentDetector,
     string auditLogPath,
-    LocaleSmith.Presentation.Abstractions.IUiTextProvider text) :
-    LocaleSmith.Presentation.Abstractions.ICliDiagnosticRequestFactory
+    LocaleSmith.Presentation.Abstractions.IUiTextProvider text)
 {
-    public Task<CliConfirmationViewModel> CreateAsync(
-        string sandboxPath,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(sandboxPath);
-        var command = new CliCommand(
-            "dotnet",
-            ["--version"],
-            Path.GetFullPath(sandboxPath),
-            TimeSpan.FromSeconds(15));
-        return CreateAsync(command, cancellationToken);
-    }
-
     public async Task<CliConfirmationViewModel> CreateAsync(
         CliCommand command,
         CancellationToken cancellationToken = default)

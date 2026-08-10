@@ -70,18 +70,10 @@ public sealed partial class MainWindow : Window
 
     private void OnNavigationRequested(object? sender, ShellSection section)
     {
-        RootNavigation.IsPaneVisible = section != ShellSection.Onboarding;
-        var pageType = section switch
+        var target = ShellNavigationMap.GetTarget(section);
+        if (ContentFrame.CurrentSourcePageType == target.PageType)
         {
-            ShellSection.Onboarding => typeof(OnboardingPage),
-            ShellSection.Dashboard => typeof(DashboardPage),
-            ShellSection.Assistant => typeof(AssistantPage),
-            ShellSection.ModelSources => typeof(ModelSourcesPage),
-            ShellSection.Settings => typeof(SettingsPage),
-            _ => typeof(DashboardPage)
-        };
-        if (ContentFrame.CurrentSourcePageType == pageType)
-        {
+            ApplyNavigationPresentation(section);
             return;
         }
 
@@ -90,11 +82,19 @@ public sealed partial class MainWindow : Window
             _motion?.Cancel(outgoingPage);
         }
 
-        ContentFrame.Navigate(pageType, null, new SuppressNavigationTransitionInfo());
+        if (!ContentFrame.Navigate(target.PageType, null, new SuppressNavigationTransitionInfo()))
+        {
+            SynchronizeNavigationPresentationWithFrame();
+        }
     }
 
     private void OnContentFrameNavigated(object sender, NavigationEventArgs args)
     {
+        if (ShellNavigationMap.TryGetSection(args.SourcePageType, out var section))
+        {
+            ApplyNavigationPresentation(section);
+        }
+
         if (args.Content is FrameworkElement incomingPage)
         {
             _motion?.AnimatePageEntrance(incomingPage);
@@ -186,13 +186,60 @@ public sealed partial class MainWindow : Window
         if (args.IsSettingsInvoked)
         {
             _viewModel.NavigateCommand.Execute(ShellSection.Settings);
+            SynchronizeNavigationPresentationWithFrame();
             return;
         }
 
-        if (args.InvokedItemContainer?.Tag is string tag &&
-            Enum.TryParse<ShellSection>(tag, ignoreCase: false, out var section))
+        if (ShellNavigationMap.TryGetMenuSection(
+                args.InvokedItemContainer?.Tag as string,
+                out var section))
         {
             _viewModel.NavigateCommand.Execute(section);
         }
+
+        // NavigationView updates its visual selection before the command runs. If navigation is
+        // temporarily unavailable (for example while encrypted settings are still loading), put
+        // the selection back on the page that is actually displayed.
+        SynchronizeNavigationPresentationWithFrame();
+    }
+
+    private void SynchronizeNavigationPresentationWithFrame()
+    {
+        if (ShellNavigationMap.TryGetSection(ContentFrame.CurrentSourcePageType, out var section))
+        {
+            ApplyNavigationPresentation(section);
+        }
+    }
+
+    private void ApplyNavigationPresentation(ShellSection section)
+    {
+        var target = ShellNavigationMap.GetTarget(section);
+        RootNavigation.IsPaneVisible = target.IsPaneVisible;
+        object? selectedItem = target.Selection switch
+        {
+            ShellNavigationSelection.None => null,
+            ShellNavigationSelection.Settings => RootNavigation.SettingsItem,
+            ShellNavigationSelection.MenuItem => FindNavigationItem(target.MenuTag),
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Unknown selection behavior.")
+        };
+
+        if (!ReferenceEquals(RootNavigation.SelectedItem, selectedItem))
+        {
+            RootNavigation.SelectedItem = selectedItem;
+        }
+    }
+
+    private object? FindNavigationItem(string? tag)
+    {
+        foreach (var item in RootNavigation.MenuItems)
+        {
+            if (item is NavigationViewItem { Tag: string itemTag } &&
+                string.Equals(itemTag, tag, StringComparison.Ordinal))
+            {
+                return item;
+            }
+        }
+
+        return null;
     }
 }

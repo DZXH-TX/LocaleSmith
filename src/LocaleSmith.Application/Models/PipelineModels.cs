@@ -59,7 +59,8 @@ public sealed record PipelineRequest
         IReadOnlySet<TranslationStyle>? styles = null,
         SignedArchiveHandling signedArchiveHandling = SignedArchiveHandling.Block,
         HardcodedStringMode hardcodedStringMode = HardcodedStringMode.ScanOnly,
-        string? modelSourceId = null)
+        string? modelSourceId = null,
+        Guid? requestedJobId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
@@ -84,6 +85,12 @@ public sealed record PipelineRequest
         SignedArchiveHandling = signedArchiveHandling;
         HardcodedStringMode = hardcodedStringMode;
         ModelSourceId = string.IsNullOrWhiteSpace(modelSourceId) ? null : modelSourceId.Trim();
+        if (requestedJobId == Guid.Empty)
+        {
+            throw new ArgumentException("A requested pipeline job identifier cannot be empty.", nameof(requestedJobId));
+        }
+
+        RequestedJobId = requestedJobId;
     }
 
     public string SourcePath { get; }
@@ -99,6 +106,12 @@ public sealed record PipelineRequest
     public HardcodedStringMode HardcodedStringMode { get; }
 
     public string? ModelSourceId { get; }
+
+    /// <summary>
+    /// Optional caller-owned identity used when diagnostics must be established before a job is
+    /// accepted by the scheduler. Direct pipeline callers can leave this unset.
+    /// </summary>
+    public Guid? RequestedJobId { get; }
 }
 
 public sealed record ArchiveInspection(

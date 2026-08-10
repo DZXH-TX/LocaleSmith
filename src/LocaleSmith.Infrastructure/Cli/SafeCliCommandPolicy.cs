@@ -57,7 +57,10 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
         "mshta",
         "rundll32",
         "regsvr32",
-        "wmic"
+        "wmic",
+        // The dotnet host is also a multiplexer. Even diagnostic switches resolve global.json
+        // from the working directory and can load a project-local SDK from a writable sandbox.
+        "dotnet"
     };
 
     private readonly ReaderWriterLockSlim _lock = new();
@@ -79,7 +82,7 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
             throw new ArgumentOutOfRangeException(nameof(maximumTimeout), "Maximum timeout must be positive.");
         }
 
-        _temporaryRoot = NormalizeSandboxRoot(temporaryRoot ?? Path.GetTempPath());
+        _temporaryRoot = NormalizeSandboxRoot(temporaryRoot ?? GetDefaultTemporaryRoot());
         ReplaceSandboxRoots(additionalSandboxRoots ?? []);
         ReplaceAllowedExecutables(allowedExecutables);
     }
@@ -139,7 +142,7 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
     public void ReplaceAllowedExecutables(IEnumerable<string> executables)
     {
         ArgumentNullException.ThrowIfNull(executables);
-        var normalized = executables.Select(ResolveExecutablePath).ToArray();
+        var normalized = executables.Select(ResolveAllowedExecutablePath).ToArray();
         _lock.EnterWriteLock();
         try
         {
@@ -154,7 +157,7 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
 
     public bool AddAllowedExecutable(string executable)
     {
-        var normalized = ResolveExecutablePath(executable);
+        var normalized = ResolveAllowedExecutablePath(executable);
         _lock.EnterWriteLock();
         try
         {
@@ -168,7 +171,7 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
 
     public bool RemoveAllowedExecutable(string executable)
     {
-        var normalized = ResolveExecutablePath(executable);
+        var normalized = ResolveAllowedExecutablePath(executable);
         _lock.EnterWriteLock();
         try
         {
@@ -360,11 +363,43 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
 
-    private static bool TryResolveExecutablePath(string executable, out string resolved)
+    private bool TryResolveExecutablePath(string executable, out string resolved)
     {
         try
         {
-            resolved = ResolveExecutablePath(executable);
+            var trimmed = ValidateExecutableText(executable);
+            if (Path.IsPathFullyQualified(trimmed) ||
+                trimmed.Contains(Path.DirectorySeparatorChar) ||
+                trimmed.Contains(Path.AltDirectorySeparatorChar))
+            {
+                resolved = ResolveExistingFile(trimmed);
+                return true;
+            }
+
+            string[] matches;
+            _lock.EnterReadLock();
+            try
+            {
+                matches = _allowedExecutables
+                    .Where(path => ExecutableNameMatches(path, trimmed))
+                    .Take(2)
+                    .ToArray();
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+
+            if (matches.Length != 1)
+            {
+                throw new FileNotFoundException(
+                    "The executable name does not identify exactly one allowlisted path.",
+                    trimmed);
+            }
+
+            // Re-resolve the configured absolute path at use time. A replaced file or link
+            // cannot redirect a simple command name through the process PATH.
+            resolved = ResolveExistingFile(matches[0]);
             return true;
         }
         catch (Exception exception) when (exception is ArgumentException or FileNotFoundException or NotSupportedException or PathTooLongException)
@@ -374,7 +409,20 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
         }
     }
 
-    private static string ResolveExecutablePath(string executable)
+    private static string ResolveAllowedExecutablePath(string executable)
+    {
+        var trimmed = ValidateExecutableText(executable);
+        if (!Path.IsPathFullyQualified(trimmed))
+        {
+            throw new ArgumentException(
+                "Allowlisted executables must use an absolute path.",
+                nameof(executable));
+        }
+
+        return ResolveExistingFile(trimmed);
+    }
+
+    private static string ValidateExecutableText(string executable)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executable);
         var trimmed = executable.Trim();
@@ -383,44 +431,16 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
             throw new ArgumentException("Executable names cannot contain shell syntax.", nameof(executable));
         }
 
-        if (Path.IsPathFullyQualified(trimmed) ||
-            trimmed.Contains(Path.DirectorySeparatorChar) ||
-            trimmed.Contains(Path.AltDirectorySeparatorChar))
-        {
-            return ResolveExistingFile(trimmed);
-        }
-
-        var pathValue = System.Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        var extensions = OperatingSystem.IsWindows()
-            ? (System.Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
-                .Split(';', StringSplitOptions.RemoveEmptyEntries)
-            : new[] { string.Empty };
-        if (Path.HasExtension(trimmed))
-        {
-            extensions = new[] { string.Empty };
-        }
-
-        foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            var cleanDirectory = directory.Trim().Trim('"');
-            foreach (var extension in extensions)
-            {
-                var candidate = Path.Combine(cleanDirectory, trimmed + extension.ToLowerInvariant());
-                if (File.Exists(candidate))
-                {
-                    return ResolveExistingFile(candidate);
-                }
-
-                candidate = Path.Combine(cleanDirectory, trimmed + extension.ToUpperInvariant());
-                if (File.Exists(candidate))
-                {
-                    return ResolveExistingFile(candidate);
-                }
-            }
-        }
-
-        throw new FileNotFoundException("The executable was not found on PATH.", trimmed);
+        return trimmed;
     }
+
+    private static bool ExecutableNameMatches(string allowedPath, string requestedName) =>
+        string.Equals(Path.GetFileName(allowedPath), requestedName, StringComparison.OrdinalIgnoreCase) ||
+        (!Path.HasExtension(requestedName) &&
+         string.Equals(
+             Path.GetFileNameWithoutExtension(allowedPath),
+             requestedName,
+             StringComparison.OrdinalIgnoreCase));
 
     private static string ResolveExistingFile(string path)
     {
@@ -442,6 +462,13 @@ public sealed class SafeCliCommandPolicy : ICliCommandPolicy, ICliSandboxRootMan
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         var fullPath = Path.GetFullPath(root);
         return Directory.Exists(fullPath) ? CanonicalizeExistingDirectory(fullPath) : fullPath;
+    }
+
+    private static string GetDefaultTemporaryRoot()
+    {
+        var localAppData = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
+        var baseRoot = string.IsNullOrWhiteSpace(localAppData) ? AppContext.BaseDirectory : localAppData;
+        return Path.Combine(baseRoot, "LocaleSmith", "CliSandbox");
     }
 
     private static IEnumerable<string> GetProtectedRoots()

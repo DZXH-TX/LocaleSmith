@@ -13,18 +13,34 @@ public sealed class SafeCliTests
     public void DefaultExecutableDiscoveryNeverTrustsPathEntries()
     {
         var discovered = TrustedCliExecutableDiscovery.FindInstalled();
-        var programFiles = Path.TrimEndingDirectorySeparator(System.Environment.GetFolderPath(
-            System.Environment.SpecialFolder.ProgramFiles));
 
-        Assert.All(discovered, executable =>
-        {
-            Assert.True(Path.IsPathFullyQualified(executable));
-            Assert.Equal("dotnet.exe", Path.GetFileName(executable), ignoreCase: true);
-            Assert.StartsWith(
-                programFiles + Path.DirectorySeparatorChar,
-                executable,
-                StringComparison.OrdinalIgnoreCase);
-        });
+        Assert.Empty(discovered);
+    }
+
+    [Fact]
+    public void DotnetRemainsBlockedEvenWhenItsAbsolutePathIsAllowlisted()
+    {
+        using var sandbox = new TemporaryDirectory();
+        var dotnet = GetActualDotnetExecutable();
+        using var policy = new SafeCliCommandPolicy([dotnet], temporaryRoot: sandbox.Path);
+
+        Assert.Equal(
+            CliPolicyViolation.InterpreterNotAllowed,
+            policy.Evaluate(new CliCommand(dotnet, ["--version"], sandbox.Path)).Violation);
+        Assert.Equal(
+            CliPolicyViolation.InterpreterNotAllowed,
+            policy.Evaluate(new CliCommand(dotnet, ["--info"], sandbox.Path)).Violation);
+    }
+
+    [Fact]
+    public void DefaultSandboxIsApplicationSpecific()
+    {
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()]);
+        var localAppData = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
+        var baseRoot = string.IsNullOrWhiteSpace(localAppData) ? AppContext.BaseDirectory : localAppData;
+        var expected = Path.GetFullPath(Path.Combine(baseRoot, "LocaleSmith", "CliSandbox"));
+
+        Assert.Contains(expected, policy.SandboxRoots);
     }
 
     [Fact]
@@ -32,8 +48,8 @@ public sealed class SafeCliTests
     {
         using var sandbox = new TemporaryDirectory();
         using var outside = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], [sandbox.Path], temporaryRoot: sandbox.Path);
-        var allowed = new CliCommand("dotnet", ["--info"], sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], [sandbox.Path], temporaryRoot: sandbox.Path);
+        var allowed = new CliCommand(GetAllowedTestExecutableName(), ["--info"], sandbox.Path);
         var alternateExecutable = System.Environment.ProcessPath
             ?? throw new InvalidOperationException("The test host executable path is unavailable.");
         var deniedExecutable = new CliCommand(alternateExecutable, ["--help"], sandbox.Path);
@@ -44,8 +60,8 @@ public sealed class SafeCliTests
         Assert.True(policy.Evaluate(deniedExecutable).IsAllowed);
         Assert.True(policy.RemoveAllowedExecutable(alternateExecutable));
 
-        using var outsidePolicy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
-        var outsideCommand = new CliCommand("dotnet", ["--info"], outside.Path);
+        using var outsidePolicy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
+        var outsideCommand = new CliCommand(GetAllowedTestExecutableName(), ["--info"], outside.Path);
         Assert.Equal(CliPolicyViolation.WorkingDirectoryOutsideSandbox, outsidePolicy.Evaluate(outsideCommand).Violation);
     }
 
@@ -56,11 +72,11 @@ public sealed class SafeCliTests
         using var previousRoot = new TemporaryDirectory();
         using var configuredRoot = new TemporaryDirectory();
         using var policy = new SafeCliCommandPolicy(
-            ["dotnet"],
+            [GetAllowedTestExecutable()],
             [previousRoot.Path],
             temporaryRoot: temporaryRoot.Path);
-        var previous = new CliCommand("dotnet", ["--version"], previousRoot.Path);
-        var configured = new CliCommand("dotnet", ["--version"], configuredRoot.Path);
+        var previous = new CliCommand(GetAllowedTestExecutableName(), ["--version"], previousRoot.Path);
+        var configured = new CliCommand(GetAllowedTestExecutableName(), ["--version"], configuredRoot.Path);
 
         Assert.True(policy.Evaluate(previous).IsAllowed);
         policy.ReplaceSandboxRoots([configuredRoot.Path]);
@@ -75,17 +91,17 @@ public sealed class SafeCliTests
     public void AbsoluteBlacklistRulesCannotBeOverriddenByAllowlist()
     {
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
         CliCommand[] forbidden =
         [
-            new("dotnet", ["::"], sandbox.Path),
-            new("dotnet", ["Format", "C:"], sandbox.Path),
-            new("dotnet", ["reformatting-is-forbidden"], sandbox.Path),
-            new("dotnet", ["rd", "/s", "/q", "folder"], sandbox.Path),
-            new("dotnet", ["del", "/f", "/s", "file"], sandbox.Path),
-            new("dotnet", [">", "nul"], sandbox.Path),
-            new("dotnet", ["Remove-Item", "-Recurse", "-Force", "folder"], sandbox.Path),
-            new("dotnet", ["-EncodedCommand", "ZABlAGwA"], sandbox.Path)
+            new(GetAllowedTestExecutableName(), ["::"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["Format", "C:"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["reformatting-is-forbidden"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["rd", "/s", "/q", "folder"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["del", "/f", "/s", "file"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), [">", "nul"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["Remove-Item", "-Recurse", "-Force", "folder"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["-EncodedCommand", "ZABlAGwA"], sandbox.Path)
         ];
 
         foreach (var command in forbidden)
@@ -100,12 +116,12 @@ public sealed class SafeCliTests
     public void CredentialLikeArgumentsAreNeverEligibleForCliApproval()
     {
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
         CliCommand[] commands =
         [
-            new("dotnet", ["tool", "--api-key", "model-supplied-value"], sandbox.Path),
-            new("dotnet", ["--token=model-supplied-value"], sandbox.Path),
-            new("dotnet", ["/password:model-supplied-value"], sandbox.Path)
+            new(GetAllowedTestExecutableName(), ["tool", "--api-key", "model-supplied-value"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["--token=model-supplied-value"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["/password:model-supplied-value"], sandbox.Path)
         ];
 
         foreach (CliCommand command in commands)
@@ -120,9 +136,9 @@ public sealed class SafeCliTests
     public void TimeoutAndProtectedPathsAreRejected()
     {
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
-        var tooLong = new CliCommand("dotnet", ["--info"], sandbox.Path, TimeSpan.FromSeconds(31));
-        var protectedPath = new CliCommand("dotnet", [@"C:\Windows\System32\drivers\etc\hosts"], sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
+        var tooLong = new CliCommand(GetAllowedTestExecutableName(), ["--info"], sandbox.Path, TimeSpan.FromSeconds(31));
+        var protectedPath = new CliCommand(GetAllowedTestExecutableName(), [@"C:\Windows\System32\drivers\etc\hosts"], sandbox.Path);
 
         Assert.Equal(CliPolicyViolation.TimeoutTooLong, policy.Evaluate(tooLong).Violation);
         Assert.Equal(CliPolicyViolation.ProtectedPathAccess, policy.Evaluate(protectedPath).Violation);
@@ -133,13 +149,13 @@ public sealed class SafeCliTests
     {
         using var sandbox = new TemporaryDirectory();
         using var outside = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
         var absoluteEscape = new CliCommand(
-            "dotnet",
+            GetAllowedTestExecutableName(),
             [$"--output={Path.Combine(outside.Path, "result.bin")}"],
             sandbox.Path);
-        var traversal = new CliCommand("dotnet", [@"..\escape.txt"], sandbox.Path);
-        var expansion = new CliCommand("dotnet", ["%USERPROFILE%\\secret.txt"], sandbox.Path);
+        var traversal = new CliCommand(GetAllowedTestExecutableName(), [@"..\escape.txt"], sandbox.Path);
+        var expansion = new CliCommand(GetAllowedTestExecutableName(), ["%USERPROFILE%\\secret.txt"], sandbox.Path);
 
         Assert.Equal(CliPolicyViolation.PathArgumentOutsideSandbox, policy.Evaluate(absoluteEscape).Violation);
         Assert.Equal(CliPolicyViolation.PathArgumentOutsideSandbox, policy.Evaluate(traversal).Violation);
@@ -159,8 +175,8 @@ public sealed class SafeCliTests
         File.WriteAllText(Path.Combine(outside.Path, "payload.dll"), "outside");
         var link = Path.Combine(sandbox.Path, "junction");
         Directory.CreateSymbolicLink(link, outside.Path);
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
-        var command = new CliCommand("dotnet", [@"junction\payload.dll"], sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
+        var command = new CliCommand(GetAllowedTestExecutableName(), [@"junction\payload.dll"], sandbox.Path);
 
         CliPolicyDecision decision = policy.Evaluate(command);
 
@@ -172,8 +188,8 @@ public sealed class SafeCliTests
     public void MalformedRelativePathFailsClosedInsteadOfEscapingPolicyEvaluation()
     {
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
-        var command = new CliCommand("dotnet", ["bad\0path.txt"], sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
+        var command = new CliCommand(GetAllowedTestExecutableName(), ["bad\0path.txt"], sandbox.Path);
 
         CliPolicyDecision decision = policy.Evaluate(command);
 
@@ -190,12 +206,12 @@ public sealed class SafeCliTests
         }
 
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
         CliCommand[] commands =
         [
-            new("dotnet", ["/Windows/System32/drivers/etc/hosts"], sandbox.Path),
-            new("dotnet", ["--out=/Windows/System32/result.bin"], sandbox.Path),
-            new("dotnet", ["/out:/Program Files/result.bin"], sandbox.Path)
+            new(GetAllowedTestExecutableName(), ["/Windows/System32/drivers/etc/hosts"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["--out=/Windows/System32/result.bin"], sandbox.Path),
+            new(GetAllowedTestExecutableName(), ["/out:/Program Files/result.bin"], sandbox.Path)
         ];
 
         foreach (CliCommand command in commands)
@@ -218,7 +234,7 @@ public sealed class SafeCliTests
         }
 
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["cmd.exe"], temporaryRoot: sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetCmdExecutable()], temporaryRoot: sandbox.Path);
         var command = new CliCommand("cmd.exe", ["/c", "echo", "hello"], sandbox.Path);
 
         Assert.Equal(CliPolicyViolation.InterpreterNotAllowed, policy.Evaluate(command).Violation);
@@ -229,8 +245,8 @@ public sealed class SafeCliTests
     {
         using var sandbox = new TemporaryDirectory();
         var approvals = new CliApprovalService();
-        var command = new CliCommand("dotnet", ["--version"], sandbox.Path);
-        var changed = new CliCommand("dotnet", ["--info"], sandbox.Path);
+        var command = new CliCommand(GetAllowedTestExecutableName(), ["--version"], sandbox.Path);
+        var changed = new CliCommand(GetAllowedTestExecutableName(), ["--info"], sandbox.Path);
 
         Assert.Throws<InvalidOperationException>(() => approvals.Issue(command, userAcknowledgedRisk: false));
         var wrongCommandToken = approvals.Issue(command, userAcknowledgedRisk: true);
@@ -245,11 +261,12 @@ public sealed class SafeCliTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
+        var probe = GetProbeExecutable();
+        using var policy = new SafeCliCommandPolicy([probe], temporaryRoot: sandbox.Path);
         var approvals = new CliApprovalService();
         var audit = new MemoryAuditSink();
         var runner = new SafeCliRunner(policy, approvals, audit, new FixedPrivilegeContext(isElevated: false));
-        var command = new CliCommand("dotnet", ["--version"], sandbox.Path);
+        var command = new CliCommand(probe, ["inspect"], sandbox.Path);
 
         var rejected = await runner.ExecuteAsync(command, approvalToken: string.Empty, cancellationToken);
         var token = approvals.Issue(command, userAcknowledgedRisk: true);
@@ -274,11 +291,11 @@ public sealed class SafeCliTests
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         using var sandbox = new TemporaryDirectory();
-        using var policy = new SafeCliCommandPolicy(["dotnet"], temporaryRoot: sandbox.Path);
+        using var policy = new SafeCliCommandPolicy([GetAllowedTestExecutable()], temporaryRoot: sandbox.Path);
         var approvals = new CliApprovalService();
         var audit = new MemoryAuditSink();
         var runner = new SafeCliRunner(policy, approvals, audit, new FixedPrivilegeContext(isElevated: true));
-        var command = new CliCommand("dotnet", ["--version"], sandbox.Path);
+        var command = new CliCommand(GetAllowedTestExecutableName(), ["--version"], sandbox.Path);
         var token = approvals.Issue(command, userAcknowledgedRisk: true);
 
         var result = await runner.ExecuteAsync(command, token, cancellationToken);
@@ -472,10 +489,74 @@ public sealed class SafeCliTests
 
     private static string GetProbeExecutable()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "LocaleSmith.CliProbe.exe");
+        var fileName = OperatingSystem.IsWindows()
+            ? "LocaleSmith.CliProbe.exe"
+            : "LocaleSmith.CliProbe";
+        var path = Path.Combine(AppContext.BaseDirectory, fileName);
         return File.Exists(path)
             ? path
             : throw new FileNotFoundException("The CLI integration-test probe was not copied to test output.", path);
+    }
+
+    [Fact]
+    public void DynamicAllowlistRejectsPathResolvedExecutableNames()
+    {
+        using var sandbox = new TemporaryDirectory();
+
+        Assert.Throws<ArgumentException>(() =>
+            new SafeCliCommandPolicy([GetAllowedTestExecutableName()], temporaryRoot: sandbox.Path));
+    }
+
+    private static string GetAllowedTestExecutable()
+        => GetProbeExecutable();
+
+    private static string GetAllowedTestExecutableName() =>
+        Path.GetFileName(GetAllowedTestExecutable());
+
+    private static string GetActualDotnetExecutable()
+    {
+        var hostName = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+        var runtimeDirectory = new DirectoryInfo(
+            System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory());
+        var runtimeRoot = runtimeDirectory.Parent?.Parent?.Parent?.FullName;
+        var architectureRoot = System.Environment.GetEnvironmentVariable(
+            $"DOTNET_ROOT_{System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString().ToUpperInvariant()}");
+        string?[] candidates =
+        [
+            System.Environment.GetEnvironmentVariable("DOTNET_HOST_PATH"),
+            AppContext.GetData("DOTNET_HOST_PATH") as string,
+            IsDotnetHost(System.Environment.ProcessPath, hostName) ? System.Environment.ProcessPath : null,
+            Path.Combine(AppContext.BaseDirectory, hostName),
+            string.IsNullOrWhiteSpace(runtimeRoot) ? null : Path.Combine(runtimeRoot, hostName),
+            CombineDotnetRoot(System.Environment.GetEnvironmentVariable("DOTNET_ROOT"), hostName),
+            CombineDotnetRoot(architectureRoot, hostName)
+        ];
+
+        foreach (var candidate in candidates.Where(static candidate => !string.IsNullOrWhiteSpace(candidate)))
+        {
+            var fullPath = Path.GetFullPath(candidate!);
+            if (IsDotnetHost(fullPath, hostName) && File.Exists(fullPath))
+            {
+                return fullPath;
+            }
+        }
+
+        throw new FileNotFoundException("The absolute dotnet host path is unavailable to the test process.");
+    }
+
+    private static string? CombineDotnetRoot(string? root, string hostName) =>
+        string.IsNullOrWhiteSpace(root) ? null : Path.Combine(root, hostName);
+
+    private static bool IsDotnetHost(string? path, string hostName) =>
+        !string.IsNullOrWhiteSpace(path) &&
+        string.Equals(Path.GetFileName(path), hostName, StringComparison.OrdinalIgnoreCase);
+
+    private static string GetCmdExecutable()
+    {
+        var path = Path.Combine(System.Environment.SystemDirectory, "cmd.exe");
+        return File.Exists(path)
+            ? path
+            : throw new FileNotFoundException("The Windows command processor was not found.", path);
     }
 
     private static async Task<bool> WaitForProcessExitAsync(int processId)

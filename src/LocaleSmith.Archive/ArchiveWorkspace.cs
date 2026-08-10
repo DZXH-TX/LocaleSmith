@@ -41,6 +41,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
     private readonly Dictionary<string, IReadOnlyList<ClassFileRewriteSelection>> _appliedClassRewrites =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly List<StagedArtifact> _stagedArtifacts = new();
+    private readonly Dictionary<string, bool> _pendingPublishedArtifacts = new(StringComparer.OrdinalIgnoreCase);
     private FileStream? _sourceLock;
     private ArchiveScanManifest? _manifest;
     private ArchiveInspection? _inspection;
@@ -55,6 +56,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
     private bool _workspaceVerified;
     private bool _externalizationCompleted;
     private bool _disposed;
+    private DirectoryMutationGuard? _workspaceGuard;
 
     public ArchiveWorkspace(
         Guid jobId,
@@ -66,6 +68,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         IArchiveScanner scanner,
         ArchiveWorkspaceOptions options,
         TransactionJournal journal,
+        DirectoryMutationGuard workspaceGuard,
         bool folderSource = false)
     {
         _jobId = jobId;
@@ -78,6 +81,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         _scanner = scanner;
         _options = options;
         _journal = journal;
+        _workspaceGuard = workspaceGuard;
         _folderSource = folderSource;
         _warningsView = _warnings.AsReadOnly();
         _workspaceVerified = VerifyWorkspaceRoot();
@@ -149,6 +153,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         try
         {
             Directory.CreateDirectory(_extractionPath);
+            using var extractionGuard = DirectoryMutationGuard.OpenDirectoryForMutation(_extractionPath);
             ArchivePathSafety.EnsureChildPath(_workspacePath, _extractionPath);
             RejectReparsePoint(_extractionPath);
 
@@ -212,7 +217,10 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 string extractedPath = ArchivePathSafety.CombineArchivePath(_extractionPath, archivePath);
                 if (isDirectory)
                 {
-                    Directory.CreateDirectory(extractedPath);
+                    using (OpenOrCreateGuardedDirectoryPath(_extractionPath, extractedPath))
+                    {
+                        // Each newly-created component is bound before traversal continues.
+                    }
                 }
                 else
                 {
@@ -222,9 +230,11 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                         throw new InvalidDataException($"Archive entry has no safe parent path: '{archivePath}'.");
                     }
 
-                    Directory.CreateDirectory(parent);
-                    await ExtractFileAsync(entry, extractedPath, cancellationToken).ConfigureAwait(false);
-                    SetRecoverableFileTimestamp(extractedPath, entry.LastWriteTime);
+                    using DirectoryMutationGuard? parentGuard =
+                        OpenOrCreateGuardedDirectoryPath(_extractionPath, parent);
+                    using var destinationGuard = DirectoryMutationGuard.CreateFileForMutation(extractedPath);
+                    await ExtractFileAsync(entry, destinationGuard, cancellationToken).ConfigureAwait(false);
+                    destinationGuard.ApplyLeafTimestamp(entry.LastWriteTime);
                 }
 
                 _entries.Add(new ArchiveEntrySnapshot(
@@ -241,7 +251,20 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                          .Where(static entry => entry.IsDirectory)
                          .OrderByDescending(static entry => entry.ArchivePath.Length))
             {
-                SetRecoverableDirectoryTimestamp(directory.ExtractedPath, directory.LastWriteTime);
+                DirectoryMutationGuard? directoryGuard =
+                    DirectoryMutationGuard.OpenExistingChildDirectoryForMutation(
+                        _extractionPath,
+                        directory.ExtractedPath);
+                if (directoryGuard is null)
+                {
+                    extractionGuard.ApplyLeafTimestamp(directory.LastWriteTime);
+                    continue;
+                }
+
+                using (directoryGuard)
+                {
+                    directoryGuard.ApplyLeafTimestamp(directory.LastWriteTime);
+                }
             }
 
             _extracted = true;
@@ -730,6 +753,9 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             throw new InvalidOperationException("Packages have already been staged for this workspace.");
         }
 
+        var outputGuards = new Dictionary<string, DirectoryMutationGuard>(StringComparer.OrdinalIgnoreCase);
+        var stagedArtifactGuards = new Dictionary<string, DirectoryMutationGuard>(StringComparer.OrdinalIgnoreCase);
+        var verifiedDirectoryDigests = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         try
         {
             List<ArtifactTarget> targets = CreateArtifactTargetsForRequest(requestedOutput);
@@ -740,9 +766,15 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 string target = artifactTarget.Path;
                 string outputDirectory = Path.GetDirectoryName(target)
                     ?? throw new InvalidOperationException("The output path has no parent directory.");
-                Directory.CreateDirectory(outputDirectory);
-                ArchivePathSafety.RejectReparsePointsInExistingDirectoryAncestry(outputDirectory);
                 string canonicalDirectory = ArchivePathSafety.Canonicalize(outputDirectory);
+                if (!outputGuards.ContainsKey(canonicalDirectory))
+                {
+                    ArchivePathSafety.RejectReparsePointsInExistingDirectoryAncestry(canonicalDirectory);
+                    outputGuards.Add(
+                        canonicalDirectory,
+                        DirectoryMutationGuard.OpenOrCreateDirectoryForMutation(canonicalDirectory));
+                }
+
                 string stageName = $".{Path.GetFileName(target)}.{_jobId:N}.{style.ToString().ToLowerInvariant()}.staged";
                 string stagedPath = Path.Combine(canonicalDirectory, stageName);
                 if (File.Exists(stagedPath) || Directory.Exists(stagedPath))
@@ -763,21 +795,36 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 {
                     await BuildPackageAsync(style, stagedPath, cancellationToken).ConfigureAwait(false);
                 }
+
+                stagedArtifactGuards.Add(
+                    stagedPath,
+                    artifactTarget.IsDirectory
+                        ? DirectoryMutationGuard.OpenDirectoryForTraversal(stagedPath)
+                        : DirectoryMutationGuard.OpenFileForTraversal(stagedPath));
             }
 
-            _verification = await VerifyStagedPackagesAsync(cancellationToken).ConfigureAwait(false);
+            _verification = await VerifyStagedPackagesAsync(
+                    stagedArtifactGuards,
+                    verifiedDirectoryDigests,
+                    cancellationToken)
+                .ConfigureAwait(false);
             if (_verification.IsValidArchive && _verification.MetadataPreserved && _verification.Errors.Count == 0)
             {
                 for (int index = 0; index < _stagedArtifacts.Count; index++)
                 {
                     StagedArtifact artifact = _stagedArtifacts[index];
-                    byte[] hash = artifact.IsDirectory
-                        ? await FolderSnapshotBuilder.ComputeTreeDigestAsync(
-                                artifact.StagedPath,
-                                _options,
-                                cancellationToken)
-                            .ConfigureAwait(false)
-                        : await ComputeFileHashAsync(artifact.StagedPath, cancellationToken).ConfigureAwait(false);
+                    byte[] hash;
+                    if (artifact.IsDirectory)
+                    {
+                        hash = verifiedDirectoryDigests[artifact.StagedPath];
+                    }
+                    else
+                    {
+                        hash = await stagedArtifactGuards[artifact.StagedPath]
+                            .ComputeFileSha256Async(cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+
                     _stagedArtifacts[index] = artifact with { VerifiedSha256 = hash };
                 }
             }
@@ -794,6 +841,18 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         {
             _journal.Write("stage_and_verify", "failed", exception.Message);
             throw;
+        }
+        finally
+        {
+            foreach (DirectoryMutationGuard guard in stagedArtifactGuards.Values.Reverse())
+            {
+                guard.Dispose();
+            }
+
+            foreach (DirectoryMutationGuard guard in outputGuards.Values.Reverse())
+            {
+                guard.Dispose();
+            }
         }
     }
 
@@ -812,42 +871,60 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             return;
         }
 
-        var committedArtifacts = new List<StagedArtifact>();
-        var stagedLocks = new List<FileStream>();
+        var commitLeases = new List<CommitMutationLease>();
+        var committedArtifacts = new List<CommitMutationLease>();
+        var targetGuards = new Dictionary<string, DirectoryMutationGuard>(StringComparer.OrdinalIgnoreCase);
         try
         {
             foreach (StagedArtifact artifact in _stagedArtifacts)
             {
-                if (File.Exists(artifact.TargetPath) || Directory.Exists(artifact.TargetPath))
-                {
-                    throw new IOException($"The output already exists and will not be overwritten: '{artifact.TargetPath}'.");
-                }
-
                 if (artifact.VerifiedSha256 is null)
                 {
                     throw new InvalidOperationException($"The staged artifact has no verified digest: '{artifact.StagedPath}'.");
                 }
 
+                string targetDirectory = ArchivePathSafety.Canonicalize(
+                    Path.GetDirectoryName(artifact.TargetPath)
+                    ?? throw new InvalidOperationException("The output path has no parent directory."));
+                string stagedDirectory = ArchivePathSafety.Canonicalize(
+                    Path.GetDirectoryName(artifact.StagedPath)
+                    ?? throw new InvalidOperationException("The staged output path has no parent directory."));
+                if (!string.Equals(targetDirectory, stagedDirectory, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("A staged artifact must share its approved target directory.");
+                }
+
+                ArchivePathSafety.RejectReparsePointsInExistingDirectoryAncestry(targetDirectory);
+                if (!targetGuards.ContainsKey(targetDirectory))
+                {
+                    targetGuards.Add(
+                        targetDirectory,
+                        DirectoryMutationGuard.OpenDirectoryForMutationWithValidatedAncestry(targetDirectory));
+                }
+
+                if (File.Exists(artifact.TargetPath) || Directory.Exists(artifact.TargetPath))
+                {
+                    throw new IOException($"The output already exists and will not be overwritten: '{artifact.TargetPath}'.");
+                }
+
+                DirectoryMutationGuard artifactGuard = artifact.IsDirectory
+                    ? DirectoryMutationGuard.OpenDirectoryForTraversal(artifact.StagedPath)
+                    : DirectoryMutationGuard.OpenFileForMutation(artifact.StagedPath);
+                var lease = new CommitMutationLease(artifact, artifactGuard);
+                commitLeases.Add(lease);
                 byte[] currentHash;
                 if (artifact.IsDirectory)
                 {
                     currentHash = await FolderSnapshotBuilder.ComputeTreeDigestAsync(
                             artifact.StagedPath,
                             _options,
-                            cancellationToken)
+                            cancellationToken,
+                            artifactGuard)
                         .ConfigureAwait(false);
                 }
                 else
                 {
-                    var stagedLock = new FileStream(
-                        artifact.StagedPath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.Read | FileShare.Delete,
-                        bufferSize: 128 * 1024,
-                        FileOptions.Asynchronous | FileOptions.SequentialScan);
-                    stagedLocks.Add(stagedLock);
-                    currentHash = await SHA256.HashDataAsync(stagedLock, cancellationToken).ConfigureAwait(false);
+                    currentHash = await artifactGuard.ComputeFileSha256Async(cancellationToken).ConfigureAwait(false);
                 }
 
                 if (!CryptographicOperations.FixedTimeEquals(currentHash, artifact.VerifiedSha256))
@@ -857,17 +934,24 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 }
             }
 
-            foreach (StagedArtifact artifact in _stagedArtifacts)
+            foreach (CommitMutationLease lease in commitLeases)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                StagedArtifact artifact = lease.Artifact;
+                if (File.Exists(artifact.TargetPath) || Directory.Exists(artifact.TargetPath))
+                {
+                    throw new IOException($"The output already exists and will not be overwritten: '{artifact.TargetPath}'.");
+                }
+
+                lease.Guard.MoveLeafTo(artifact.TargetPath);
+                committedArtifacts.Add(lease);
                 if (artifact.IsDirectory)
                 {
-                    Directory.Move(artifact.StagedPath, artifact.TargetPath);
-                    committedArtifacts.Add(artifact);
                     byte[] committedHash = await FolderSnapshotBuilder.ComputeTreeDigestAsync(
                             artifact.TargetPath,
                             _options,
-                            cancellationToken)
+                            cancellationToken,
+                            lease.Guard)
                         .ConfigureAwait(false);
                     if (!CryptographicOperations.FixedTimeEquals(committedHash, artifact.VerifiedSha256!))
                     {
@@ -877,38 +961,49 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 }
                 else
                 {
-                    File.Move(artifact.StagedPath, artifact.TargetPath, overwrite: false);
-                    committedArtifacts.Add(artifact);
+                    byte[] committedHash = await lease.Guard
+                        .ComputeFileSha256Async(cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!CryptographicOperations.FixedTimeEquals(committedHash, artifact.VerifiedSha256!))
+                    {
+                        throw new InvalidDataException(
+                            $"The file artifact changed during commit: '{artifact.TargetPath}'.");
+                    }
                 }
             }
 
-            _committed = true;
-            _journal.Write("commit", "ok", $"artifacts={committedArtifacts.Count}");
             ReleaseSourceLock();
             SafeDeleteWorkspace();
+            _journal.Write("commit", "ok", $"artifacts={committedArtifacts.Count}");
+            _committed = true;
             return;
         }
         catch (Exception exception)
         {
+            _committed = false;
             var withdrawalErrors = new List<string>();
-            foreach (StagedArtifact committed in committedArtifacts)
+            foreach (CommitMutationLease committed in committedArtifacts.AsEnumerable().Reverse())
             {
+                _pendingPublishedArtifacts[committed.Artifact.TargetPath] = committed.Artifact.IsDirectory;
                 try
                 {
-                    if (committed.IsDirectory && Directory.Exists(committed.TargetPath))
+                    if (committed.Artifact.IsDirectory)
                     {
-                        DeleteDirectoryTreeWithoutFollowingReparsePoints(
-                            committed.TargetPath,
-                            committed.TargetPath);
+                        DirectoryMutationGuard.DeleteDirectoryTree(
+                            committed.Artifact.TargetPath,
+                            committed.Artifact.TargetPath,
+                            committed.Guard);
                     }
-                    else if (File.Exists(committed.TargetPath))
+                    else
                     {
-                        File.Delete(committed.TargetPath);
+                        committed.Guard.DeleteLeaf();
                     }
+
+                    _pendingPublishedArtifacts.Remove(committed.Artifact.TargetPath);
                 }
                 catch (Exception withdrawalException) when (withdrawalException is IOException or UnauthorizedAccessException)
                 {
-                    withdrawalErrors.Add($"{committed.TargetPath}: {withdrawalException.Message}");
+                    withdrawalErrors.Add($"{committed.Artifact.TargetPath}: {withdrawalException.Message}");
                 }
             }
 
@@ -920,9 +1015,14 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         }
         finally
         {
-            foreach (FileStream stagedLock in stagedLocks)
+            foreach (CommitMutationLease lease in commitLeases.AsEnumerable().Reverse())
             {
-                stagedLock.Dispose();
+                lease.Guard.Dispose();
+            }
+
+            foreach (DirectoryMutationGuard guard in targetGuards.Values.Reverse())
+            {
+                guard.Dispose();
             }
         }
     }
@@ -937,6 +1037,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
         var errors = new List<string>();
         ReleaseSourceLock();
+        DeletePendingPublishedArtifacts(errors);
         DeleteStagedFiles(errors);
         try
         {
@@ -947,7 +1048,6 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             errors.Add(exception.Message);
         }
 
-        _rolledBack = true;
         _journal.Write(
             "rollback",
             errors.Count == 0 ? "ok" : "partial",
@@ -957,6 +1057,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             throw new IOException($"Rollback did not fully complete: {string.Join(" | ", errors)}");
         }
 
+        _rolledBack = true;
         return Task.CompletedTask;
     }
 
@@ -985,7 +1086,16 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         finally
         {
             _disposed = true;
-            _journal.Write("dispose", "ok");
+            try
+            {
+                _journal.Write("dispose", "ok");
+            }
+            finally
+            {
+                _journal.Dispose();
+                _workspaceGuard?.Dispose();
+                _workspaceGuard = null;
+            }
         }
     }
 
@@ -1004,34 +1114,21 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
     private static async Task ExtractFileAsync(
         ZipArchiveEntry entry,
-        string destinationPath,
+        DirectoryMutationGuard destinationGuard,
         CancellationToken cancellationToken)
     {
         await using Stream source = entry.Open();
-        await using var destination = new FileStream(
-            destinationPath,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: 128 * 1024,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var buffer = new byte[128 * 1024];
-        long written = 0;
-        while (true)
+        long written;
+        try
         {
-            int read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0)
-            {
-                break;
-            }
-
-            written = checked(written + read);
-            if (written > entry.Length)
-            {
-                throw new InvalidDataException($"Archive entry expanded beyond its declared size: '{entry.FullName}'.");
-            }
-
-            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+            written = await destinationGuard.CopyFromStreamAsync(source, entry.Length, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new InvalidDataException(
+                $"Archive entry expanded beyond its declared size: '{entry.FullName}'.",
+                exception);
         }
 
         if (written != entry.Length)
@@ -1209,6 +1306,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         CancellationToken cancellationToken)
     {
         Dictionary<string, byte[]> overrides = _overrides[style];
+        using var extractedRootGuard = DirectoryMutationGuard.OpenDirectoryForMutation(_extractionPath);
         await using (var output = new FileStream(
                          stagedPath,
                          FileMode.CreateNew,
@@ -1237,6 +1335,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                         archive,
                         outputSnapshot,
                         overrideBytes,
+                        _extractionPath,
                         cancellationToken)
                     .ConfigureAwait(false);
                 writtenPaths.Add(outputArchivePath.TrimEnd('/'));
@@ -1257,7 +1356,13 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                     IsDirectory = false,
                     ExtractedPath = string.Empty
                 };
-                await WriteArchiveEntryAsync(archive, added, content, cancellationToken).ConfigureAwait(false);
+                await WriteArchiveEntryAsync(
+                        archive,
+                        added,
+                        content,
+                        _extractionPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
             }
         }
 
@@ -1273,7 +1378,9 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         CancellationToken cancellationToken)
     {
         Dictionary<string, byte[]> overrides = _overrides[style];
+        using var extractedRootGuard = DirectoryMutationGuard.OpenDirectoryForMutation(_extractionPath);
         Directory.CreateDirectory(stagedPath);
+        using var stagedRootGuard = DirectoryMutationGuard.OpenDirectoryForMutation(stagedPath);
         RejectReparsePoint(stagedPath);
         var writtenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var directories = new List<(string Path, ArchiveEntrySnapshot Snapshot)>();
@@ -1295,8 +1402,11 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             string destination = ArchivePathSafety.CombineArchivePath(stagedPath, outputArchivePath);
             if (outputSnapshot.IsDirectory)
             {
-                Directory.CreateDirectory(destination);
-                RejectReparsePoint(destination);
+                using (OpenOrCreateGuardedDirectoryPath(stagedPath, destination))
+                {
+                    // The returned leaf guard is intentionally held until creation has completed.
+                }
+
                 directories.Add((destination, outputSnapshot));
             }
             else
@@ -1308,23 +1418,32 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                         $"Directory package entry has no safe parent: '{outputArchivePath}'.");
                 }
 
-                Directory.CreateDirectory(parent);
-                RejectReparsePoint(parent);
+                using DirectoryMutationGuard? parentGuard = OpenOrCreateGuardedDirectoryPath(stagedPath, parent);
+                using DirectoryMutationGuard destinationGuard =
+                    DirectoryMutationGuard.CreateFileForMutation(destination);
                 if (overrideBytes is null)
                 {
-                    await CopySnapshotFileAsync(
-                            outputSnapshot.ExtractedPath,
-                            destination,
-                            cancellationToken)
+                    string sourceParent = Path.GetDirectoryName(outputSnapshot.ExtractedPath)
+                        ?? throw new InvalidDataException(
+                            $"Extracted package entry has no safe parent: '{outputArchivePath}'.");
+                    using DirectoryMutationGuard? sourceParentGuard =
+                        DirectoryMutationGuard.OpenExistingChildDirectoryForMutation(
+                            _extractionPath,
+                            sourceParent);
+                    using var sourceGuard =
+                        DirectoryMutationGuard.OpenFileForMutation(outputSnapshot.ExtractedPath);
+                    await sourceGuard.CopyFileToAsync(destinationGuard, cancellationToken)
                         .ConfigureAwait(false);
                 }
                 else
                 {
-                    await File.WriteAllBytesAsync(destination, overrideBytes, cancellationToken).ConfigureAwait(false);
+                    await destinationGuard.WriteFileContentsAsync(overrideBytes, cancellationToken)
+                        .ConfigureAwait(false);
                 }
 
-                SetRecoverableFileTimestamp(destination, outputSnapshot.LastWriteTime);
-                SetRecoverableAttributes(destination, outputSnapshot.ExternalAttributes, isDirectory: false);
+                destinationGuard.ApplyLeafMetadata(
+                    outputSnapshot.LastWriteTime,
+                    GetRecoverableAttributes(outputSnapshot.ExternalAttributes));
             }
 
             writtenPaths.Add(outputArchivePath.TrimEnd('/'));
@@ -1347,47 +1466,45 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                     $"Directory package entry has no safe parent: '{archivePath}'.");
             }
 
-            Directory.CreateDirectory(parent);
-            RejectReparsePoint(parent);
-            await File.WriteAllBytesAsync(destination, content, cancellationToken).ConfigureAwait(false);
-            SetRecoverableFileTimestamp(destination, template.LastWriteTime);
-            SetRecoverableAttributes(destination, template.ExternalAttributes, isDirectory: false);
+            using DirectoryMutationGuard? parentGuard = OpenOrCreateGuardedDirectoryPath(stagedPath, parent);
+            using var destinationGuard = DirectoryMutationGuard.CreateFileForMutation(destination);
+            await destinationGuard.WriteFileContentsAsync(content, cancellationToken).ConfigureAwait(false);
+            destinationGuard.ApplyLeafMetadata(
+                template.LastWriteTime,
+                GetRecoverableAttributes(template.ExternalAttributes));
         }
 
         foreach ((string directory, ArchiveEntrySnapshot snapshot) in directories
                      .OrderByDescending(static item => item.Path.Length))
         {
-            SetRecoverableDirectoryTimestamp(directory, snapshot.LastWriteTime);
-            SetRecoverableAttributes(directory, snapshot.ExternalAttributes, isDirectory: true);
+            DirectoryMutationGuard? directoryGuard = OpenOrCreateGuardedDirectoryPath(stagedPath, directory);
+            if (directoryGuard is null)
+            {
+                stagedRootGuard.ApplyLeafMetadata(
+                    snapshot.LastWriteTime,
+                    GetRecoverableAttributes(snapshot.ExternalAttributes));
+                continue;
+            }
+
+            using (directoryGuard)
+            {
+                directoryGuard.ApplyLeafMetadata(
+                    snapshot.LastWriteTime,
+                    GetRecoverableAttributes(snapshot.ExternalAttributes));
+            }
         }
     }
 
-    private static async Task CopySnapshotFileAsync(
-        string sourcePath,
-        string destinationPath,
-        CancellationToken cancellationToken)
-    {
-        await using var source = new FileStream(
-            sourcePath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 128 * 1024,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
-        await using var destination = new FileStream(
-            destinationPath,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: 128 * 1024,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
-        await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
-    }
+    private static DirectoryMutationGuard? OpenOrCreateGuardedDirectoryPath(
+        string guardedRoot,
+        string directory) =>
+        DirectoryMutationGuard.OpenOrCreateChildDirectoryForMutation(guardedRoot, directory);
 
     private static async Task WriteArchiveEntryAsync(
         ZipArchive archive,
         ArchiveEntrySnapshot entry,
         byte[]? overrideBytes,
+        string guardedSourceRoot,
         CancellationToken cancellationToken)
     {
         CompressionLevel level = entry.IsDirectory || entry.Compression == CompressionKind.Stored
@@ -1408,17 +1525,21 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             return;
         }
 
-        await using var source = new FileStream(
-            entry.ExtractedPath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 128 * 1024,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
-        await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
+        string sourceParent = Path.GetDirectoryName(entry.ExtractedPath)
+            ?? throw new InvalidDataException(
+                $"Extracted archive entry has no safe parent: '{entry.ArchivePath}'.");
+        using DirectoryMutationGuard? sourceParentGuard =
+            DirectoryMutationGuard.OpenExistingChildDirectoryForMutation(
+                guardedSourceRoot,
+                sourceParent);
+        using var sourceGuard = DirectoryMutationGuard.OpenFileForMutation(entry.ExtractedPath);
+        _ = await sourceGuard.CopyFileToStreamAsync(target, long.MaxValue, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task<PackageVerification> VerifyStagedPackagesAsync(
+        Dictionary<string, DirectoryMutationGuard> stagedArtifactGuards,
+        Dictionary<string, byte[]> verifiedDirectoryDigests,
         CancellationToken cancellationToken)
     {
         var errors = new List<string>();
@@ -1428,21 +1549,52 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         {
             cancellationToken.ThrowIfCancellationRequested();
             ArchiveScanManifest rebuilt;
+            FolderSnapshotBuilder.FolderSnapshotResult? snapshotResult = null;
+            string scanPath = artifact.StagedPath;
             try
             {
-                string scanPath = artifact.StagedPath;
                 if (artifact.IsDirectory)
                 {
                     scanPath = Path.Combine(
                         _workspacePath,
                         $"verify-{artifact.Style.ToString().ToLowerInvariant()}.zip");
                     ArchivePathSafety.EnsureChildPath(_workspacePath, scanPath);
-                    await FolderSnapshotBuilder.CreateSnapshotZipAsync(
+                    snapshotResult = await FolderSnapshotBuilder.CreateSnapshotZipAsync(
                             artifact.StagedPath,
                             scanPath,
                             _options,
-                            cancellationToken)
+                            cancellationToken,
+                            stagedArtifactGuards[artifact.StagedPath])
                         .ConfigureAwait(false);
+                }
+
+            }
+            catch (Exception exception)
+            {
+                validArchive = false;
+                errors.Add($"{artifact.Style}: staged ZIP scan failed: {exception.Message}");
+                continue;
+            }
+
+            using DirectoryMutationGuard? snapshotGuard = artifact.IsDirectory
+                ? DirectoryMutationGuard.OpenFileForTraversal(scanPath)
+                : null;
+            DirectoryMutationGuard verificationGuard =
+                snapshotGuard ?? stagedArtifactGuards[artifact.StagedPath];
+            try
+            {
+                if (snapshotResult is not null)
+                {
+                    byte[] currentSnapshotHash = await verificationGuard
+                        .ComputeFileSha256Async(cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!CryptographicOperations.FixedTimeEquals(
+                            snapshotResult.SnapshotSha256,
+                            currentSnapshotHash))
+                    {
+                        throw new InvalidDataException(
+                            "The directory verification snapshot changed before scanning.");
+                    }
                 }
 
                 rebuilt = _scanner.ScanArchive(scanPath);
@@ -1494,7 +1646,14 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
             try
             {
-                await VerifyStagedExternalizationAsync(artifact, cancellationToken).ConfigureAwait(false);
+                StagedArtifact verificationArtifact = artifact.IsDirectory
+                    ? artifact with { StagedPath = scanPath, IsDirectory = false }
+                    : artifact;
+                await VerifyStagedExternalizationAsync(
+                        verificationArtifact,
+                        verificationGuard,
+                        cancellationToken)
+                    .ConfigureAwait(false);
             }
             catch (Exception exception) when (
                 exception is InvalidDataException or IOException or UnauthorizedAccessException)
@@ -1508,6 +1667,25 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             {
                 errors.Add($"{artifact.Style}: signature files remain in the requested unsigned copy.");
             }
+
+            if (artifact.IsDirectory && snapshotResult is not null)
+            {
+                byte[] currentDigest = await FolderSnapshotBuilder.ComputeTreeDigestAsync(
+                        artifact.StagedPath,
+                        _options,
+                        cancellationToken,
+                        stagedArtifactGuards[artifact.StagedPath])
+                    .ConfigureAwait(false);
+                if (!CryptographicOperations.FixedTimeEquals(snapshotResult.TreeSha256, currentDigest))
+                {
+                    validArchive = false;
+                    errors.Add($"{artifact.Style}: staged directory changed after its verification snapshot.");
+                }
+                else
+                {
+                    verifiedDirectoryDigests.Add(artifact.StagedPath, snapshotResult.TreeSha256);
+                }
+            }
         }
 
         IReadOnlyList<PackageArtifact> artifacts = _stagedArtifacts
@@ -1518,6 +1696,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
     private async Task VerifyStagedExternalizationAsync(
         StagedArtifact artifact,
+        DirectoryMutationGuard artifactGuard,
         CancellationToken cancellationToken)
     {
         foreach ((string classArchivePath, IReadOnlyList<ClassFileRewriteSelection> selections) in _appliedClassRewrites)
@@ -1525,6 +1704,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             cancellationToken.ThrowIfCancellationRequested();
             byte[] classBytes = await ReadStagedEntryBytesAsync(
                     artifact,
+                    artifactGuard,
                     classArchivePath,
                     MaximumClassFileBytes,
                     cancellationToken)
@@ -1538,6 +1718,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         {
             byte[] targetBytes = await ReadStagedEntryBytesAsync(
                     artifact,
+                    artifactGuard,
                     group.Key,
                     MaximumTextResourceBytes,
                     cancellationToken)
@@ -1561,6 +1742,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         {
             byte[] fallbackBytes = await ReadStagedEntryBytesAsync(
                     artifact,
+                    artifactGuard,
                     group.Key,
                     MaximumTextResourceBytes,
                     cancellationToken)
@@ -1582,6 +1764,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
     private static async Task<byte[]> ReadStagedEntryBytesAsync(
         StagedArtifact artifact,
+        DirectoryMutationGuard artifactGuard,
         string archivePath,
         int maximumBytes,
         CancellationToken cancellationToken)
@@ -1589,19 +1772,24 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         if (artifact.IsDirectory)
         {
             string path = ArchivePathSafety.CombineArchivePath(artifact.StagedPath, archivePath);
-            if (!File.Exists(path))
-            {
-                throw new InvalidDataException($"Staged directory is missing '{archivePath}'.");
-            }
-
-            RejectReparsePoint(path);
-            var info = new FileInfo(path);
-            if (info.Length > maximumBytes)
+            artifactGuard.EnsurePinsDirectory(artifact.StagedPath);
+            string parent = Path.GetDirectoryName(path)
+                ?? throw new InvalidDataException($"Staged entry has no safe parent: '{archivePath}'.");
+            using DirectoryMutationGuard? parentGuard =
+                DirectoryMutationGuard.OpenExistingChildDirectoryForMutation(
+                    artifact.StagedPath,
+                    parent);
+            using var fileGuard = DirectoryMutationGuard.OpenFileForMutation(path);
+            using var content = new MemoryStream(capacity: Math.Min(maximumBytes, 64 * 1024));
+            (long length, _) = await fileGuard
+                .CopyFileToStreamAsync(content, maximumBytes, cancellationToken)
+                .ConfigureAwait(false);
+            if (length > int.MaxValue)
             {
                 throw new InvalidDataException($"Staged entry '{archivePath}' exceeds the verification size limit.");
             }
 
-            return await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
+            return content.ToArray();
         }
 
         await using var stream = new FileStream(
@@ -1862,7 +2050,25 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             throw new IOException("The transaction workspace became a reparse point and will not be recursively deleted.");
         }
 
-        DeleteDirectoryTreeWithoutFollowingReparsePoints(_workspacePath, _workspacePath);
+        DirectoryMutationGuard? workspaceGuard = _workspaceGuard;
+        _workspaceGuard = null;
+        if (workspaceGuard is null)
+        {
+            DeleteDirectoryTreeWithoutFollowingReparsePoints(_workspacePath, _workspacePath);
+            return;
+        }
+
+        try
+        {
+            DirectoryMutationGuard.DeleteDirectoryTree(
+                _workspacePath,
+                _workspacePath,
+                workspaceGuard);
+        }
+        finally
+        {
+            workspaceGuard.Dispose();
+        }
     }
 
     private static void DeleteDirectoryTreeWithoutFollowingReparsePoints(string root, string directory)
@@ -1874,32 +2080,8 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         {
             ArchivePathSafety.EnsureChildPath(root, directory);
         }
-        foreach (string child in Directory.EnumerateFileSystemEntries(directory))
-        {
-            ArchivePathSafety.EnsureChildPath(root, child);
-            FileAttributes attributes = File.GetAttributes(child);
-            if ((attributes & FileAttributes.ReadOnly) != 0)
-            {
-                File.SetAttributes(child, attributes & ~FileAttributes.ReadOnly);
-                attributes &= ~FileAttributes.ReadOnly;
-            }
 
-            if ((attributes & FileAttributes.Directory) != 0 &&
-                (attributes & FileAttributes.ReparsePoint) == 0)
-            {
-                DeleteDirectoryTreeWithoutFollowingReparsePoints(root, child);
-            }
-            else if ((attributes & FileAttributes.Directory) != 0)
-            {
-                Directory.Delete(child, recursive: false);
-            }
-            else
-            {
-                File.Delete(child);
-            }
-        }
-
-        Directory.Delete(directory, recursive: false);
+        DirectoryMutationGuard.DeleteDirectoryTree(directory);
     }
 
     private void DeleteStagedFiles(List<string> errors)
@@ -1916,12 +2098,63 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 }
                 else if (File.Exists(artifact.StagedPath))
                 {
-                    File.Delete(artifact.StagedPath);
+                    var stagedDirectory = Path.GetDirectoryName(artifact.StagedPath)
+                        ?? throw new InvalidOperationException("The staged artifact has no parent directory.");
+                    using var parentGuard = DirectoryMutationGuard.OpenAncestry(stagedDirectory);
+                    using var fileGuard = DirectoryMutationGuard.OpenFileForMutation(artifact.StagedPath);
+                    fileGuard.DeleteLeaf();
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 errors.Add($"{artifact.StagedPath}: {exception.Message}");
+            }
+        }
+    }
+
+    private void DeletePendingPublishedArtifacts(List<string> errors)
+    {
+        foreach ((string targetPath, bool isDirectory) in _pendingPublishedArtifacts.ToArray())
+        {
+            try
+            {
+                if (isDirectory)
+                {
+                    if (File.Exists(targetPath))
+                    {
+                        throw new IOException(
+                            $"The pending directory output changed into a file: '{targetPath}'.");
+                    }
+
+                    if (Directory.Exists(targetPath))
+                    {
+                        DeleteDirectoryTreeWithoutFollowingReparsePoints(targetPath, targetPath);
+                    }
+                }
+                else
+                {
+                    if (Directory.Exists(targetPath))
+                    {
+                        throw new IOException(
+                            $"The pending file output changed into a directory: '{targetPath}'.");
+                    }
+
+                    if (File.Exists(targetPath))
+                    {
+                        string parent = Path.GetDirectoryName(targetPath)
+                            ?? throw new InvalidOperationException(
+                                "The pending published artifact has no parent directory.");
+                        using var parentGuard = DirectoryMutationGuard.OpenAncestry(parent);
+                        using var fileGuard = DirectoryMutationGuard.OpenFileForMutation(targetPath);
+                        fileGuard.DeleteLeaf();
+                    }
+                }
+
+                _pendingPublishedArtifacts.Remove(targetPath);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                errors.Add($"{targetPath}: {exception.Message}");
             }
         }
     }
@@ -1973,54 +2206,14 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
     private static bool IsUnixSymbolicLink(uint unixMode) => (unixMode & 0xF000) == 0xA000;
 
-    private static void SetRecoverableFileTimestamp(string path, DateTimeOffset timestamp)
-    {
-        try
-        {
-            File.SetLastWriteTimeUtc(path, timestamp.UtcDateTime);
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            // The exact ZIP timestamp remains in ArchiveEntrySnapshot for repacking.
-        }
-    }
-
-    private static void SetRecoverableDirectoryTimestamp(string path, DateTimeOffset timestamp)
-    {
-        try
-        {
-            Directory.SetLastWriteTimeUtc(path, timestamp.UtcDateTime);
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            // The exact ZIP timestamp remains in ArchiveEntrySnapshot for repacking.
-        }
-    }
-
-    private static void SetRecoverableAttributes(
-        string path,
-        int externalAttributes,
-        bool isDirectory)
+    private static FileAttributes GetRecoverableAttributes(int externalAttributes)
     {
         const FileAttributes restorable = FileAttributes.Archive |
             FileAttributes.Hidden |
             FileAttributes.NotContentIndexed |
             FileAttributes.ReadOnly |
             FileAttributes.System;
-        FileAttributes attributes = (FileAttributes)(externalAttributes & (int)restorable);
-        if (isDirectory)
-        {
-            attributes |= FileAttributes.Directory;
-        }
-
-        try
-        {
-            File.SetAttributes(path, attributes);
-        }
-        catch (ArgumentException)
-        {
-            // ZIP metadata remains authoritative when a filesystem cannot apply an attribute.
-        }
+        return (FileAttributes)(externalAttributes & (int)restorable);
     }
 
     private static DateTimeOffset ClampZipTimestamp(DateTimeOffset timestamp)
@@ -2041,6 +2234,10 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         string TargetPath,
         bool IsDirectory,
         byte[]? VerifiedSha256 = null);
+
+    private sealed record CommitMutationLease(
+        StagedArtifact Artifact,
+        DirectoryMutationGuard Guard);
 
     private static async Task<byte[]> ComputeFileHashAsync(
         string path,

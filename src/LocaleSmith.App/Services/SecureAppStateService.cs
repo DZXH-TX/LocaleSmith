@@ -108,6 +108,10 @@ public sealed partial class SecureAppStateService :
         {
             Directory.CreateDirectory(normalized.SandboxPath);
         }
+        if (!string.IsNullOrWhiteSpace(normalized.LogDirectoryPath))
+        {
+            Directory.CreateDirectory(normalized.LogDirectoryPath);
+        }
         ModelSelectionStateChangedEventArgs? selectionStateChanged = null;
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -121,6 +125,42 @@ public sealed partial class SecureAppStateService :
         {
             _gate.Release();
             PublishModelSelectionState(selectionStateChanged);
+        }
+    }
+
+    public async Task SaveSettingsAsync(
+        AppSettingsUpdate settings,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        var workspacePath = EnsureUserDirectoryAllowed(settings.WorkspacePath, nameof(settings));
+        var sandboxPath = EnsureUserDirectoryAllowed(settings.SandboxPath, nameof(settings));
+        Directory.CreateDirectory(sandboxPath);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var logDirectoryPath = EnsureLogDirectoryAllowed(
+                settings.LogDirectoryPath ?? _configuration.LogDirectoryPath,
+                nameof(settings));
+            Directory.CreateDirectory(logDirectoryPath);
+            var updated = _configuration with
+            {
+                Language = settings.Language,
+                Theme = settings.Theme,
+                ForceAppAnimations = settings.ForceAppAnimations,
+                WorkspacePath = workspacePath,
+                SandboxPath = sandboxPath,
+                LogDirectoryPath = logDirectoryPath
+            };
+            ValidateConfiguration(updated);
+            await _configurationStore.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
+            _configuration = updated with { ModelSources = updated.ModelSources.ToArray() };
+            ApplySandboxRoots(_configuration);
+        }
+        finally
+        {
+            _gate.Release();
         }
     }
 
@@ -170,8 +210,12 @@ public sealed partial class SecureAppStateService :
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
         var workspace = EnsureUserDirectoryAllowed(submission.WorkspacePath, nameof(submission));
         var sandbox = EnsureUserDirectoryAllowed(submission.SandboxPath, nameof(submission));
+        var logDirectory = EnsureLogDirectoryAllowed(
+            submission.LogDirectoryPath ?? AppConfiguration.GetDefaultLogDirectoryPath(),
+            nameof(submission));
         Directory.CreateDirectory(workspace);
         Directory.CreateDirectory(sandbox);
+        Directory.CreateDirectory(logDirectory);
 
         ModelSelectionStateChangedEventArgs? selectionStateChanged = null;
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -227,6 +271,7 @@ public sealed partial class SecureAppStateService :
                 IsOnboardingComplete = true,
                 WorkspacePath = workspace,
                 SandboxPath = sandbox,
+                LogDirectoryPath = logDirectory,
                 SelectedModelSourceId = selectedId,
                 ModelSources = sources.ToArray()
             };
@@ -638,7 +683,8 @@ public sealed partial class SecureAppStateService :
             var service = CreateModelService(profile, resolver);
             var response = await service.CompleteAsync(
                 new ModelRequest(
-                    [new ModelMessage(ModelMessageRole.User, "Reply only with OK.")]),
+                    [new ModelMessage(ModelMessageRole.User, "Reply only with OK.")],
+                    maxTokens: 64),
                 cancellationToken).ConfigureAwait(false);
             return string.IsNullOrWhiteSpace(response.Content)
                 ? ModelConnectionResult.Failure("The service responded without text. Check the model name.")
@@ -851,13 +897,16 @@ public sealed partial class SecureAppStateService :
         if (configuration.IsOnboardingComplete)
         {
             if (string.IsNullOrWhiteSpace(configuration.WorkspacePath) ||
-                string.IsNullOrWhiteSpace(configuration.SandboxPath))
+                string.IsNullOrWhiteSpace(configuration.SandboxPath) ||
+                string.IsNullOrWhiteSpace(configuration.LogDirectoryPath))
             {
-                throw new InvalidDataException("Completed settings require workspace and sandbox paths.");
+                throw new InvalidDataException(
+                    "Completed settings require workspace, sandbox, and log directory paths.");
             }
 
             _ = EnsureUserDirectoryAllowed(configuration.WorkspacePath, nameof(configuration));
             _ = EnsureUserDirectoryAllowed(configuration.SandboxPath, nameof(configuration));
+            _ = EnsureLogDirectoryAllowed(configuration.LogDirectoryPath, nameof(configuration));
         }
     }
 
@@ -869,6 +918,9 @@ public sealed partial class SecureAppStateService :
         SandboxPath = string.IsNullOrWhiteSpace(configuration.SandboxPath)
             ? string.Empty
             : EnsureUserDirectoryAllowed(configuration.SandboxPath, nameof(configuration)),
+        LogDirectoryPath = string.IsNullOrWhiteSpace(configuration.LogDirectoryPath)
+            ? AppConfiguration.GetDefaultLogDirectoryPath()
+            : EnsureLogDirectoryAllowed(configuration.LogDirectoryPath, nameof(configuration)),
         ModelSources = configuration.ModelSources.ToArray()
     };
 
@@ -906,12 +958,12 @@ public sealed partial class SecureAppStateService :
                 Path.TrimEndingDirectorySeparator(root),
                 StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("A drive root cannot be used as a workspace or sandbox.", parameterName);
+            throw new ArgumentException("A drive root cannot be used as an application data directory.", parameterName);
         }
 
         if (File.Exists(fullPath))
         {
-            throw new ArgumentException("Workspace and sandbox paths must be directories.", parameterName);
+            throw new ArgumentException("Application data paths must be directories.", parameterName);
         }
 
         var protectedRoots = new[]
@@ -942,6 +994,10 @@ public sealed partial class SecureAppStateService :
 
         return fullPath;
     }
+
+    private static string EnsureLogDirectoryAllowed(string path, string parameterName) =>
+        AppConfiguration.NormalizeLogDirectoryPath(
+            EnsureUserDirectoryAllowed(path, parameterName));
 
     private static bool IsWithin(string candidate, string root)
     {

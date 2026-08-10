@@ -213,7 +213,7 @@ public sealed class SafeSubsetExternalizationPipelineTests
                 cancellationToken: TestContext.Current.CancellationToken));
 
         Assert.Equal(PipelineStage.Verifying, exception.FailedStage);
-        Assert.Contains("safe-subset", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("staged ZIP scan failed", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.False(File.Exists(request.OutputPath));
         Assert.False(Directory.Exists(Path.Combine(
             Path.GetTempPath(),

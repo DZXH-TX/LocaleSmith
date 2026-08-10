@@ -9,7 +9,13 @@ public enum OpenAiTokenLimitParameter
     MaxTokens,
 
     [JsonStringEnumMemberName("max_completion_tokens")]
-    MaxCompletionTokens
+    MaxCompletionTokens,
+
+    /// <summary>
+    /// Do not send a completion-token limit field. The provider or model applies its own default.
+    /// </summary>
+    [JsonStringEnumMemberName("omit")]
+    Omit
 }
 
 /// <summary>
@@ -72,7 +78,7 @@ public static class ModelProviderPresets
         "MiniMax",
         ModelProviderKind.OpenAiCompatible,
         new Uri("https://api.minimax.io/v1"),
-        "MiniMax-M3",
+        "MiniMax-M2.7",
         new Uri("https://platform.minimax.io/docs/api-reference/text-openai-api"),
         OpenAiTokenLimitParameter.MaxCompletionTokens);
 

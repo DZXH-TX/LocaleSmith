@@ -39,7 +39,7 @@ public sealed class PipelineJobScheduler : IPipelineJobScheduler
             Volatile.Read(ref _disposeState) != 0,
             this);
 
-        var item = new QueueItem(Guid.NewGuid(), request, cancellationToken);
+        var item = new QueueItem(request.RequestedJobId ?? Guid.NewGuid(), request, cancellationToken);
         try
         {
             await _channel.Writer.WriteAsync(item, cancellationToken).ConfigureAwait(false);

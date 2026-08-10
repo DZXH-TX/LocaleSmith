@@ -76,7 +76,7 @@ public sealed record ModelSource
     /// <summary>Editable provider-default metadata; transport remains selected by <see cref="Provider"/>.</summary>
     public string PresetId { get; }
 
-    /// <summary>The request field used when a completion token limit is supplied.</summary>
+    /// <summary>The request field used for a completion limit, or <c>Omit</c> to use the provider default.</summary>
     public OpenAiTokenLimitParameter TokenLimitParameter { get; }
 
     /// <summary>Whether the selected preset's default model accepts caller-selected sampling temperature.</summary>

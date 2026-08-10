@@ -1,11 +1,12 @@
-using LocaleSmith.App.Dialogs;
 using LocaleSmith.App.Services;
 using LocaleSmith.Presentation.Models;
 using LocaleSmith.Presentation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.Globalization;
+using Microsoft.Windows.Globalization;
+using Windows.Storage.Pickers;
+using WinRT.Interop;
 
 namespace LocaleSmith.App.Pages;
 
@@ -14,7 +15,6 @@ public sealed partial class SettingsPage : Page
     private SettingsViewModel ViewModel { get; }
     private bool _loaded;
     private bool _loading;
-    private bool _confirmationSubscribed;
 
     public SettingsPage()
     {
@@ -22,17 +22,10 @@ public sealed partial class SettingsPage : Page
         ViewModel = App.Services.GetRequiredService<SettingsViewModel>();
         DataContext = ViewModel;
         Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs args)
     {
-        if (!_confirmationSubscribed)
-        {
-            ViewModel.CliConfirmationRequested += OnCliConfirmationRequested;
-            _confirmationSubscribed = true;
-        }
-
         if (_loaded || _loading)
         {
             return;
@@ -60,15 +53,6 @@ public sealed partial class SettingsPage : Page
         }
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs args)
-    {
-        if (_confirmationSubscribed)
-        {
-            ViewModel.CliConfirmationRequested -= OnCliConfirmationRequested;
-            _confirmationSubscribed = false;
-        }
-    }
-
     private void OnForceAppAnimationsToggled(object sender, RoutedEventArgs args)
     {
         if (_loaded && sender is ToggleSwitch toggle)
@@ -91,21 +75,22 @@ public sealed partial class SettingsPage : Page
             .SetForceAppAnimations(forceAppAnimations);
     }
 
-    private async void OnCliConfirmationRequested(
-        object? sender,
-        CliConfirmationRequestedEventArgs args)
+    private async void OnBrowseLogDirectoryClicked(object sender, RoutedEventArgs args)
     {
-        var dialog = new CliConfirmationDialog(args.Confirmation)
+        var picker = new FolderPicker
         {
-            XamlRoot = XamlRoot
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary
         };
-        try
+        picker.FileTypeFilter.Add("*");
+        InitializeWithWindow.Initialize(picker, GetWindowHandle());
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is not null)
         {
-            await dialog.ShowAsync();
-        }
-        finally
-        {
-            args.Confirmation.Dispose();
+            ViewModel.LogDirectoryPath = folder.Path;
         }
     }
+
+    private static nint GetWindowHandle() => App.MainWindow is null
+        ? throw new InvalidOperationException("The main window is unavailable.")
+        : WindowNative.GetWindowHandle(App.MainWindow);
 }

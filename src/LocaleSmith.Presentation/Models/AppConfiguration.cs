@@ -41,7 +41,57 @@ public sealed record ModelSourceProfile
 
 public sealed record AppConfiguration
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 3;
+
+    public static string GetDefaultLogDirectoryPath()
+    {
+        var localApplicationData = System.Environment.GetFolderPath(
+            System.Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localApplicationData))
+        {
+            throw new InvalidOperationException("The per-user application-data directory is unavailable.");
+        }
+
+        return Path.Combine(localApplicationData, "LocaleSmith", "logs", "translations");
+    }
+
+    public static string NormalizeLogDirectoryPath(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var fullPath = Path.GetFullPath(path);
+        var root = Path.GetPathRoot(fullPath)
+            ?? throw new ArgumentException("The log directory does not have a filesystem root.", nameof(path));
+        if (string.Equals(
+                Path.TrimEndingDirectorySeparator(fullPath),
+                Path.TrimEndingDirectorySeparator(root),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("A drive root cannot be used as the translation log directory.", nameof(path));
+        }
+
+        if (OperatingSystem.IsWindows() &&
+            (fullPath.StartsWith(@"\\", StringComparison.Ordinal) ||
+             new DriveInfo(root).DriveType == DriveType.Network))
+        {
+            throw new ArgumentException(
+                "Translation logs require a local directory so an unavailable network share cannot stall diagnostics.",
+                nameof(path));
+        }
+
+        return Path.TrimEndingDirectorySeparator(fullPath);
+    }
+
+    public static string GetDefaultSandboxPath()
+    {
+        var localApplicationData = System.Environment.GetFolderPath(
+            System.Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localApplicationData))
+        {
+            throw new InvalidOperationException("The per-user application-data directory is unavailable.");
+        }
+
+        return Path.Combine(localApplicationData, "LocaleSmith", "CliSandbox");
+    }
 
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
 
@@ -49,10 +99,13 @@ public sealed record AppConfiguration
 
     public string WorkspacePath { get; init; } = string.Empty;
 
-    public string SandboxPath { get; init; } = Path.Combine(
-        Path.GetTempPath(),
-        "LocaleSmith",
-        "Sandbox");
+    public string SandboxPath { get; init; } = GetDefaultSandboxPath();
+
+    /// <summary>
+    /// Directory containing per-translation diagnostic logs. Pre-schema-2 settings are upgraded
+    /// at startup so migrations can choose the correct target-root default.
+    /// </summary>
+    public string LogDirectoryPath { get; init; } = GetDefaultLogDirectoryPath();
 
     public string Language { get; init; } = "zh-CN";
 
@@ -69,6 +122,18 @@ public sealed record AppConfiguration
     public IReadOnlyList<ModelSourceProfile> ModelSources { get; init; } = [];
 }
 
+/// <summary>
+/// The non-secret settings edited by the settings page. Model-source credentials and catalog state
+/// are deliberately excluded so a stale page cannot overwrite a newer model-source transaction.
+/// </summary>
+public sealed record AppSettingsUpdate(
+    string Language,
+    AppThemePreference Theme,
+    bool ForceAppAnimations,
+    string WorkspacePath,
+    string SandboxPath,
+    string? LogDirectoryPath = null);
+
 public sealed record OnboardingSubmission(
     string WorkspacePath,
     string SandboxPath,
@@ -79,7 +144,8 @@ public sealed record OnboardingSubmission(
     Uri? NetworkEndpoint = null,
     string? NetworkModelName = null,
     ReadOnlyMemory<char> NetworkApiKey = default,
-    OpenAiTokenLimitParameter? NetworkTokenLimitParameter = null);
+    OpenAiTokenLimitParameter? NetworkTokenLimitParameter = null,
+    string? LogDirectoryPath = null);
 
 public sealed record ModelSourceDraft(
     string? Id,
@@ -104,5 +170,6 @@ public enum ShellSection
     Dashboard,
     Assistant,
     ModelSources,
+    Logs,
     Settings
 }

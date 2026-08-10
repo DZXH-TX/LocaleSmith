@@ -17,7 +17,8 @@ public sealed class OnboardingViewModel : ViewModelBase
     private string _workspacePath = Path.Combine(
         System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments),
         "LocaleSmith");
-    private string _sandboxPath = Path.Combine(Path.GetTempPath(), "LocaleSmith", "Sandbox");
+    private string _sandboxPath = AppConfiguration.GetDefaultSandboxPath();
+    private string _logDirectoryPath = AppConfiguration.GetDefaultLogDirectoryPath();
     private bool _configureOllama = true;
     private string _ollamaEndpoint = "http://127.0.0.1:11434";
     private string _ollamaModelName = "llama3";
@@ -36,6 +37,14 @@ public sealed class OnboardingViewModel : ViewModelBase
     {
         _onboardingService = onboardingService ?? throw new ArgumentNullException(nameof(onboardingService));
         _text = text ?? FallbackUiTextProvider.Instance;
+        NetworkTokenLimitParameterOptions =
+        [
+            new(
+                OpenAiTokenLimitParameter.Omit,
+                Text("ModelSourceTokenLimitParameterOmitOption", "Provider default (do not send)")),
+            new(OpenAiTokenLimitParameter.MaxTokens, "max_tokens"),
+            new(OpenAiTokenLimitParameter.MaxCompletionTokens, "max_completion_tokens")
+        ];
         BackCommand = new RelayCommand(Back, () => CurrentStep > 0 && !IsBusy);
         NextCommand = new RelayCommand(Next, () => CurrentStep < StepCount - 1 && !IsBusy);
         SkipModelSetupCommand = new RelayCommand(SkipModelSetup, () => CurrentStep == 2 && !IsBusy);
@@ -92,11 +101,7 @@ public sealed class OnboardingViewModel : ViewModelBase
 
     public IReadOnlyList<ModelProviderPreset> NetworkPresetOptions { get; } = ModelProviderPresets.All;
 
-    public IReadOnlyList<TokenLimitParameterOption> NetworkTokenLimitParameterOptions { get; } =
-    [
-        new(OpenAiTokenLimitParameter.MaxTokens, "max_tokens"),
-        new(OpenAiTokenLimitParameter.MaxCompletionTokens, "max_completion_tokens")
-    ];
+    public IReadOnlyList<TokenLimitParameterOption> NetworkTokenLimitParameterOptions { get; }
 
     public OnboardingModelPath SelectedModelPath
     {
@@ -128,6 +133,12 @@ public sealed class OnboardingViewModel : ViewModelBase
     {
         get => _sandboxPath;
         set => SetProperty(ref _sandboxPath, value);
+    }
+
+    public string LogDirectoryPath
+    {
+        get => _logDirectoryPath;
+        set => SetProperty(ref _logDirectoryPath, value);
     }
 
     public bool ConfigureOllama
@@ -184,9 +195,22 @@ public sealed class OnboardingViewModel : ViewModelBase
                 return;
             }
 
+            OnPropertyChanged(nameof(SelectedNetworkPresetId));
             NetworkEndpoint = value.DefaultEndpoint?.AbsoluteUri ?? string.Empty;
             NetworkModelName = value.DefaultModelName ?? string.Empty;
             NetworkTokenLimitParameter = value.DefaultTokenLimitParameter;
+        }
+    }
+
+    public string SelectedNetworkPresetId
+    {
+        get => SelectedNetworkPreset.Id;
+        set
+        {
+            if (ModelProviderPresets.TryGet(value, out var preset))
+            {
+                SelectedNetworkPreset = preset;
+            }
         }
     }
 
@@ -205,7 +229,25 @@ public sealed class OnboardingViewModel : ViewModelBase
     public OpenAiTokenLimitParameter NetworkTokenLimitParameter
     {
         get => _networkTokenLimitParameter;
-        set => SetProperty(ref _networkTokenLimitParameter, value);
+        set
+        {
+            if (SetProperty(ref _networkTokenLimitParameter, value))
+            {
+                OnPropertyChanged(nameof(NetworkTokenLimitParameterOption));
+            }
+        }
+    }
+
+    public TokenLimitParameterOption NetworkTokenLimitParameterOption
+    {
+        get => NetworkTokenLimitParameterOptions.First(option => option.Value == NetworkTokenLimitParameter);
+        set
+        {
+            if (value is not null)
+            {
+                NetworkTokenLimitParameter = value.Value;
+            }
+        }
     }
 
     public void SelectModelPath(OnboardingModelPath path)
@@ -290,7 +332,8 @@ public sealed class OnboardingViewModel : ViewModelBase
                     : null,
                 IsNetworkModelPath && ConfigureNetworkProvider ? NetworkModelName.Trim() : null,
                 networkSecret is null ? ReadOnlyMemory<char>.Empty : networkSecret.AsMemory(),
-                IsNetworkModelPath && ConfigureNetworkProvider ? NetworkTokenLimitParameter : null);
+                IsNetworkModelPath && ConfigureNetworkProvider ? NetworkTokenLimitParameter : null,
+                AppConfiguration.NormalizeLogDirectoryPath(LogDirectoryPath));
             await _onboardingService.CompleteAsync(submission).ConfigureAwait(true);
             StatusMessage = Text("OnboardingComplete", "Setup complete.");
             completed = true;
@@ -333,9 +376,13 @@ public sealed class OnboardingViewModel : ViewModelBase
 
     private bool ValidatePaths()
     {
-        if (string.IsNullOrWhiteSpace(WorkspacePath) || string.IsNullOrWhiteSpace(SandboxPath))
+        if (string.IsNullOrWhiteSpace(WorkspacePath) ||
+            string.IsNullOrWhiteSpace(SandboxPath) ||
+            string.IsNullOrWhiteSpace(LogDirectoryPath))
         {
-            ErrorMessage = Text("OnboardingPathsRequired", "Workspace and sandbox paths are required.");
+            ErrorMessage = Text(
+                "OnboardingPathsRequired",
+                "Workspace, sandbox, and log directory paths are required.");
             return false;
         }
 
@@ -343,11 +390,14 @@ public sealed class OnboardingViewModel : ViewModelBase
         {
             _ = Path.GetFullPath(WorkspacePath);
             _ = Path.GetFullPath(SandboxPath);
+            _ = AppConfiguration.NormalizeLogDirectoryPath(LogDirectoryPath);
             return true;
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            ErrorMessage = Text("OnboardingPathsInvalid", "Workspace or sandbox path is invalid.");
+            ErrorMessage = Text(
+                "OnboardingPathsInvalid",
+                "Workspace, sandbox, or log directory path is invalid.");
             return false;
         }
     }

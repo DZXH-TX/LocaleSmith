@@ -5,6 +5,14 @@ namespace LocaleSmith.Core.Tests;
 public sealed class ModelProviderPresetTests
 {
     [Fact]
+    public void OmitTokenOptionIsAppendedWithoutChangingPersistedEnumValues()
+    {
+        Assert.Equal(0, (int)OpenAiTokenLimitParameter.MaxTokens);
+        Assert.Equal(1, (int)OpenAiTokenLimitParameter.MaxCompletionTokens);
+        Assert.Equal(2, (int)OpenAiTokenLimitParameter.Omit);
+    }
+
+    [Fact]
     public void NetworkPresetsShareOpenAiCompatibleProtocolAndKeepEditableDefaults()
     {
         var expectedIds = new[]
@@ -28,7 +36,7 @@ public sealed class ModelProviderPresetTests
         Assert.Equal("deepseek-v4-pro", ModelProviderPresets.DeepSeek.DefaultModelName);
         Assert.Equal("qwen-plus", ModelProviderPresets.Qwen.DefaultModelName);
         Assert.Equal("mimo-v2.5-pro", ModelProviderPresets.XiaomiMimo.DefaultModelName);
-        Assert.Equal("MiniMax-M3", ModelProviderPresets.MiniMax.DefaultModelName);
+        Assert.Equal("MiniMax-M2.7", ModelProviderPresets.MiniMax.DefaultModelName);
         Assert.Equal("https://ark.cn-beijing.volces.com/api/v3", ModelProviderPresets.Doubao.DefaultEndpoint?.AbsoluteUri.TrimEnd('/'));
         Assert.Equal("doubao-seed-2-0-lite-260215", ModelProviderPresets.Doubao.DefaultModelName);
         Assert.Equal("glm-5.2", ModelProviderPresets.ZhipuGlm.DefaultModelName);

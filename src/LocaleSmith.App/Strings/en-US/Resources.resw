@@ -7,6 +7,7 @@
   <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>LocaleSmith</value></data>
   <data name="DashboardNavigationItem.Content" xml:space="preserve"><value>Processing queue</value></data>
   <data name="ModelSourcesNavigationItem.Content" xml:space="preserve"><value>Model sources</value></data>
+  <data name="LogsNavigationItem.Content" xml:space="preserve"><value>Logs</value></data>
   <data name="StartupErrorTitle.Text" xml:space="preserve"><value>The app could not start securely</value></data>
   <data name="OnboardingStepPrefix.Text" xml:space="preserve"><value>Step</value></data>
   <data name="OnboardingStepSuffix.Text" xml:space="preserve"><value>of 4</value></data>
@@ -32,6 +33,11 @@
   <data name="SandboxPathInput.Header" xml:space="preserve"><value>CLI sandbox directory</value></data>
   <data name="SandboxPathInput.AutomationProperties.Name" xml:space="preserve"><value>CLI sandbox directory path</value></data>
   <data name="SandboxHelp.Text" xml:space="preserve"><value>Drive roots, Windows, Program Files, symbolic links, and junction paths are blocked.</value></data>
+  <data name="OnboardingLogDirectoryPath.Header" xml:space="preserve"><value>Translation log directory</value></data>
+  <data name="OnboardingLogDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>Translation log storage directory path</value></data>
+  <data name="OnboardingBrowseLogDirectoryButton.Content" xml:space="preserve"><value>Browse…</value></data>
+  <data name="OnboardingBrowseLogDirectoryButton.AutomationProperties.Name" xml:space="preserve"><value>Choose the translation log directory</value></data>
+  <data name="OnboardingLogDirectoryHelp.Text" xml:space="preserve"><value>Choose a local directory. Each translation makes a best-effort background write to separate Debug and all-level .log files; the newest 500 sessions are retained. Bounded logging never blocks translation.</value></data>
   <data name="OnboardingModelTitle.Text" xml:space="preserve"><value>Configure the model connection</value></data>
   <data name="OnboardingModelBody.Text" xml:space="preserve"><value>Configure local Ollama or a network model based on your first-page choice. The endpoint and model name remain editable.</value></data>
   <data name="ConfigureOllamaCheckBox.Content" xml:space="preserve"><value>Configure local Ollama now</value></data>
@@ -44,7 +50,7 @@
   <data name="OnboardingNetworkModelInput.Header" xml:space="preserve"><value>Model name</value></data>
   <data name="OnboardingNetworkTokenLimitParameter.Header" xml:space="preserve"><value>Completion token parameter</value></data>
   <data name="OnboardingNetworkTokenLimitParameter.AutomationProperties.Name" xml:space="preserve"><value>Network model completion token parameter</value></data>
-  <data name="OnboardingNetworkTokenLimitParameterHelp.Text" xml:space="preserve"><value>The preset selects the provider's recommended field. You can change it when a compatible endpoint requires a different field. The initial connection test omits this optional parameter.</value></data>
+  <data name="OnboardingNetworkTokenLimitParameterHelp.Text" xml:space="preserve"><value>The preset selects the recommended field. Choose a different compatible field, or omit it and let the provider decide.</value></data>
   <data name="OnboardingNetworkApiKeyInput.Header" xml:space="preserve"><value>API key</value></data>
   <data name="OnboardingNetworkApiKeyInput.AutomationProperties.Name" xml:space="preserve"><value>Network model API key</value></data>
   <data name="OnboardingNetworkCredentialHelp.Text" xml:space="preserve"><value>The API key is written only to Windows Credential Manager. Settings and logs retain only its credential reference.</value></data>
@@ -82,13 +88,33 @@
   <data name="QueueFailureDetailsTitle.Text" xml:space="preserve"><value>Failure and rollback</value></data>
   <data name="QueueTechnicalDetailsTitle.Text" xml:space="preserve"><value>Technical details</value></data>
   <data name="CancelQueueItemButtonText.Text" xml:space="preserve"><value>Cancel</value></data>
-  <data name="CancelQueueItemButton.AutomationProperties.Name" xml:space="preserve"><value>Cancel this translation job</value></data>
+  <data name="QueueCancelAccessibleName" xml:space="preserve"><value>Cancel translation job {0}</value></data>
   <data name="CancelQueueItemButton.ToolTipService.ToolTip" xml:space="preserve"><value>Cancel job</value></data>
   <data name="FormalArtifactLabel.Text" xml:space="preserve"><value>Formal artifact:</value></data>
   <data name="InformalArtifactLabel.Text" xml:space="preserve"><value>Informal artifact:</value></data>
   <data name="HardcodedFoundPrefix.Text" xml:space="preserve"><value>Hard-coded candidates:</value></data>
   <data name="HardcodedExternalizedPrefix.Text" xml:space="preserve"><value>; externalized:</value></data>
   <data name="HardcodedReadonlySuffix.Text" xml:space="preserve"><value>(safe mode in this release)</value></data>
+  <data name="LogsTitle.Text" xml:space="preserve"><value>Translation logs</value></data>
+  <data name="LogsSubtitle.Text" xml:space="preserve"><value>Review each translation transaction. Debug is selected by default; switch to all levels when needed.</value></data>
+  <data name="LogsSessionSelector.Header" xml:space="preserve"><value>Translation session</value></data>
+  <data name="LogsSessionSelector.PlaceholderText" xml:space="preserve"><value>No logs available</value></data>
+  <data name="LogsSessionSelector.AutomationProperties.Name" xml:space="preserve"><value>Select a translation log</value></data>
+  <data name="LogsViewSelector.Header" xml:space="preserve"><value>Log view</value></data>
+  <data name="LogsViewSelector.AutomationProperties.Name" xml:space="preserve"><value>Select the log-level view</value></data>
+  <data name="LogsRefreshButtonText.Text" xml:space="preserve"><value>Refresh</value></data>
+  <data name="LogsRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>Refresh the translation log list</value></data>
+  <data name="LogsRefreshButton.ToolTipService.ToolTip" xml:space="preserve"><value>Scan the log directory again</value></data>
+  <data name="LogsDirectoryLabel.Text" xml:space="preserve"><value>Log directory</value></data>
+  <data name="LogsDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>Configured translation log directory</value></data>
+  <data name="LogsError.Title" xml:space="preserve"><value>Logs could not be read</value></data>
+  <data name="LogsBusy.AutomationProperties.Name" xml:space="preserve"><value>Reading translation logs</value></data>
+  <data name="LogsEmptyTitle.Text" xml:space="preserve"><value>No translation logs to display yet</value></data>
+  <data name="LogsEmptyBody.Text" xml:space="preserve"><value>Run or complete a translation, then select its session here to view Debug or all-level entries.</value></data>
+  <data name="LogsContent.AutomationProperties.Name" xml:space="preserve"><value>Log content for the selected translation session</value></data>
+  <data name="LogViewModeDebug" xml:space="preserve"><value>Debug</value></data>
+  <data name="LogViewModeAllLevels" xml:space="preserve"><value>All levels</value></data>
+  <data name="LogsLoadFailed" xml:space="preserve"><value>Translation logs could not be loaded. Check the configured directory and its permissions, then try again.</value></data>
   <data name="ModelSourcesTitle.Text" xml:space="preserve"><value>Model sources</value></data>
   <data name="NewModelSourceButtonText.Text" xml:space="preserve"><value>New</value></data>
   <data name="ModelSourcesList.AutomationProperties.Name" xml:space="preserve"><value>Configured model sources</value></data>
@@ -105,7 +131,8 @@
   <data name="ModelSourcePreset.Header" xml:space="preserve"><value>Provider preset (editable defaults)</value></data>
   <data name="ModelSourcePresetDocumentation.Content" xml:space="preserve"><value>Open official API documentation</value></data>
   <data name="ModelSourceTokenLimitParameter.Header" xml:space="preserve"><value>Completion token parameter</value></data>
-  <data name="ModelSourceTokenLimitParameterHelp.Text" xml:space="preserve"><value>Use the provider's recommended field, or change it for a custom compatible endpoint. Connection tests omit this optional field.</value></data>
+  <data name="ModelSourceTokenLimitParameterHelp.Text" xml:space="preserve"><value>Use the recommended field, choose a different compatible field, or omit it and let the provider decide. Connection tests and translation requests honor the same choice.</value></data>
+  <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>Provider default (do not send)</value></data>
   <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>Service address</value></data>
   <data name="ModelSourceModelName.Header" xml:space="preserve"><value>Model name (manual entry available)</value></data>
   <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Downloaded local models</value></data>
@@ -140,11 +167,16 @@
   <data name="SettingsWorkspacePath.Header" xml:space="preserve"><value>Translation workspace root</value></data>
   <data name="SettingsWorkspacePath.AutomationProperties.Name" xml:space="preserve"><value>Translation workspace root path</value></data>
   <data name="SettingsWorkspaceHelp.Text" xml:space="preserve"><value>Output is written under LocaleSmith.Output here. Drive roots, reparse paths, and output inside a source directory are blocked.</value></data>
+  <data name="LogDirectorySectionTitle.Text" xml:space="preserve"><value>Translation logs</value></data>
+  <data name="SettingsLogDirectoryPath.Header" xml:space="preserve"><value>Log storage directory</value></data>
+  <data name="SettingsLogDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>Translation log storage directory path</value></data>
+  <data name="BrowseLogDirectoryButton.Content" xml:space="preserve"><value>Browse…</value></data>
+  <data name="BrowseLogDirectoryButton.AutomationProperties.Name" xml:space="preserve"><value>Choose the translation log directory</value></data>
+  <data name="SettingsLogDirectoryHelp.Text" xml:space="preserve"><value>Choose a local directory and save. New translations write bounded background .log entries there, retaining the newest 500 sessions. Slow diagnostics never block translation; API keys and full prompts are never logged.</value></data>
   <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>CLI security boundary</value></data>
   <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>Allowed sandbox root</value></data>
   <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>The policy always retains the system temp root and rejects drive roots, system directories, reparse paths, excessive timeouts, and blacklisted commands.</value></data>
   <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>The built-in MCP CLI execution tool is hidden and disabled by default; only context and read-only capabilities are enabled.</value></data>
-  <data name="OpenCliDiagnosticButton.Content" xml:space="preserve"><value>Verify the secure command confirmation flow</value></data>
   <data name="SaveSettingsButton.Content" xml:space="preserve"><value>Save settings</value></data>
   <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>Model-proposed command</value></data>
   <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>Run command</value></data>
@@ -168,8 +200,8 @@
   <data name="OnboardingEncrypting" xml:space="preserve"><value>Creating the master key and encrypting settings…</value></data>
   <data name="OnboardingComplete" xml:space="preserve"><value>First-run setup is complete.</value></data>
   <data name="OnboardingSaveFailed" xml:space="preserve"><value>Settings could not be saved securely: {0}</value></data>
-  <data name="OnboardingPathsRequired" xml:space="preserve"><value>Workspace and sandbox paths are required.</value></data>
-  <data name="OnboardingPathsInvalid" xml:space="preserve"><value>Workspace or sandbox path is invalid.</value></data>
+  <data name="OnboardingPathsRequired" xml:space="preserve"><value>Workspace, sandbox, and log directory paths are required.</value></data>
+  <data name="OnboardingPathsInvalid" xml:space="preserve"><value>Workspace, sandbox, or log directory path is invalid.</value></data>
   <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>Enter an absolute HTTP or HTTPS Ollama address.</value></data>
   <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>Unencrypted HTTP is allowed only for a loopback Ollama service.</value></data>
   <data name="OnboardingModelRequired" xml:space="preserve"><value>Enter an installed Ollama model name.</value></data>
@@ -207,6 +239,7 @@
   <data name="QueueStyleFormalDescription" xml:space="preserve"><value>Official terminology and consistent written language.</value></data>
   <data name="QueueStyleInformal" xml:space="preserve"><value>Tone translation</value></data>
   <data name="QueueStyleInformalDescription" xml:space="preserve"><value>Natural player-community wording with an informal tone.</value></data>
+  <data name="QueueHardcodedSummary" xml:space="preserve"><value>Hard-coded candidates: {0}; externalized: {1}.</value></data>
   <data name="QueueModelSelectFailed" xml:space="preserve"><value>Model source could not be selected: {0}</value></data>
   <data name="QueueProgressDetailsPending" xml:space="preserve"><value>Detailed stage information will appear when processing begins.</value></data>
   <data name="QueueRollbackStatus" xml:space="preserve"><value>Rollback: {0}</value></data>
@@ -299,6 +332,7 @@
   <data name="SettingsLoadBeforeSave" xml:space="preserve"><value>Load settings before saving changes.</value></data>
   <data name="SettingsSandboxRequired" xml:space="preserve"><value>A sandbox path is required.</value></data>
   <data name="SettingsWorkspaceAndSandboxRequired" xml:space="preserve"><value>Workspace and sandbox paths are required.</value></data>
+  <data name="SettingsWorkspaceSandboxAndLogRequired" xml:space="preserve"><value>Workspace, sandbox, and log directory paths are required.</value></data>
   <data name="SettingsSaved" xml:space="preserve"><value>Settings saved securely.</value></data>
   <data name="SettingsSaveFailed" xml:space="preserve"><value>Settings could not be saved: {0}</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>The command review could not be opened: {0}</value></data>

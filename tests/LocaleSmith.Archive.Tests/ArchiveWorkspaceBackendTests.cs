@@ -11,6 +11,196 @@ namespace LocaleSmith.Archive.Tests;
 public sealed class ArchiveWorkspaceBackendTests
 {
     [Fact]
+    public void DirectoryMutationGuardMovesFileByHandleToExactTarget()
+    {
+        var root = Directory.CreateTempSubdirectory("localesmith-file-guard-");
+        string source = Path.Combine(root.FullName, "source.txt");
+        string target = Path.Combine(root.FullName, "target.txt");
+        File.WriteAllText(source, "guarded");
+        try
+        {
+            Type guardType = typeof(ArchiveWorkspaceBackend).Assembly.GetType(
+                "LocaleSmith.Archive.DirectoryMutationGuard",
+                throwOnError: true)!;
+            var openMethod = guardType.GetMethod("OpenFileForMutation")
+                ?? throw new InvalidOperationException("The file mutation guard factory was not found.");
+            var moveMethod = guardType.GetMethod("MoveLeafTo")
+                ?? throw new InvalidOperationException("The guarded move method was not found.");
+            var guard = (IDisposable)(openMethod.Invoke(null, [source])
+                ?? throw new InvalidOperationException("The file mutation guard was not created."));
+            try
+            {
+                moveMethod.Invoke(guard, [target]);
+                Assert.False(File.Exists(source));
+                Assert.True(File.Exists(target));
+            }
+            finally
+            {
+                guard.Dispose();
+            }
+
+            Assert.True(File.Exists(target));
+            Assert.Equal("guarded", File.ReadAllText(target));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void DirectoryMutationGuardBlocksExternalRenameAndMovesDirectoryByHandle()
+    {
+        var root = Directory.CreateTempSubdirectory("localesmith-directory-guard-");
+        string source = Path.Combine(root.FullName, "source");
+        string externalRename = Path.Combine(root.FullName, "external-rename");
+        string guardedTarget = Path.Combine(root.FullName, "guarded-target");
+        Directory.CreateDirectory(source);
+        File.WriteAllText(Path.Combine(source, "sentinel.txt"), "guarded");
+        try
+        {
+            Type guardType = typeof(ArchiveWorkspaceBackend).Assembly.GetType(
+                "LocaleSmith.Archive.DirectoryMutationGuard",
+                throwOnError: true)!;
+            var openMethod = guardType.GetMethod("OpenDirectoryForMutation")
+                ?? throw new InvalidOperationException("The directory mutation guard factory was not found.");
+            var moveMethod = guardType.GetMethod("MoveLeafTo")
+                ?? throw new InvalidOperationException("The guarded move method was not found.");
+            var guard = (IDisposable)(openMethod.Invoke(null, [source])
+                ?? throw new InvalidOperationException("The directory mutation guard was not created."));
+            try
+            {
+                Assert.ThrowsAny<IOException>(() => Directory.Move(source, externalRename));
+                moveMethod.Invoke(guard, [guardedTarget]);
+                Assert.False(Directory.Exists(source));
+                Assert.True(Directory.Exists(guardedTarget));
+            }
+            finally
+            {
+                guard.Dispose();
+            }
+
+            Assert.True(File.Exists(Path.Combine(guardedTarget, "sentinel.txt")));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LeafMutationGuardPinsEveryAncestorAgainstRename()
+    {
+        var root = Directory.CreateTempSubdirectory("localesmith-ancestry-guard-");
+        string product = Path.Combine(root.FullName, "product");
+        string parent = Path.Combine(product, "workspaces");
+        string leaf = Path.Combine(parent, "workspace");
+        string renamedParent = Path.Combine(product, "renamed-workspaces");
+        string renamedProduct = Path.Combine(root.FullName, "renamed-product");
+        Directory.CreateDirectory(leaf);
+        try
+        {
+            Type guardType = typeof(ArchiveWorkspaceBackend).Assembly.GetType(
+                "LocaleSmith.Archive.DirectoryMutationGuard",
+                throwOnError: true)!;
+            var openMethod = guardType.GetMethod("OpenDirectoryForMutation")
+                ?? throw new InvalidOperationException("The directory mutation guard factory was not found.");
+            var guard = (IDisposable)(openMethod.Invoke(null, [leaf])
+                ?? throw new InvalidOperationException("The leaf mutation guard was not created."));
+            try
+            {
+                Assert.ThrowsAny<IOException>(() => Directory.Move(parent, renamedParent));
+                Assert.ThrowsAny<IOException>(() => Directory.Move(product, renamedProduct));
+            }
+            finally
+            {
+                guard.Dispose();
+            }
+
+            Directory.Move(product, renamedProduct);
+            Assert.True(Directory.Exists(Path.Combine(renamedProduct, "workspaces", "workspace")));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void TransactionJournalPinsItsFileAndAncestorUntilDisposal()
+    {
+        var root = Directory.CreateTempSubdirectory("localesmith-journal-guard-");
+        string logs = Path.Combine(root.FullName, "logs");
+        string renamedLogs = Path.Combine(root.FullName, "renamed-logs");
+        string journalPath = Path.Combine(logs, "transaction.jsonl");
+        string renamedJournal = Path.Combine(logs, "renamed.jsonl");
+        Directory.CreateDirectory(logs);
+        try
+        {
+            Type journalType = typeof(ArchiveWorkspaceBackend).Assembly.GetType(
+                "LocaleSmith.Archive.TransactionJournal",
+                throwOnError: true)!;
+            var journal = (IDisposable)(Activator.CreateInstance(journalType, [Guid.NewGuid(), journalPath])
+                ?? throw new InvalidOperationException("The transaction journal was not created."));
+            try
+            {
+                var writeMethod = journalType.GetMethod("Write")
+                    ?? throw new InvalidOperationException("The transaction journal write method was not found.");
+                writeMethod.Invoke(journal, ["test", "ok", null]);
+                Assert.ThrowsAny<IOException>(() => File.Move(journalPath, renamedJournal));
+                Assert.ThrowsAny<IOException>(() => Directory.Move(logs, renamedLogs));
+            }
+            finally
+            {
+                journal.Dispose();
+            }
+
+            Directory.Move(logs, renamedLogs);
+            Assert.Contains(
+                "\"operation\":\"test\"",
+                File.ReadAllText(Path.Combine(renamedLogs, "transaction.jsonl")),
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task WorkspaceAndJournalRemainPinnedUntilWorkspaceDisposal()
+    {
+        using var fixture = new ArchiveFixture("lifetime-guards.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"lifetime_guards\"}");
+        fixture.Complete();
+        Guid jobId = Guid.NewGuid();
+        string workspacePath = GetWorkspacePath(jobId);
+        string renamedWorkspace = workspacePath + ".renamed";
+        string journalPath = Path.Combine(Path.GetTempPath(), "LocaleSmith", "logs", $"{jobId:N}.jsonl");
+        string renamedJournal = journalPath + ".renamed";
+        var workspace = await new ArchiveWorkspaceBackend(new TestArchiveScanner()).BeginAsync(
+            jobId,
+            CreateRequest(fixture, styles: FormalOnly),
+            TestContext.Current.CancellationToken);
+        try
+        {
+            Assert.ThrowsAny<IOException>(() => Directory.Move(workspacePath, renamedWorkspace));
+            Assert.ThrowsAny<IOException>(() => File.Move(journalPath, renamedJournal));
+            await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+            Assert.ThrowsAny<IOException>(() => File.Move(journalPath, renamedJournal));
+        }
+        finally
+        {
+            await workspace.DisposeAsync();
+        }
+
+        Assert.False(Directory.Exists(workspacePath));
+        File.Move(journalPath, renamedJournal);
+        Assert.True(File.Exists(renamedJournal));
+        File.Move(renamedJournal, journalPath);
+    }
+
+    [Fact]
     public async Task FolderInputBuildsOnlyTheSelectedStyleWithoutChangingSource()
     {
         using var fixture = new FolderFixture("fabric-folder");
@@ -258,6 +448,128 @@ public sealed class ArchiveWorkspaceBackendTests
             fixture.RootPath,
             $".{Path.GetFileName(outputPath)}.{jobId:N}.*.staged"));
         Assert.False(Directory.Exists(GetWorkspacePath(jobId)));
+    }
+
+    [Fact]
+    public async Task RollbackRefusesReparsePointAtStagedDirectoryArtifactRoot()
+    {
+        using var fixture = new FolderFixture("staged-root-link-pack");
+        await fixture.AddTextAsync(
+            "pack.mcmeta",
+            "{\"pack\":{\"pack_format\":34,\"description\":\"Safe\"}}",
+            TestContext.Current.CancellationToken);
+        Guid jobId = Guid.NewGuid();
+        string outputPath = Path.Combine(fixture.RootPath, "translated-folder");
+        var request = new PipelineRequest(fixture.SourcePath, outputPath, styles: FormalOnly);
+        var external = Directory.CreateTempSubdirectory("localesmith-staged-link-target-");
+        string sentinel = Path.Combine(external.FullName, "must-survive.txt");
+        await File.WriteAllTextAsync(sentinel, "outside", TestContext.Current.CancellationToken);
+        string stagedPath = Path.Combine(
+            fixture.RootPath,
+            $".{Path.GetFileName(outputPath)}.{jobId:N}.formal.staged");
+
+        try
+        {
+            await using var workspace = await new ArchiveWorkspaceBackend(new TestArchiveScanner()).BeginAsync(
+                jobId,
+                request,
+                TestContext.Current.CancellationToken);
+            await workspace.InspectAsync(TestContext.Current.CancellationToken);
+            await workspace.ExtractAsync(TestContext.Current.CancellationToken);
+            IReadOnlyList<TranslationEntry> entries = await workspace.ReadTranslatableEntriesAsync(
+                TestContext.Current.CancellationToken);
+            await workspace.ApplyTranslationsAsync(
+                CreateTranslations(entries, FormalOnly, static entry => ($"正式:{entry.SourceText}", string.Empty)),
+                TestContext.Current.CancellationToken);
+            PackageVerification verification = await workspace.StagePackageAsync(
+                outputPath,
+                TestContext.Current.CancellationToken);
+            Assert.Empty(verification.Errors);
+            Directory.Delete(stagedPath, recursive: true);
+            try
+            {
+                _ = Directory.CreateSymbolicLink(stagedPath, external.FullName);
+            }
+            catch (Exception exception) when (exception is
+                IOException or
+                UnauthorizedAccessException or
+                PlatformNotSupportedException)
+            {
+                await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+                return;
+            }
+
+            IOException rollbackError = await Assert.ThrowsAsync<IOException>(
+                () => workspace.RollbackAsync(TestContext.Current.CancellationToken));
+
+            Assert.Contains("reparse point", rollbackError.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(sentinel));
+            Assert.True(Directory.Exists(stagedPath));
+            Assert.False(Directory.Exists(outputPath));
+            Directory.Delete(stagedPath, recursive: false);
+            await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+            Assert.False(Directory.Exists(stagedPath));
+        }
+        finally
+        {
+            if (Directory.Exists(stagedPath) &&
+                (File.GetAttributes(stagedPath) & FileAttributes.ReparsePoint) != 0)
+            {
+                Directory.Delete(stagedPath, recursive: false);
+            }
+
+            external.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void WithdrawalDeletionHelperRejectsReparsePointAtCommittedDirectoryRoot()
+    {
+        var root = Directory.CreateTempSubdirectory("localesmith-withdrawal-link-");
+        var external = Directory.CreateTempSubdirectory("localesmith-withdrawal-target-");
+        string link = Path.Combine(root.FullName, "committed-artifact");
+        string sentinel = Path.Combine(external.FullName, "must-survive.txt");
+        File.WriteAllText(sentinel, "outside");
+        try
+        {
+            try
+            {
+                _ = Directory.CreateSymbolicLink(link, external.FullName);
+            }
+            catch (Exception exception) when (exception is
+                IOException or
+                UnauthorizedAccessException or
+                PlatformNotSupportedException)
+            {
+                return;
+            }
+
+            Type workspaceType = typeof(ArchiveWorkspaceBackend).Assembly.GetType(
+                "LocaleSmith.Archive.ArchiveWorkspace",
+                throwOnError: true)!;
+            var deleteMethod = workspaceType.GetMethod(
+                "DeleteDirectoryTreeWithoutFollowingReparsePoints",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                ?? throw new InvalidOperationException("The guarded recursive deletion helper was not found.");
+
+            var invocation = Assert.Throws<System.Reflection.TargetInvocationException>(
+                () => deleteMethod.Invoke(null, [link, link]));
+
+            Assert.IsType<IOException>(invocation.InnerException);
+            Assert.True(File.Exists(sentinel));
+            Assert.True(Directory.Exists(link));
+        }
+        finally
+        {
+            if (Directory.Exists(link) &&
+                (File.GetAttributes(link) & FileAttributes.ReparsePoint) != 0)
+            {
+                Directory.Delete(link, recursive: false);
+            }
+
+            root.Delete(recursive: true);
+            external.Delete(recursive: true);
+        }
     }
 
     [Fact]
@@ -589,6 +901,7 @@ public sealed class ArchiveWorkspaceBackendTests
         await Assert.ThrowsAsync<IOException>(
             () => workspace.CommitAsync(TestContext.Current.CancellationToken));
         await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+        await workspace.DisposeAsync();
 
         Assert.Equal("do not overwrite", await File.ReadAllTextAsync(request.OutputPath, TestContext.Current.CancellationToken));
         Assert.Empty(Directory.EnumerateFiles(
@@ -598,6 +911,145 @@ public sealed class ArchiveWorkspaceBackendTests
         string journalPath = Path.Combine(Path.GetTempPath(), "LocaleSmith", "logs", $"{jobId:N}.jsonl");
         Assert.True(File.Exists(journalPath));
         Assert.Contains("\"operation\":\"rollback\"", await File.ReadAllTextAsync(journalPath, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task RollbackRetriesPendingPublishedArtifactAfterTransientDeleteFailure()
+    {
+        using var fixture = new ArchiveFixture("rollback-published-retry.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"rollback_retry\"}");
+        fixture.AddText("assets/rollback_retry/lang/en_us.json", "{\"demo.key\":\"Demo\"}");
+        fixture.Complete();
+        Guid jobId = Guid.NewGuid();
+        var request = CreateRequest(fixture, styles: FormalOnly);
+
+        await using var workspace = await new ArchiveWorkspaceBackend(new TestArchiveScanner()).BeginAsync(
+            jobId,
+            request,
+            TestContext.Current.CancellationToken);
+        await workspace.InspectAsync(TestContext.Current.CancellationToken);
+        await workspace.ExtractAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<TranslationEntry> entries = await workspace.ReadTranslatableEntriesAsync(
+            TestContext.Current.CancellationToken);
+        await workspace.ApplyTranslationsAsync(
+            CreateTranslations(entries, FormalOnly, static entry => ("正式:" + entry.SourceText, string.Empty)),
+            TestContext.Current.CancellationToken);
+        await workspace.StagePackageAsync(request.OutputPath, TestContext.Current.CancellationToken);
+
+        string stagedPath = Path.Combine(
+            fixture.DirectoryPath,
+            $".{Path.GetFileName(request.OutputPath)}.{jobId:N}.formal.staged");
+        File.Move(stagedPath, request.OutputPath);
+        Type workspaceType = workspace.GetType();
+        var pendingField = workspaceType.GetField(
+            "_pendingPublishedArtifacts",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("The pending published artifact registry was not found.");
+        var pending = Assert.IsAssignableFrom<System.Collections.IDictionary>(pendingField.GetValue(workspace));
+        pending.Add(request.OutputPath, false);
+
+        using (var blocker = new FileStream(
+                   request.OutputPath,
+                   FileMode.Open,
+                   FileAccess.Read,
+                   FileShare.Read))
+        {
+            await Assert.ThrowsAsync<IOException>(
+                () => workspace.RollbackAsync(TestContext.Current.CancellationToken));
+            Assert.True(File.Exists(request.OutputPath));
+            var rolledBackField = workspaceType.GetField(
+                "_rolledBack",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("The rollback state field was not found.");
+            Assert.False(Assert.IsType<bool>(rolledBackField.GetValue(workspace)));
+        }
+
+        await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(File.Exists(request.OutputPath));
+        Assert.False(Directory.Exists(GetWorkspacePath(jobId)));
+        Assert.Empty(pending);
+    }
+
+    [Fact]
+    public async Task CommitJournalFailureLeavesPublishedDirectoryRetryableByRollback()
+    {
+        using var fixture = new FolderFixture("commit-journal-retry");
+        await fixture.AddTextAsync(
+            "pack.mcmeta",
+            "{\"pack\":{\"pack_format\":34,\"description\":\"Retry\"}}",
+            TestContext.Current.CancellationToken);
+        await fixture.AddTextAsync(
+            "assets/retry/lang/en_us.json",
+            "{\"demo.key\":\"Demo\"}",
+            TestContext.Current.CancellationToken);
+        Guid jobId = Guid.NewGuid();
+        string outputPath = Path.Combine(fixture.RootPath, "translated-folder");
+        var request = new PipelineRequest(fixture.SourcePath, outputPath, styles: FormalOnly);
+
+        await using var workspace = await new ArchiveWorkspaceBackend(new TestArchiveScanner()).BeginAsync(
+            jobId,
+            request,
+            TestContext.Current.CancellationToken);
+        await workspace.InspectAsync(TestContext.Current.CancellationToken);
+        await workspace.ExtractAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<TranslationEntry> entries = await workspace.ReadTranslatableEntriesAsync(
+            TestContext.Current.CancellationToken);
+        await workspace.ApplyTranslationsAsync(
+            CreateTranslations(entries, FormalOnly, static entry => ("正式:" + entry.SourceText, string.Empty)),
+            TestContext.Current.CancellationToken);
+        PackageVerification verification = await workspace.StagePackageAsync(
+            outputPath,
+            TestContext.Current.CancellationToken);
+        Assert.Empty(verification.Errors);
+
+        FileStream? blocker = null;
+        Type workspaceType = workspace.GetType();
+        var journalField = workspaceType.GetField(
+            "_journal",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("The workspace journal field was not found.");
+        object journal = journalField.GetValue(workspace)
+            ?? throw new InvalidOperationException("The workspace journal was not initialized.");
+        var writerField = journal.GetType().GetField(
+            "_writer",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("The transaction journal writer field was not found.");
+        var originalWriter = Assert.IsType<StreamWriter>(writerField.GetValue(journal));
+        var failingWriter = new FailOnceStreamWriter(() =>
+        {
+            blocker = new FileStream(
+                Path.Combine(outputPath, "pack.mcmeta"),
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+        });
+        writerField.SetValue(journal, failingWriter);
+        originalWriter.Dispose();
+
+        try
+        {
+            await Assert.ThrowsAsync<IOException>(
+                () => workspace.CommitAsync(TestContext.Current.CancellationToken));
+            Assert.NotNull(blocker);
+            Assert.True(Directory.Exists(outputPath));
+            var committedField = workspaceType.GetField(
+                "_committed",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("The commit state field was not found.");
+            Assert.False(Assert.IsType<bool>(committedField.GetValue(workspace)));
+
+            blocker.Dispose();
+            blocker = null;
+            await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+
+            Assert.False(Directory.Exists(outputPath));
+            Assert.False(Directory.Exists(GetWorkspacePath(jobId)));
+        }
+        finally
+        {
+            blocker?.Dispose();
+        }
     }
 
     [Fact]
@@ -634,6 +1086,136 @@ public sealed class ArchiveWorkspaceBackendTests
 
         Assert.False(File.Exists(request.OutputPath));
         Assert.False(File.Exists(stagedPath));
+    }
+
+    [Fact]
+    public async Task StagePackageRejectsReparsePointOutputAncestorBeforeCreatingDirectories()
+    {
+        using var fixture = new ArchiveFixture("reparse-output.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"reparse_output\"}");
+        fixture.AddText("assets/reparse_output/lang/en_us.json", "{\"demo.key\":\"Demo\"}");
+        fixture.Complete();
+        var external = Directory.CreateTempSubdirectory("localesmith-reparse-output-");
+        var outputLink = Path.Combine(fixture.DirectoryPath, "linked-output");
+        var escapedDirectory = Path.Combine(external.FullName, "nested");
+        try
+        {
+            try
+            {
+                _ = Directory.CreateSymbolicLink(outputLink, external.FullName);
+            }
+            catch (Exception exception) when (exception is
+                IOException or
+                UnauthorizedAccessException or
+                PlatformNotSupportedException)
+            {
+                // Symbolic-link creation can be disabled by local policy.
+                return;
+            }
+
+            var request = new PipelineRequest(
+                fixture.ArchivePath,
+                Path.Combine(outputLink, "nested", "translated.jar"),
+                styles: FormalOnly);
+            var backend = new ArchiveWorkspaceBackend(new TestArchiveScanner());
+            await using var workspace = await backend.BeginAsync(
+                Guid.NewGuid(),
+                request,
+                TestContext.Current.CancellationToken);
+            await workspace.InspectAsync(TestContext.Current.CancellationToken);
+            await workspace.ExtractAsync(TestContext.Current.CancellationToken);
+            IReadOnlyList<TranslationEntry> entries = await workspace.ReadTranslatableEntriesAsync(
+                TestContext.Current.CancellationToken);
+            await workspace.ApplyTranslationsAsync(
+                CreateTranslations(entries, FormalOnly, static entry => ("正式:" + entry.SourceText, string.Empty)),
+                TestContext.Current.CancellationToken);
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => workspace.StagePackageAsync(
+                    request.OutputPath,
+                    TestContext.Current.CancellationToken));
+
+            Assert.False(Directory.Exists(escapedDirectory));
+            await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            if (Directory.Exists(outputLink))
+            {
+                Directory.Delete(outputLink);
+            }
+
+            external.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task CommitRejectsOutputDirectoryReplacedByReparsePointAfterStaging()
+    {
+        using var fixture = new ArchiveFixture("commit-output-swap.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"commit_output_swap\"}");
+        fixture.AddText("assets/commit_output_swap/lang/en_us.json", "{\"demo.key\":\"Demo\"}");
+        fixture.Complete();
+        var outputDirectory = Path.Combine(fixture.DirectoryPath, "translated-output");
+        var outputPath = Path.Combine(outputDirectory, "translated.jar");
+        var external = Directory.CreateTempSubdirectory("localesmith-commit-output-swap-");
+        var sentinel = Path.Combine(external.FullName, "must-survive.txt");
+        File.WriteAllText(sentinel, "outside");
+        try
+        {
+            var request = new PipelineRequest(fixture.ArchivePath, outputPath, styles: FormalOnly);
+            var backend = new ArchiveWorkspaceBackend(new TestArchiveScanner());
+            await using var workspace = await backend.BeginAsync(
+                Guid.NewGuid(),
+                request,
+                TestContext.Current.CancellationToken);
+            await workspace.InspectAsync(TestContext.Current.CancellationToken);
+            await workspace.ExtractAsync(TestContext.Current.CancellationToken);
+            IReadOnlyList<TranslationEntry> entries = await workspace.ReadTranslatableEntriesAsync(
+                TestContext.Current.CancellationToken);
+            await workspace.ApplyTranslationsAsync(
+                CreateTranslations(entries, FormalOnly, static entry => ("正式:" + entry.SourceText, string.Empty)),
+                TestContext.Current.CancellationToken);
+            PackageVerification verification = await workspace.StagePackageAsync(
+                outputPath,
+                TestContext.Current.CancellationToken);
+            Assert.Empty(verification.Errors);
+            foreach (var stagedFile in Directory.EnumerateFiles(outputDirectory))
+            {
+                File.Move(stagedFile, Path.Combine(external.FullName, Path.GetFileName(stagedFile)));
+            }
+            Directory.Delete(outputDirectory, recursive: false);
+            try
+            {
+                _ = Directory.CreateSymbolicLink(outputDirectory, external.FullName);
+            }
+            catch (Exception exception) when (exception is
+                IOException or
+                UnauthorizedAccessException or
+                PlatformNotSupportedException)
+            {
+                await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+                return;
+            }
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => workspace.CommitAsync(TestContext.Current.CancellationToken));
+
+            Assert.True(File.Exists(sentinel));
+            Assert.False(File.Exists(Path.Combine(external.FullName, "translated.jar")));
+            Directory.Delete(outputDirectory, recursive: false);
+            await workspace.RollbackAsync(TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory) &&
+                (File.GetAttributes(outputDirectory) & FileAttributes.ReparsePoint) != 0)
+            {
+                Directory.Delete(outputDirectory, recursive: false);
+            }
+
+            external.Delete(recursive: true);
+        }
     }
 
     [Fact]
@@ -779,6 +1361,22 @@ public sealed class ArchiveWorkspaceBackendTests
 
     private static string GetWorkspacePath(Guid jobId) =>
         Path.Combine(Path.GetTempPath(), "LocaleSmith", "workspaces", jobId.ToString("N"));
+
+    private sealed class FailOnceStreamWriter(Action beforeFailure) : StreamWriter(Stream.Null)
+    {
+        private int _writeCount;
+
+        public override void Write(string? value)
+        {
+            if (Interlocked.Increment(ref _writeCount) == 1)
+            {
+                beforeFailure();
+                throw new IOException("Injected commit journal write failure.");
+            }
+
+            base.Write(value);
+        }
+    }
 
     private sealed class FailOnVerificationScanner : IArchiveScanner
     {

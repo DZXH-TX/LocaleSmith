@@ -25,11 +25,9 @@ internal static class Program
             shutdown.Cancel();
         };
 
-        var sandboxRoot = Path.Combine(Path.GetTempPath(), "LocaleSmith", "McpSandbox");
-        Directory.CreateDirectory(sandboxRoot);
         using var commandPolicy = new SafeCliCommandPolicy(
-            TrustedCliExecutableDiscovery.FindInstalled(),
-            [sandboxRoot],
+            [],
+            additionalSandboxRoots: [],
             maximumTimeout: TimeSpan.FromSeconds(30));
         var detector = new TerminalEnvironmentDetector();
         var contextProvider = new SafeSystemPromptContextProvider(detector);

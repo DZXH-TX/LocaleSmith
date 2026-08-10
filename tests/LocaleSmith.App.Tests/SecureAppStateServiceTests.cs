@@ -65,7 +65,8 @@ public sealed class SecureAppStateServiceTests
             {
                 IsOnboardingComplete = true,
                 WorkspacePath = Path.Combine(documentsRoot, "JaxI18n"),
-                SandboxPath = Path.Combine(Path.GetTempPath(), "JaxI18n", "Sandbox")
+                SandboxPath = Path.Combine(Path.GetTempPath(), "JaxI18n", "Sandbox"),
+                LogDirectoryPath = string.Empty
             },
             events);
         using var secretStore = new FaultInjectingSecretStore(events);
@@ -83,10 +84,148 @@ public sealed class SecureAppStateServiceTests
         var loaded = await service.LoadAsync(cancellationToken);
 
         Assert.Equal(Path.Combine(documentsRoot, "LocaleSmith"), loaded.WorkspacePath);
-        Assert.Equal(Path.Combine(Path.GetTempPath(), "LocaleSmith", "Sandbox"), loaded.SandboxPath);
+        Assert.Equal(AppConfiguration.GetDefaultSandboxPath(), loaded.SandboxPath);
+        Assert.Equal(AppConfiguration.GetDefaultLogDirectoryPath(), loaded.LogDirectoryPath);
         Assert.Equal(loaded.WorkspacePath, configurationStore.Persisted.WorkspacePath);
         Assert.Equal(loaded.SandboxPath, configurationStore.Persisted.SandboxPath);
+        Assert.Equal(loaded.LogDirectoryPath, configurationStore.Persisted.LogDirectoryPath);
         Assert.Equal(1, events.Count(static entry => entry == "configuration:save"));
+    }
+
+    [Fact]
+    public async Task InitializationMigratesPreviousLocaleSmithTemporarySandboxDefault()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(
+            new AppConfiguration
+            {
+                SandboxPath = Path.Combine(Path.GetTempPath(), "LocaleSmith", "Sandbox")
+            },
+            events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager());
+
+        await service.InitializeAsync(cancellationToken);
+        var loaded = await service.LoadAsync(cancellationToken);
+
+        Assert.Equal(AppConfiguration.GetDefaultSandboxPath(), loaded.SandboxPath);
+        Assert.Equal(loaded.SandboxPath, configurationStore.Persisted.SandboxPath);
+        Assert.Equal(1, events.Count(static entry => entry == "configuration:save"));
+    }
+
+    [Fact]
+    public async Task InitializationPersistsLegacyPresetDefaultsBeforeBuildingRuntimeRegistry()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var events = new ConcurrentQueue<string>();
+        var legacyProfile = CloudProfile() with
+        {
+            PresetId = ModelProviderPresets.MiniMaxId,
+            TokenLimitParameter = null,
+            Endpoint = "http://127.0.0.1:11434",
+            ModelName = "llama3"
+        };
+        var existingLogDirectory = Path.Combine(
+            AppContext.BaseDirectory,
+            ".test-artifacts",
+            "existing-translation-logs");
+        var configurationStore = new RecordingConfigurationStore(
+            CreateConfiguration(legacyProfile) with
+            {
+                SchemaVersion = 2,
+                LogDirectoryPath = existingLogDirectory
+            },
+            events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager());
+
+        await service.InitializeAsync(cancellationToken);
+
+        var persisted = Assert.Single(configurationStore.Persisted.ModelSources);
+        Assert.Equal("https://api.minimax.io/v1", persisted.Endpoint.TrimEnd('/'));
+        Assert.Equal("MiniMax-M2.7", persisted.ModelName);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, service.SelectedSource?.TokenLimitParameter);
+        Assert.Equal("https://api.minimax.io/v1", service.SelectedSource?.Endpoint.AbsoluteUri.TrimEnd('/'));
+        Assert.Equal("MiniMax-M2.7", service.SelectedSource?.ModelName);
+        Assert.Equal(existingLogDirectory, configurationStore.Persisted.LogDirectoryPath);
+        Assert.Equal(1, events.Count(static entry => entry == "configuration:save"));
+    }
+
+    [Fact]
+    public async Task InitializationPreservesCurrentSchemaEditablePresetValues()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var events = new ConcurrentQueue<string>();
+        var editedProfile = CloudProfile() with
+        {
+            PresetId = ModelProviderPresets.MiniMaxId,
+            Endpoint = "http://127.0.0.1:11434",
+            ModelName = "llama3"
+        };
+        var configurationStore = new RecordingConfigurationStore(
+            CreateConfiguration(editedProfile),
+            events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager());
+
+        await service.InitializeAsync(cancellationToken);
+
+        Assert.Equal("http://127.0.0.1:11434", service.SelectedSource?.Endpoint.AbsoluteUri.TrimEnd('/'));
+        Assert.Equal("llama3", service.SelectedSource?.ModelName);
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public async Task InitializationDoesNotRewriteEditableCustomPresetDefaults()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var events = new ConcurrentQueue<string>();
+        var customProfile = CloudProfile() with
+        {
+            PresetId = ModelProviderPresets.CustomId,
+            Endpoint = "http://127.0.0.1:11434",
+            ModelName = "llama3"
+        };
+        var configurationStore = new RecordingConfigurationStore(
+            CreateConfiguration(customProfile),
+            events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager());
+
+        await service.InitializeAsync(cancellationToken);
+
+        Assert.Equal("http://127.0.0.1:11434", service.SelectedSource?.Endpoint.AbsoluteUri.TrimEnd('/'));
+        Assert.Equal("llama3", service.SelectedSource?.ModelName);
+        Assert.Empty(events);
     }
 
     [Fact]
@@ -432,7 +571,7 @@ public sealed class SecureAppStateServiceTests
             var requestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
             Assert.Contains("\"model\":\"deepseek-chat\"", requestBody, StringComparison.Ordinal);
             Assert.DoesNotContain("\"temperature\"", requestBody, StringComparison.Ordinal);
-            Assert.DoesNotContain("\"max_tokens\"", requestBody, StringComparison.Ordinal);
+            Assert.Contains("\"max_tokens\":64", requestBody, StringComparison.Ordinal);
             Assert.DoesNotContain("\"max_completion_tokens\"", requestBody, StringComparison.Ordinal);
             return JsonResponse("""{"model":"deepseek-chat","choices":[{"message":{"content":"OK"}}]}""");
         });
@@ -467,6 +606,37 @@ public sealed class SecureAppStateServiceTests
         Assert.Equal(
             [$"secret:resolve:{saved.CredentialReference}", "http:send"],
             events.ToArray());
+    }
+
+    [Fact]
+    public async Task ConnectionTestHonorsExplicitTokenLimitOmission()
+    {
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var handler = new DelegateHttpHandler(async (request, cancellationToken) =>
+        {
+            var requestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+            Assert.DoesNotContain("\"max_tokens\"", requestBody, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"max_completion_tokens\"", requestBody, StringComparison.Ordinal);
+            return JsonResponse("""{"choices":[{"message":{"content":"OK"}}]}""");
+        });
+        using var harness = await CreateHarnessAsync(configurationStore, secretStore, handler);
+
+        var result = await harness.Service.TestConnectionAsync(
+            new ModelSourceDraft(
+                "custom",
+                "Custom",
+                ModelProviderKind.OpenAiCompatible,
+                new Uri("https://models.example.test/v1"),
+                "custom-model",
+                null,
+                ModelProviderPresets.CustomId,
+                OpenAiTokenLimitParameter.Omit),
+            "temporary-secret".AsMemory(),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccessful, result.Message);
     }
 
     [Fact]
@@ -562,7 +732,8 @@ public sealed class SecureAppStateServiceTests
                 new Uri("https://api.deepseek.com"),
                 "account-specific-deepseek-model",
                 apiKey.AsMemory(),
-                OpenAiTokenLimitParameter.MaxCompletionTokens),
+                OpenAiTokenLimitParameter.MaxCompletionTokens,
+                directories.LogDirectoryPath),
             TestContext.Current.CancellationToken);
 
         var profile = Assert.Single(configurationStore.Persisted.ModelSources);
@@ -589,6 +760,8 @@ public sealed class SecureAppStateServiceTests
         Assert.Equal(
             OpenAiTokenLimitParameter.MaxCompletionTokens,
             harness.Registry.Sources.Single().TokenLimitParameter);
+        Assert.Equal(directories.LogDirectoryPath, configurationStore.Persisted.LogDirectoryPath);
+        Assert.True(Directory.Exists(directories.LogDirectoryPath));
     }
 
     [Fact]
@@ -614,8 +787,9 @@ public sealed class SecureAppStateServiceTests
                 "llama3",
                 ModelProviderPresets.MiniMaxId,
                 new Uri("https://api.minimax.io/v1"),
-                "MiniMax-M3",
-                apiKey.AsMemory()),
+                "MiniMax-M2.7",
+                apiKey.AsMemory(),
+                LogDirectoryPath: directories.LogDirectoryPath),
             TestContext.Current.CancellationToken));
 
         Assert.Equal("configuration write failed", exception.Message);
@@ -906,6 +1080,7 @@ public sealed class SecureAppStateServiceTests
             RootPath = Path.Combine(Path.GetTempPath(), "LocaleSmith.App.Tests", Guid.NewGuid().ToString("N"));
             WorkspacePath = Path.Combine(RootPath, "workspace");
             SandboxPath = Path.Combine(RootPath, "sandbox");
+            LogDirectoryPath = Path.Combine(RootPath, "logs");
         }
 
         public string RootPath { get; }
@@ -913,6 +1088,8 @@ public sealed class SecureAppStateServiceTests
         public string WorkspacePath { get; }
 
         public string SandboxPath { get; }
+
+        public string LogDirectoryPath { get; }
 
         public void Dispose()
         {

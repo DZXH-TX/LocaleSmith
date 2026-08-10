@@ -28,8 +28,16 @@ internal static class ArchivePathSafety
         ArgumentException.ThrowIfNullOrWhiteSpace(archivePath);
 
         string normalized = ValidateArchiveRelativePath(archivePath);
-        string combined = Canonicalize(Path.Combine(root, normalized.Replace('/', Path.DirectorySeparatorChar)));
-        EnsureChildPath(root, combined);
+        string canonicalRoot = Canonicalize(root);
+        string combined = Canonicalize(
+            Path.Combine(canonicalRoot, normalized.Replace('/', Path.DirectorySeparatorChar)));
+        string prefix = canonicalRoot + Path.DirectorySeparatorChar;
+        if (!combined.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Path '{combined}' escapes the approved root '{canonicalRoot}'.");
+        }
+
         return combined;
     }
 

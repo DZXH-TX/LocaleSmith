@@ -31,6 +31,22 @@ public sealed class OnboardingAndShellTests
         Assert.NotNull(onboarding.Submission);
         Assert.True(completed);
         Assert.Equal("http://127.0.0.1:11434/", onboarding.Submission.OllamaEndpoint.AbsoluteUri);
+        Assert.Equal(
+            Path.GetFullPath(viewModel.LogDirectoryPath),
+            onboarding.Submission.LogDirectoryPath);
+    }
+
+    [Fact]
+    public void OnboardingRequiresALogDirectoryBeforeLeavingThePathStep()
+    {
+        var viewModel = new OnboardingViewModel(new RecordingOnboardingService());
+        viewModel.NextCommand.Execute(null);
+        viewModel.LogDirectoryPath = string.Empty;
+
+        viewModel.NextCommand.Execute(null);
+
+        Assert.True(viewModel.IsWorkspaceStep);
+        Assert.Contains("log", viewModel.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -68,9 +84,37 @@ public sealed class OnboardingAndShellTests
         Assert.Equal(OpenAiTokenLimitParameter.MaxTokens, viewModel.NetworkTokenLimitParameter);
         Assert.Equal(9, viewModel.NetworkPresetOptions.Count);
 
-        viewModel.SelectedNetworkPreset = ModelProviderPresets.OpenAi;
+        viewModel.SelectedNetworkPresetId = ModelProviderPresets.XiaomiMimoId;
 
+        Assert.Equal("https://api.xiaomimimo.com/v1", viewModel.NetworkEndpoint);
+        Assert.Equal("mimo-v2.5-pro", viewModel.NetworkModelName);
         Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, viewModel.NetworkTokenLimitParameter);
+        Assert.Equal(
+            OpenAiTokenLimitParameter.MaxCompletionTokens,
+            viewModel.NetworkTokenLimitParameterOption.Value);
+
+        viewModel.NetworkTokenLimitParameterOption = viewModel.NetworkTokenLimitParameterOptions.Single(
+            static option => option.Value == OpenAiTokenLimitParameter.Omit);
+
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, viewModel.NetworkTokenLimitParameter);
+    }
+
+    [Fact]
+    public void NetworkOmitTokenOptionUsesLocalizedLabelAndRemainsTheSelectedObject()
+    {
+        var text = new DictionaryTextProvider(new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["ModelSourceTokenLimitParameterOmitOption"] = "由服务端决定（不发送）"
+        });
+        var viewModel = new OnboardingViewModel(new RecordingOnboardingService(), text);
+        var omit = viewModel.NetworkTokenLimitParameterOptions.Single(
+            static option => option.Value == OpenAiTokenLimitParameter.Omit);
+
+        viewModel.NetworkTokenLimitParameterOption = omit;
+
+        Assert.Equal("由服务端决定（不发送）", omit.DisplayName);
+        Assert.Same(omit, viewModel.NetworkTokenLimitParameterOption);
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, viewModel.NetworkTokenLimitParameter);
     }
 
     [Fact]
@@ -160,6 +204,17 @@ public sealed class OnboardingAndShellTests
         }
     }
 
+    private sealed class DictionaryTextProvider(IReadOnlyDictionary<string, string> values) : IUiTextProvider
+    {
+        public string GetText(string key, string fallback, params object?[] arguments)
+        {
+            var template = values.GetValueOrDefault(key, fallback);
+            return arguments.Length == 0
+                ? template
+                : string.Format(System.Globalization.CultureInfo.InvariantCulture, template, arguments);
+        }
+    }
+
     private sealed class MemoryConfigurationService : IAppConfigurationService
     {
         public AppConfiguration Configuration { get; set; } = new();
@@ -178,5 +233,20 @@ public sealed class OnboardingAndShellTests
             Configuration = configuration;
             return Task.CompletedTask;
         }
+
+        public Task SaveSettingsAsync(
+            AppSettingsUpdate settings,
+            CancellationToken cancellationToken = default) =>
+            SaveAsync(
+                Configuration with
+                {
+                    Language = settings.Language,
+                    Theme = settings.Theme,
+                    ForceAppAnimations = settings.ForceAppAnimations,
+                    WorkspacePath = settings.WorkspacePath,
+                    SandboxPath = settings.SandboxPath,
+                    LogDirectoryPath = settings.LogDirectoryPath ?? Configuration.LogDirectoryPath
+                },
+                cancellationToken);
     }
 }

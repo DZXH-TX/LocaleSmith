@@ -244,6 +244,10 @@ public sealed class DashboardViewModelTests
         Assert.Equal("Localized current status", translating.StatusText);
         Assert.True(translating.IsCurrent);
         Assert.True(translating.HasTiming);
+        Assert.Contains(
+            "Localized translation stage: Localized current status",
+            item.StageDetailsSummary,
+            StringComparison.Ordinal);
 
         item.Update(new TranslationQueueProgress(
             item.JobId,
@@ -261,6 +265,7 @@ public sealed class DashboardViewModelTests
         Assert.Equal("Localized rollback: Localized completed status", item.RollbackStatusText);
         Assert.Contains(item.StageDetails, stage =>
             stage.Stage == PipelineStage.RollingBack && stage.IsCompleted);
+        Assert.Contains("Localized rollback stage", item.StageDetailsSummary, StringComparison.Ordinal);
     }
 
     [Theory]

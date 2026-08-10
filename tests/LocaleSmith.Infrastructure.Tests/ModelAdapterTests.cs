@@ -306,6 +306,37 @@ public sealed class ModelAdapterTests
     }
 
     [Fact]
+    public async Task OpenAiCompatibleCanOmitTokenLimitParameterWhenModelUsesProviderDefault()
+    {
+        string? requestJson = null;
+        using var handler = new StubHttpMessageHandler(async (request, cancellationToken) =>
+        {
+            requestJson = await request.Content!.ReadAsStringAsync(cancellationToken);
+            return JsonResponse("""{"choices":[{"message":{"content":"OK"}}]}""");
+        });
+        using var client = new HttpClient(handler);
+        using var secrets = new InMemorySecretStore();
+        await secrets.SetAsync("providers/custom", "secret".AsMemory(), TestContext.Current.CancellationToken);
+        var service = new OpenAiCompatibleModelService(
+            client,
+            new ModelSource(
+                "custom",
+                "Custom",
+                ModelProviderKind.OpenAiCompatible,
+                new Uri("https://models.example/v1"),
+                "model-with-provider-default",
+                "providers/custom",
+                ModelProviderPresets.CustomId,
+                OpenAiTokenLimitParameter.Omit),
+            secrets);
+
+        await service.CompleteAsync(CreateRequest(), TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("\"max_tokens\"", requestJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"max_completion_tokens\"", requestJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AnthropicUsesMessagesApiAndSeparateSystemPrompt()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

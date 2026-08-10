@@ -1,3 +1,4 @@
+using LocaleSmith.Core.Models;
 using LocaleSmith.Presentation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
@@ -9,6 +10,7 @@ public sealed partial class ModelSourcesPage : Page
 {
     private ModelSourcesViewModel ViewModel { get; }
     private bool _loaded;
+    private bool _loading;
 
     public ModelSourcesPage()
     {
@@ -21,13 +23,55 @@ public sealed partial class ModelSourcesPage : Page
 
     private async void OnLoaded(object sender, RoutedEventArgs args)
     {
-        if (_loaded)
+        if (_loaded || _loading)
         {
             return;
         }
 
-        _loaded = true;
-        await ViewModel.LoadAsync().ConfigureAwait(true);
+        _loading = true;
+        try
+        {
+            await ViewModel.LoadAsync().ConfigureAwait(true);
+            _loaded = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnPresetSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (!_loaded || sender is not ComboBox comboBox)
+        {
+            return;
+        }
+
+        if (ModelOptionSelectionMap.TryResolvePreset(
+                comboBox.SelectedItem,
+                ViewModel.PresetOptions,
+                out var preset) &&
+            !ReferenceEquals(ViewModel.SelectedPreset, preset))
+        {
+            ViewModel.SelectedPreset = preset;
+        }
+    }
+
+    private void OnTokenLimitParameterSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (!_loaded || sender is not ComboBox comboBox)
+        {
+            return;
+        }
+
+        if (ModelOptionSelectionMap.TryResolveTokenLimitParameter(
+                comboBox.SelectedItem,
+                ViewModel.TokenLimitParameterOptions,
+                out var option) &&
+            !ReferenceEquals(ViewModel.SelectedTokenLimitParameterOption, option))
+        {
+            ViewModel.SelectedTokenLimitParameterOption = option;
+        }
     }
 
     private void OnSecretInputConsumed(object? sender, EventArgs args) => ApiKeyInput.Password = string.Empty;

@@ -48,7 +48,8 @@ public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
             body["temperature"] = temperature;
         }
 
-        if (request.MaxTokens is { } maxTokens)
+        if (request.MaxTokens is { } maxTokens &&
+            Source.TokenLimitParameter != OpenAiTokenLimitParameter.Omit)
         {
             body[Source.TokenLimitParameter == OpenAiTokenLimitParameter.MaxCompletionTokens
                 ? "max_completion_tokens"

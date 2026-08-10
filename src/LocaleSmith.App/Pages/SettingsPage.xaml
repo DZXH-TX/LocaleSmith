@@ -8,11 +8,15 @@
         <ScrollViewer HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel MaxWidth="760" HorizontalAlignment="Left" Spacing="20">
                 <StackPanel Spacing="4">
-                    <TextBlock x:Uid="SettingsTitle" Style="{ThemeResource PageTitleStyle}" />
+                    <TextBlock
+                        x:Uid="SettingsTitle"
+                        AutomationProperties.HeadingLevel="Level1"
+                        Style="{ThemeResource PageTitleStyle}" />
                     <TextBlock x:Uid="SettingsSubtitle" TextWrapping="WrapWholeWords" />
                 </StackPanel>
                 <InfoBar
                     x:Uid="SettingsError"
+                    AutomationProperties.LiveSetting="Assertive"
                     behaviors:AppMotion.StatusFeedback="True"
                     IsOpen="{Binding HasError}"
                     IsClosable="False"
@@ -20,6 +24,7 @@
                     Severity="Error" />
                 <InfoBar
                     x:Uid="SettingsStatus"
+                    AutomationProperties.LiveSetting="Polite"
                     behaviors:AppMotion.StatusFeedback="True"
                     IsOpen="{Binding HasStatus}"
                     IsClosable="False"
@@ -27,7 +32,7 @@
                     Severity="Success" />
                 <Border Style="{ThemeResource CardBorderStyle}">
                     <StackPanel Spacing="16">
-                        <TextBlock x:Uid="AppearanceSectionTitle" Style="{ThemeResource SectionTitleStyle}" />
+                        <TextBlock x:Uid="AppearanceSectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
                         <ComboBox
                             x:Uid="LanguageSelector"
                             ItemsSource="{Binding LanguageOptions}"
@@ -51,7 +56,7 @@
                 </Border>
                 <Border Style="{ThemeResource CardBorderStyle}">
                     <StackPanel Spacing="16">
-                        <TextBlock x:Uid="WorkspaceSectionTitle" Style="{ThemeResource SectionTitleStyle}" />
+                        <TextBlock x:Uid="WorkspaceSectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
                         <TextBox
                             x:Uid="SettingsWorkspacePath"
                             Text="{Binding WorkspacePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -63,16 +68,35 @@
                 </Border>
                 <Border Style="{ThemeResource CardBorderStyle}">
                     <StackPanel Spacing="16">
-                        <TextBlock x:Uid="SecuritySectionTitle" Style="{ThemeResource SectionTitleStyle}" />
+                        <TextBlock x:Uid="LogDirectorySectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox
+                                x:Uid="SettingsLogDirectoryPath"
+                                Text="{Binding LogDirectoryPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button
+                                x:Uid="BrowseLogDirectoryButton"
+                                Grid.Column="1"
+                                VerticalAlignment="Bottom"
+                                Click="OnBrowseLogDirectoryClicked" />
+                        </Grid>
+                        <TextBlock
+                            x:Uid="SettingsLogDirectoryHelp"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{ThemeResource CardBorderStyle}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="SecuritySectionTitle" AutomationProperties.HeadingLevel="Level2" Style="{ThemeResource SectionTitleStyle}" />
                         <TextBox
                             x:Uid="SettingsSandboxPath"
                             Text="{Binding SandboxPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <TextBlock x:Uid="SettingsSecurityHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
                         <TextBlock x:Uid="McpCliDisabledHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
-                        <Button
-                            x:Uid="OpenCliDiagnosticButton"
-                            HorizontalAlignment="Left"
-                            Command="{Binding OpenCliDiagnosticCommand}" />
                     </StackPanel>
                 </Border>
                 <Button

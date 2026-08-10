@@ -96,6 +96,114 @@ public sealed class ModelSourcesViewModelTests
         Assert.Equal(ModelProviderPresets.DeepSeekId, viewModel.SelectedPreset.Id);
     }
 
+    [Theory]
+    [InlineData(
+        ModelProviderPresets.DeepSeekId,
+        "https://api.deepseek.com/",
+        "deepseek-v4-pro",
+        OpenAiTokenLimitParameter.MaxTokens)]
+    [InlineData(
+        ModelProviderPresets.ZhipuGlmId,
+        "https://open.bigmodel.cn/api/paas/v4",
+        "glm-5.2",
+        OpenAiTokenLimitParameter.MaxTokens)]
+    [InlineData(
+        ModelProviderPresets.XiaomiMimoId,
+        "https://api.xiaomimimo.com/v1",
+        "mimo-v2.5-pro",
+        OpenAiTokenLimitParameter.MaxCompletionTokens)]
+    [InlineData(
+        ModelProviderPresets.MiniMaxId,
+        "https://api.minimax.io/v1",
+        "MiniMax-M2.7",
+        OpenAiTokenLimitParameter.MaxCompletionTokens)]
+    public async Task PresetIdSelectionReplacesOllamaDefaultsAndKeepsTokenSelectionVisible(
+        string presetId,
+        string expectedEndpoint,
+        string expectedModel,
+        OpenAiTokenLimitParameter expectedTokenParameter)
+    {
+        var viewModel = new ModelSourcesViewModel(new MemoryModelSourceCatalog());
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+        viewModel.Provider = ModelProviderKind.OpenAiCompatible;
+
+        // SelectedPresetId is the stable value used by the WinUI ComboBox binding.
+        viewModel.SelectedPresetId = presetId;
+
+        Assert.Equal(presetId, viewModel.SelectedPresetId);
+        Assert.Equal(expectedEndpoint, viewModel.Endpoint);
+        Assert.Equal(expectedModel, viewModel.ModelName);
+        Assert.Equal(expectedTokenParameter, viewModel.SelectedTokenLimitParameter);
+        Assert.Equal(expectedTokenParameter, viewModel.SelectedTokenLimitParameterOption.Value);
+    }
+
+    [Fact]
+    public async Task TokenLimitFieldCanBeExplicitlyOmittedForConnectionTestsAndSavedRequests()
+    {
+        var catalog = new MemoryModelSourceCatalog();
+        var viewModel = new ModelSourcesViewModel(catalog);
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+        viewModel.Provider = ModelProviderKind.OpenAiCompatible;
+        viewModel.SelectedPresetId = ModelProviderPresets.DeepSeekId;
+        viewModel.SelectedTokenLimitParameterOption = viewModel.TokenLimitParameterOptions.Single(
+            static option => option.Value == OpenAiTokenLimitParameter.Omit);
+
+        await viewModel.TestConnectionAsync("secret", TestContext.Current.CancellationToken);
+
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, catalog.LastTestSource?.TokenLimitParameter);
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, viewModel.SelectedTokenLimitParameter);
+        Assert.Contains(
+            "do not send",
+            viewModel.SelectedTokenLimitParameterOption.DisplayName,
+            StringComparison.OrdinalIgnoreCase);
+
+        await viewModel.SaveAsync("secret", TestContext.Current.CancellationToken);
+
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, catalog.LastSavedSource?.TokenLimitParameter);
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, viewModel.SelectedTokenLimitParameter);
+    }
+
+    [Fact]
+    public void OmitTokenOptionUsesLocalizedLabelAndRemainsTheSelectedObject()
+    {
+        var text = new DictionaryTextProvider(new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["ModelSourceTokenLimitParameterOmitOption"] = "由服务端决定（不发送）"
+        });
+        var viewModel = new ModelSourcesViewModel(new MemoryModelSourceCatalog(), text);
+        var omit = viewModel.TokenLimitParameterOptions.Single(
+            static option => option.Value == OpenAiTokenLimitParameter.Omit);
+
+        viewModel.SelectedTokenLimitParameterOption = omit;
+
+        Assert.Equal("由服务端决定（不发送）", omit.DisplayName);
+        Assert.Same(omit, viewModel.SelectedTokenLimitParameterOption);
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, viewModel.SelectedTokenLimitParameter);
+    }
+
+    [Fact]
+    public async Task LoadingPresetProfilePreservesEditableConnectionFields()
+    {
+        var catalog = new MemoryModelSourceCatalog();
+        catalog.Seed(new ModelSourceProfile
+        {
+            Id = "legacy-deepseek",
+            DisplayName = "DeepSeek",
+            Provider = ModelProviderKind.OpenAiCompatible,
+            PresetId = ModelProviderPresets.DeepSeekId,
+            Endpoint = "http://127.0.0.1:11434",
+            ModelName = "llama3"
+        });
+        var viewModel = new ModelSourcesViewModel(catalog);
+
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(ModelProviderPresets.DeepSeekId, viewModel.SelectedPresetId);
+        Assert.Equal("http://127.0.0.1:11434", viewModel.Endpoint);
+        Assert.Equal("llama3", viewModel.ModelName);
+        Assert.False(viewModel.IsDirty);
+    }
+
     [Fact]
     public void LegacyProfileWithoutPresetIdDeserializesAsCustomWithoutChangingConnectionFields()
     {
@@ -146,6 +254,27 @@ public sealed class ModelSourcesViewModelTests
 
         Assert.Contains("\"tokenLimitParameter\":\"max_completion_tokens\"", json, StringComparison.Ordinal);
         Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, roundTrip?.TokenLimitParameter);
+    }
+
+    [Fact]
+    public void OmittedTokenLimitParameterPersistsWithStableApiValue()
+    {
+        var profile = new ModelSourceProfile
+        {
+            Id = "custom",
+            DisplayName = "Custom",
+            Provider = ModelProviderKind.OpenAiCompatible,
+            PresetId = ModelProviderPresets.CustomId,
+            TokenLimitParameter = OpenAiTokenLimitParameter.Omit,
+            Endpoint = "https://models.example.test/v1",
+            ModelName = "model"
+        };
+
+        var json = JsonSerializer.Serialize(profile, WebJsonOptions);
+        var roundTrip = JsonSerializer.Deserialize<ModelSourceProfile>(json, WebJsonOptions);
+
+        Assert.Contains("\"tokenLimitParameter\":\"omit\"", json, StringComparison.Ordinal);
+        Assert.Equal(OpenAiTokenLimitParameter.Omit, roundTrip?.TokenLimitParameter);
     }
 
     [Fact]
@@ -224,6 +353,17 @@ public sealed class ModelSourcesViewModelTests
         Assert.Contains("manual", viewModel.ConnectionMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+    private sealed class DictionaryTextProvider(IReadOnlyDictionary<string, string> values) : IUiTextProvider
+    {
+        public string GetText(string key, string fallback, params object?[] arguments)
+        {
+            var template = values.GetValueOrDefault(key, fallback);
+            return arguments.Length == 0
+                ? template
+                : string.Format(System.Globalization.CultureInfo.InvariantCulture, template, arguments);
+        }
+    }
+
     private sealed class MemoryModelSourceCatalog : IModelSourceCatalog
     {
         private readonly List<ModelSourceProfile> _profiles = [];
@@ -244,6 +384,8 @@ public sealed class ModelSourcesViewModelTests
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource<ModelConnectionResult>? PendingTestResult { get; init; }
+
+        public void Seed(ModelSourceProfile profile) => _profiles.Add(profile);
 
         public Task<IReadOnlyList<ModelSourceProfile>> GetAllAsync(
             CancellationToken cancellationToken = default)

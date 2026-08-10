@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LocaleSmith.App.Services;
 using LocaleSmith.Infrastructure.Security;
 using LocaleSmith.Presentation.Models;
@@ -7,7 +8,7 @@ namespace LocaleSmith.App.Tests;
 public sealed class LegacyAppDataMigratorTests
 {
     [Fact]
-    public async Task MigratesConfigurationCredentialsMemoryAndLogsWithoutDeletingLegacyState()
+    public async Task MigratesEssentialConfigurationAndCredentialsWithoutCopyingCachesOrLogsAtStartup()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var root = Directory.CreateTempSubdirectory("localesmith-app-data-migration-");
@@ -32,6 +33,7 @@ public sealed class LegacyAppDataMigratorTests
             {
                 await legacyConfiguration.SaveAsync(new AppConfiguration
                 {
+                    SchemaVersion = 1,
                     IsOnboardingComplete = true,
                     WorkspacePath = Path.Combine(documentsRoot, "JaxI18n"),
                     SandboxPath = Path.Combine(Path.GetTempPath(), "JaxI18n", "Sandbox"),
@@ -67,38 +69,80 @@ public sealed class LegacyAppDataMigratorTests
                 new CredentialManagerMasterKeyStore(currentSecrets));
             var migrated = await currentConfiguration.LoadAsync(cancellationToken);
             Assert.NotNull(migrated);
+            Assert.Equal(AppConfiguration.CurrentSchemaVersion, migrated.SchemaVersion);
             Assert.True(migrated.IsOnboardingComplete);
             Assert.Equal(Path.Combine(documentsRoot, "LocaleSmith"), migrated.WorkspacePath);
+            Assert.Equal(Path.Combine(currentRoot, "CliSandbox"), migrated.SandboxPath);
             Assert.Equal(
-                Path.Combine(Path.GetTempPath(), "LocaleSmith", "Sandbox"),
-                migrated.SandboxPath);
+                Path.Combine(currentRoot, "logs", "translations"),
+                migrated.LogDirectoryPath);
             Assert.Equal(credentialReference, Assert.Single(migrated.ModelSources).CredentialReference);
 
             using var currentCredential = await currentSecrets.ResolveAsync(credentialReference, cancellationToken);
             using var legacyCredential = await legacySecrets.ResolveAsync(credentialReference, cancellationToken);
             Assert.Equal("legacy-api-key", currentCredential?.DangerousGetString());
             Assert.Equal("legacy-api-key", legacyCredential?.DangerousGetString());
-            Assert.Equal(
-                "legacy-memory",
-                await File.ReadAllTextAsync(
-                    Path.Combine(currentRoot, "translation-memory", "legacy.json"),
-                    cancellationToken));
-            Assert.Equal(
-                "legacy-log",
-                await File.ReadAllTextAsync(Path.Combine(currentRoot, "logs", "cli-audit.jsonl"), cancellationToken));
+            Assert.False(Directory.Exists(Path.Combine(currentRoot, "translation-memory")));
+            Assert.False(Directory.Exists(Path.Combine(currentRoot, "logs")));
             Assert.True(File.Exists(legacyMemory));
             Assert.True(File.Exists(legacyLog));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
 
+    [Fact]
+    public void ConfigurationPayloadWithoutLogDirectoryUsesTheMigrationTargetRoot()
+    {
+        var currentRoot = Path.Combine(
+            AppContext.BaseDirectory,
+            ".test-artifacts",
+            "legacy-log-default-" + Guid.NewGuid().ToString("N"));
+        var legacyPayload = JsonSerializer.Deserialize<AppConfiguration>("{\"SchemaVersion\":1}");
+        Assert.NotNull(legacyPayload);
+        Assert.Equal(1, legacyPayload.SchemaVersion);
+
+        var normalized = LegacyDefaultPathNormalizer.Normalize(
+            legacyPayload,
+            out var changed,
+            currentRoot);
+
+        Assert.True(changed);
+        Assert.Equal(AppConfiguration.CurrentSchemaVersion, normalized.SchemaVersion);
+        Assert.Equal(
+            Path.Combine(currentRoot, "logs", "translations"),
+            normalized.LogDirectoryPath);
+    }
+
+    [Fact]
+    public async Task InvalidLegacyConfigurationDoesNotPreventFreshStartupState()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var root = Directory.CreateTempSubdirectory("localesmith-invalid-legacy-config-");
+        using var legacySecrets = new InMemorySecretStore();
+        using var currentSecrets = new InMemorySecretStore();
+        try
+        {
+            var legacyRoot = Directory.CreateDirectory(Path.Combine(root.FullName, "JaxI18n")).FullName;
+            var currentRoot = Path.Combine(root.FullName, "LocaleSmith");
             await File.WriteAllTextAsync(
-                Path.Combine(currentRoot, "translation-memory", "legacy.json"),
-                "current-memory",
+                Path.Combine(legacyRoot, LegacyAppDataMigrator.LegacyConfigurationFileName),
+                "not-an-encrypted-envelope",
                 cancellationToken);
+
+            var migrator = new LegacyAppDataMigrator(
+                legacyRoot,
+                currentRoot,
+                legacySecrets,
+                currentSecrets);
+
             await migrator.MigrateAsync(cancellationToken);
-            Assert.Equal(
-                "current-memory",
-                await File.ReadAllTextAsync(
-                    Path.Combine(currentRoot, "translation-memory", "legacy.json"),
-                    cancellationToken));
+
+            Assert.False(File.Exists(Path.Combine(
+                currentRoot,
+                LegacyAppDataMigrator.CurrentConfigurationFileName)));
         }
         finally
         {

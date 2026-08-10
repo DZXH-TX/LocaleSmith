@@ -70,6 +70,14 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     {
         _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         _text = text ?? FallbackUiTextProvider.Instance;
+        TokenLimitParameterOptions =
+        [
+            new(
+                OpenAiTokenLimitParameter.Omit,
+                Text("ModelSourceTokenLimitParameterOmitOption", "Provider default (do not send)")),
+            new(OpenAiTokenLimitParameter.MaxTokens, "max_tokens"),
+            new(OpenAiTokenLimitParameter.MaxCompletionTokens, "max_completion_tokens")
+        ];
         NewCommand = new RelayCommand(StartNew, () => !IsBusy);
         SaveCommand = new AsyncRelayCommand<string?>(SaveAsync, _ => CanSave);
         TestConnectionCommand = new AsyncRelayCommand<string?>(TestConnectionAsync, _ => CanTestConnection);
@@ -89,11 +97,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
 
     public IReadOnlyList<ModelProviderPreset> PresetOptions { get; } = ModelProviderPresets.All;
 
-    public IReadOnlyList<TokenLimitParameterOption> TokenLimitParameterOptions { get; } =
-    [
-        new(OpenAiTokenLimitParameter.MaxTokens, "max_tokens"),
-        new(OpenAiTokenLimitParameter.MaxCompletionTokens, "max_completion_tokens")
-    ];
+    public IReadOnlyList<TokenLimitParameterOption> TokenLimitParameterOptions { get; }
 
     public IRelayCommand NewCommand { get; }
 
@@ -176,6 +180,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
                 return;
             }
 
+            OnPropertyChanged(nameof(SelectedPresetId));
             NotifyPresetProperties();
             if (_suppressDirtyTracking)
             {
@@ -196,6 +201,22 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Stable value used by the WinUI selector. Binding by ID avoids relying on object identity when the
+    /// selector materializes or restores its items.
+    /// </summary>
+    public string SelectedPresetId
+    {
+        get => SelectedPreset.Id;
+        set
+        {
+            if (ModelProviderPresets.TryGet(value, out var preset))
+            {
+                SelectedPreset = preset;
+            }
+        }
+    }
+
     public OpenAiTokenLimitParameter SelectedTokenLimitParameter
     {
         get => _selectedTokenLimitParameter;
@@ -203,7 +224,24 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedTokenLimitParameter, value))
             {
+                OnPropertyChanged(nameof(SelectedTokenLimitParameterOption));
                 MarkDirty();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Object-backed selection used by WinUI. This keeps the ComboBox selection visible for enum values and
+    /// exposes the explicit omit option without a nullable SelectedValue conversion.
+    /// </summary>
+    public TokenLimitParameterOption SelectedTokenLimitParameterOption
+    {
+        get => TokenLimitParameterOptions.First(option => option.Value == SelectedTokenLimitParameter);
+        set
+        {
+            if (value is not null)
+            {
+                SelectedTokenLimitParameter = value.Value;
             }
         }
     }
@@ -703,6 +741,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
 
         _selectedPreset = preset;
         OnPropertyChanged(nameof(SelectedPreset));
+        OnPropertyChanged(nameof(SelectedPresetId));
         NotifyPresetProperties();
     }
 
@@ -715,6 +754,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
 
         _selectedTokenLimitParameter = parameter;
         OnPropertyChanged(nameof(SelectedTokenLimitParameter));
+        OnPropertyChanged(nameof(SelectedTokenLimitParameterOption));
     }
 
     private void NotifyPresetProperties()

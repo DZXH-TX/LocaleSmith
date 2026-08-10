@@ -25,7 +25,24 @@ internal sealed class SecurityOperationLock : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operation);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        var lockRoot = Path.Combine(Path.GetTempPath(), "LocaleSmith", "SecurityLocks");
+        var localApplicationData = System.Environment.GetFolderPath(
+            System.Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localApplicationData))
+        {
+            throw new InvalidOperationException("The per-user application-data directory is unavailable.");
+        }
+
+        var applicationDataRoot = Path.TrimEndingDirectorySeparator(
+            Path.GetFullPath(localApplicationData));
+        var lockRoot = Path.GetFullPath(
+            Path.Combine(applicationDataRoot, "LocaleSmith", "SecurityLocks"));
+        if (!lockRoot.StartsWith(
+                applicationDataRoot + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The security-lock directory escaped application data.");
+        }
+
         Directory.CreateDirectory(lockRoot);
         var path = Path.Combine(lockRoot, $"{GetName(operation, key)}.lock");
 

@@ -8,6 +8,10 @@ public interface IAppConfigurationService
     Task<AppConfiguration> LoadAsync(CancellationToken cancellationToken = default);
 
     Task SaveAsync(AppConfiguration configuration, CancellationToken cancellationToken = default);
+
+    Task SaveSettingsAsync(
+        AppSettingsUpdate settings,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IOnboardingService
@@ -88,13 +92,6 @@ public interface IOutputPathStrategy
 public interface IUiTextProvider
 {
     string GetText(string key, string fallback, params object?[] arguments);
-}
-
-public interface ICliDiagnosticRequestFactory
-{
-    Task<LocaleSmith.Presentation.ViewModels.CliConfirmationViewModel> CreateAsync(
-        string sandboxPath,
-        CancellationToken cancellationToken = default);
 }
 
 public interface IModelAssistantService

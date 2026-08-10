@@ -125,6 +125,11 @@ public sealed class QueueItemViewModel : ObservableObject
 
     public string FileName { get; }
 
+    public string CancelAccessibleName => _text.GetText(
+        "QueueCancelAccessibleName",
+        "Cancel translation job {0}",
+        FileName);
+
     public TranslationStyle Style { get; }
 
     public string TranslationStyleName => Style switch
@@ -189,11 +194,18 @@ public sealed class QueueItemViewModel : ObservableObject
             if (SetProperty(ref _stageDetails, value))
             {
                 OnPropertyChanged(nameof(HasStageDetails));
+                OnPropertyChanged(nameof(StageDetailsSummary));
             }
         }
     }
 
     public bool HasStageDetails => StageDetails.Count > 0;
+
+    public string StageDetailsSummary => string.Join(
+        System.Environment.NewLine,
+        StageDetails.Select(static detail => string.IsNullOrWhiteSpace(detail.TimingText)
+            ? $"{detail.StageName}: {detail.StatusText}"
+            : $"{detail.StageName}: {detail.StatusText} ({detail.TimingText})"));
 
     public string DetailsEmptyMessage => _text.GetText(
         "QueueProgressDetailsPending",
@@ -313,11 +325,18 @@ public sealed class QueueItemViewModel : ObservableObject
             if (SetProperty(ref _hardcodedCandidates, value))
             {
                 OnPropertyChanged(nameof(HardcodedCandidateCount));
+                OnPropertyChanged(nameof(HardcodedSummary));
             }
         }
     }
 
     public int HardcodedCandidateCount => HardcodedCandidates.Count;
+
+    public string HardcodedSummary => _text.GetText(
+        "QueueHardcodedSummary",
+        "Hard-coded candidates: {0}; externalized: {1}.",
+        HardcodedCandidateCount,
+        ExternalizedCount);
 
     public int ExternalizedCount
     {
@@ -326,6 +345,7 @@ public sealed class QueueItemViewModel : ObservableObject
         {
             if (SetProperty(ref _externalizedCount, value))
             {
+                OnPropertyChanged(nameof(HardcodedSummary));
             }
         }
     }

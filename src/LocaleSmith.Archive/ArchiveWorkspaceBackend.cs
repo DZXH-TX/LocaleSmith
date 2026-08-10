@@ -59,32 +59,55 @@ public sealed class ArchiveWorkspaceBackend : IArchiveWorkspaceBackend
         bool workspaceCreated = false;
         FileStream? sourceLock = null;
         TransactionJournal? journal = null;
+        DirectoryMutationGuard? productRootGuard = null;
+        DirectoryMutationGuard? workspacesRootGuard = null;
+        DirectoryMutationGuard? logsRootGuard = null;
+        DirectoryMutationGuard? workspaceGuard = null;
         try
         {
-            Directory.CreateDirectory(workspacesRoot);
-            Directory.CreateDirectory(logsRoot);
-            RejectReparsePoint(productRoot);
-            RejectReparsePoint(workspacesRoot);
-            RejectReparsePoint(logsRoot);
-            ArchivePathSafety.EnsureChildPath(tempRoot, workspacePath);
-            if (Directory.Exists(workspacePath) || File.Exists(workspacePath))
+            string canonicalWorkspace;
+            using (ArchiveWorkspaceSetupLock.Acquire(cancellationToken))
             {
-                throw new IOException($"The transaction workspace already exists: '{workspacePath}'.");
-            }
+                productRootGuard = DirectoryMutationGuard.OpenOrCreateDirectoryForMutation(productRoot);
+                workspacesRootGuard = DirectoryMutationGuard.OpenOrCreateChildDirectoryForMutation(
+                        productRoot,
+                        workspacesRoot)
+                    ?? throw new InvalidOperationException("The workspace root must be below the product root.");
+                logsRootGuard = DirectoryMutationGuard.OpenOrCreateChildDirectoryForMutation(
+                        productRoot,
+                        logsRoot)
+                    ?? throw new InvalidOperationException("The log root must be below the product root.");
+                RejectReparsePoint(productRoot);
+                RejectReparsePoint(workspacesRoot);
+                RejectReparsePoint(logsRoot);
+                ArchivePathSafety.EnsureChildPath(tempRoot, workspacePath);
+                if (Directory.Exists(workspacePath) || File.Exists(workspacePath))
+                {
+                    throw new IOException($"The transaction workspace already exists: '{workspacePath}'.");
+                }
 
-            Directory.CreateDirectory(workspacePath);
-            workspaceCreated = true;
-            RejectReparsePoint(workspacePath);
-            string canonicalWorkspace = ArchivePathSafety.Canonicalize(workspacePath);
-            ArchivePathSafety.EnsureChildPath(workspacesRoot, canonicalWorkspace);
-            string journalPath = Path.Combine(logsRoot, $"{jobId:N}.jsonl");
-            journal = new TransactionJournal(jobId, journalPath);
+                Directory.CreateDirectory(workspacePath);
+                workspaceCreated = true;
+                workspaceGuard = DirectoryMutationGuard.OpenDirectoryForMutation(workspacePath);
+                RejectReparsePoint(workspacePath);
+                canonicalWorkspace = ArchivePathSafety.Canonicalize(workspacePath);
+                ArchivePathSafety.EnsureChildPath(workspacesRoot, canonicalWorkspace);
+                string journalPath = Path.Combine(logsRoot, $"{jobId:N}.jsonl");
+                journal = new TransactionJournal(jobId, journalPath);
+                logsRootGuard.Dispose();
+                logsRootGuard = null;
+                workspacesRootGuard.Dispose();
+                workspacesRootGuard = null;
+                productRootGuard.Dispose();
+                productRootGuard = null;
+            }
 
             string transactionSourcePath = source.Path;
             if (source.IsDirectory)
             {
                 string snapshotRoot = Path.Combine(canonicalWorkspace, "source-snapshot");
                 Directory.CreateDirectory(snapshotRoot);
+                using var snapshotGuard = DirectoryMutationGuard.OpenDirectoryForMutation(snapshotRoot);
                 RejectReparsePoint(snapshotRoot);
                 string sourceName = Path.GetFileName(source.Path);
                 string snapshotPath = Path.Combine(snapshotRoot, $"{sourceName}.zip");
@@ -121,20 +144,53 @@ public sealed class ArchiveWorkspaceBackend : IArchiveWorkspaceBackend
                 _scanner,
                 _options,
                 journal,
+                workspaceGuard,
                 source.IsDirectory);
             sourceLock = null;
+            journal = null;
+            workspaceGuard = null;
             return workspace;
         }
         catch (Exception exception)
         {
-            journal?.Write("begin", "failed", exception.Message);
-            sourceLock?.Dispose();
+            var cleanupErrors = new List<string>();
+            try
+            {
+                journal?.Write("begin", "failed", exception.Message);
+            }
+            catch (Exception journalException) when (journalException is
+                IOException or
+                UnauthorizedAccessException or
+                ObjectDisposedException)
+            {
+                // Preserve the primary begin failure while cleanup continues.
+            }
+
+            TryCleanup(() => journal?.Dispose(), cleanupErrors, "journal");
+            TryCleanup(() => sourceLock?.Dispose(), cleanupErrors, "source lock");
+            TryCleanup(() => workspaceGuard?.Dispose(), cleanupErrors, "workspace guard");
+            workspaceGuard = null;
             if (workspaceCreated && Directory.Exists(workspacePath))
             {
-                DeleteWorkspaceAfterFailedBegin(workspacesRoot, workspacePath);
+                TryCleanup(
+                    () => DeleteWorkspaceAfterFailedBegin(workspacesRoot, workspacePath),
+                    cleanupErrors,
+                    "workspace tree");
+            }
+
+            if (cleanupErrors.Count > 0)
+            {
+                exception.Data["LocaleSmith.ArchiveCleanupErrors"] = string.Join(" | ", cleanupErrors);
             }
 
             throw;
+        }
+        finally
+        {
+            workspaceGuard?.Dispose();
+            logsRootGuard?.Dispose();
+            workspacesRootGuard?.Dispose();
+            productRootGuard?.Dispose();
         }
     }
 
@@ -182,40 +238,90 @@ public sealed class ArchiveWorkspaceBackend : IArchiveWorkspaceBackend
     private static void DeleteWorkspaceAfterFailedBegin(string workspacesRoot, string workspacePath)
     {
         ArchivePathSafety.EnsureChildPath(workspacesRoot, workspacePath);
-        if ((File.GetAttributes(workspacePath) & FileAttributes.ReparsePoint) != 0)
+        DirectoryMutationGuard.DeleteDirectoryTree(workspacePath);
+    }
+
+    private static void TryCleanup(Action action, List<string> errors, string operation)
+    {
+        try
         {
-            throw new IOException(
-                $"A failed transaction workspace became a reparse point and was not deleted: '{workspacePath}'.");
+            action();
+        }
+        catch (Exception exception) when (exception is
+            IOException or
+            UnauthorizedAccessException or
+            ObjectDisposedException)
+        {
+            errors.Add($"{operation}: {exception.Message}");
+        }
+    }
+
+    private sealed class ArchiveWorkspaceSetupLock : IDisposable
+    {
+        private const string MutexName = @"Local\DZXH-TX.LocaleSmith.ArchiveWorkspaceSetup.v1";
+        private const int AcquireTimeoutMilliseconds = 10_000;
+        private readonly Mutex _mutex;
+        private bool _ownsMutex;
+
+        private ArchiveWorkspaceSetupLock(Mutex mutex)
+        {
+            _mutex = mutex;
+            _ownsMutex = true;
         }
 
-        foreach (string child in Directory.EnumerateFileSystemEntries(workspacePath))
+        public static ArchiveWorkspaceSetupLock Acquire(CancellationToken cancellationToken)
         {
-            FileAttributes attributes = File.GetAttributes(child);
-            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            cancellationToken.ThrowIfCancellationRequested();
+            var mutex = new Mutex(initiallyOwned: false, MutexName);
+            try
             {
-                if ((attributes & FileAttributes.Directory) != 0)
+                try
                 {
-                    Directory.Delete(child, recursive: false);
+                    int signaled = WaitHandle.WaitAny(
+                        [mutex, cancellationToken.WaitHandle],
+                        AcquireTimeoutMilliseconds);
+                    if (signaled == WaitHandle.WaitTimeout)
+                    {
+                        throw new IOException("Timed out while waiting to create a secure archive workspace.");
+                    }
+
+                    if (signaled != 0)
+                    {
+                        throw new OperationCanceledException(cancellationToken);
+                    }
                 }
-                else
+                catch (AbandonedMutexException)
                 {
-                    File.Delete(child);
+                    // Ownership is granted when an abandoned mutex is observed. All filesystem
+                    // objects are still revalidated under fresh handles below.
                 }
 
-                continue;
+                return new ArchiveWorkspaceSetupLock(mutex);
             }
-
-            if ((attributes & FileAttributes.Directory) != 0)
+            catch
             {
-                DeleteWorkspaceAfterFailedBegin(workspacePath, child);
-            }
-            else
-            {
-                File.Delete(child);
+                mutex.Dispose();
+                throw;
             }
         }
 
-        Directory.Delete(workspacePath, recursive: false);
+        public void Dispose()
+        {
+            if (!_ownsMutex)
+            {
+                return;
+            }
+
+            _ownsMutex = false;
+            try
+            {
+                _mutex.ReleaseMutex();
+            }
+            finally
+            {
+                _mutex.Dispose();
+            }
+        }
     }
 
     private sealed record SourceResolution(string Path, bool IsDirectory);

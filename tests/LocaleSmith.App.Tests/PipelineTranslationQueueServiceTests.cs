@@ -22,12 +22,15 @@ public sealed class PipelineTranslationQueueServiceTests
             "translated.jar");
         await using var scheduler = new RecordingScheduler();
         var service = new PipelineTranslationQueueService(scheduler);
+        var outputDirectory = Path.GetDirectoryName(outputPath)!;
+        Assert.False(Directory.Exists(outputDirectory));
 
         var handle = await service.EnqueueAsync(
             new TranslationQueueRequest("input.jar", outputPath, "saved-source", style),
             TestContext.Current.CancellationToken);
         var result = await handle.Completion.WaitAsync(TestContext.Current.CancellationToken);
 
+        Assert.False(Directory.Exists(outputDirectory));
         Assert.Equal(1, scheduler.EnqueueCount);
         Assert.NotNull(scheduler.Request);
         Assert.Equal(style, Assert.Single(scheduler.Request.Styles));
@@ -56,7 +59,7 @@ public sealed class PipelineTranslationQueueServiceTests
             cancellationToken.ThrowIfCancellationRequested();
             Request = request;
             EnqueueCount++;
-            var jobId = Guid.NewGuid();
+            var jobId = request.RequestedJobId ?? Guid.NewGuid();
             var artifact = new PackageArtifact(Assert.Single(request.Styles), request.OutputPath);
             var artifacts = new[] { artifact };
             var result = new PipelineResult(

@@ -7,6 +7,7 @@
   <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>LocaleSmith | 译匠</value></data>
   <data name="DashboardNavigationItem.Content" xml:space="preserve"><value>处理队列</value></data>
   <data name="ModelSourcesNavigationItem.Content" xml:space="preserve"><value>模型源</value></data>
+  <data name="LogsNavigationItem.Content" xml:space="preserve"><value>日志</value></data>
   <data name="StartupErrorTitle.Text" xml:space="preserve"><value>应用无法安全启动</value></data>
   <data name="OnboardingStepPrefix.Text" xml:space="preserve"><value>第</value></data>
   <data name="OnboardingStepSuffix.Text" xml:space="preserve"><value>/ 4 步</value></data>
@@ -32,6 +33,11 @@
   <data name="SandboxPathInput.Header" xml:space="preserve"><value>CLI 沙箱目录</value></data>
   <data name="SandboxPathInput.AutomationProperties.Name" xml:space="preserve"><value>CLI 沙箱目录路径</value></data>
   <data name="SandboxHelp.Text" xml:space="preserve"><value>禁止使用磁盘根目录、Windows、Program Files、符号链接或联接点路径。</value></data>
+  <data name="OnboardingLogDirectoryPath.Header" xml:space="preserve"><value>翻译日志目录</value></data>
+  <data name="OnboardingLogDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>翻译日志存储目录路径</value></data>
+  <data name="OnboardingBrowseLogDirectoryButton.Content" xml:space="preserve"><value>浏览…</value></data>
+  <data name="OnboardingBrowseLogDirectoryButton.AutomationProperties.Name" xml:space="preserve"><value>选择翻译日志目录</value></data>
+  <data name="OnboardingLogDirectoryHelp.Text" xml:space="preserve"><value>请选择本地目录；目录可写时，每次翻译会尽力在后台持久化 Debug 与全部级别两份 .log，并保留最新 500 次会话。写入采用有界队列，慢速日志不会阻塞翻译。</value></data>
   <data name="OnboardingModelTitle.Text" xml:space="preserve"><value>配置模型连接</value></data>
   <data name="OnboardingModelBody.Text" xml:space="preserve"><value>根据首屏选择配置本地 Ollama 或网络大模型；地址和模型名称均可编辑。</value></data>
   <data name="ConfigureOllamaCheckBox.Content" xml:space="preserve"><value>现在配置本机 Ollama</value></data>
@@ -44,7 +50,7 @@
   <data name="OnboardingNetworkModelInput.Header" xml:space="preserve"><value>模型名称</value></data>
   <data name="OnboardingNetworkTokenLimitParameter.Header" xml:space="preserve"><value>补全 Token 参数</value></data>
   <data name="OnboardingNetworkTokenLimitParameter.AutomationProperties.Name" xml:space="preserve"><value>网络模型补全 Token 参数</value></data>
-  <data name="OnboardingNetworkTokenLimitParameterHelp.Text" xml:space="preserve"><value>预设会自动选择提供方建议的字段；如果兼容端点要求不同，仍可手动切换。首次连接测试不会发送该可选参数。</value></data>
+  <data name="OnboardingNetworkTokenLimitParameterHelp.Text" xml:space="preserve"><value>预设会自动选择推荐字段；也可切换兼容字段，或选择不发送并由服务端决定。</value></data>
   <data name="OnboardingNetworkApiKeyInput.Header" xml:space="preserve"><value>API Key</value></data>
   <data name="OnboardingNetworkApiKeyInput.AutomationProperties.Name" xml:space="preserve"><value>网络模型 API Key</value></data>
   <data name="OnboardingNetworkCredentialHelp.Text" xml:space="preserve"><value>API Key 只会写入 Windows 凭据管理器；配置和日志仅保留凭据引用。</value></data>
@@ -82,13 +88,33 @@
   <data name="QueueFailureDetailsTitle.Text" xml:space="preserve"><value>失败与回滚</value></data>
   <data name="QueueTechnicalDetailsTitle.Text" xml:space="preserve"><value>技术详情</value></data>
   <data name="CancelQueueItemButtonText.Text" xml:space="preserve"><value>取消</value></data>
-  <data name="CancelQueueItemButton.AutomationProperties.Name" xml:space="preserve"><value>取消此翻译任务</value></data>
+  <data name="QueueCancelAccessibleName" xml:space="preserve"><value>取消翻译任务 {0}</value></data>
   <data name="CancelQueueItemButton.ToolTipService.ToolTip" xml:space="preserve"><value>取消任务</value></data>
   <data name="FormalArtifactLabel.Text" xml:space="preserve"><value>正式版工件：</value></data>
   <data name="InformalArtifactLabel.Text" xml:space="preserve"><value>非正式版工件：</value></data>
   <data name="HardcodedFoundPrefix.Text" xml:space="preserve"><value>硬编码候选：</value></data>
   <data name="HardcodedExternalizedPrefix.Text" xml:space="preserve"><value>；已外部化：</value></data>
   <data name="HardcodedReadonlySuffix.Text" xml:space="preserve"><value>（首版仅安全模式）</value></data>
+  <data name="LogsTitle.Text" xml:space="preserve"><value>翻译日志</value></data>
+  <data name="LogsSubtitle.Text" xml:space="preserve"><value>查看每次翻译的事务记录；默认仅显示 Debug 视图，可切换到全部级别。</value></data>
+  <data name="LogsSessionSelector.Header" xml:space="preserve"><value>翻译会话</value></data>
+  <data name="LogsSessionSelector.PlaceholderText" xml:space="preserve"><value>没有可用日志</value></data>
+  <data name="LogsSessionSelector.AutomationProperties.Name" xml:space="preserve"><value>选择一次翻译日志</value></data>
+  <data name="LogsViewSelector.Header" xml:space="preserve"><value>日志视图</value></data>
+  <data name="LogsViewSelector.AutomationProperties.Name" xml:space="preserve"><value>选择日志级别视图</value></data>
+  <data name="LogsRefreshButtonText.Text" xml:space="preserve"><value>刷新</value></data>
+  <data name="LogsRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>刷新翻译日志列表</value></data>
+  <data name="LogsRefreshButton.ToolTipService.ToolTip" xml:space="preserve"><value>重新扫描日志目录</value></data>
+  <data name="LogsDirectoryLabel.Text" xml:space="preserve"><value>日志目录</value></data>
+  <data name="LogsDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>已配置的翻译日志目录</value></data>
+  <data name="LogsError.Title" xml:space="preserve"><value>无法读取日志</value></data>
+  <data name="LogsBusy.AutomationProperties.Name" xml:space="preserve"><value>正在读取翻译日志</value></data>
+  <data name="LogsEmptyTitle.Text" xml:space="preserve"><value>还没有可显示的翻译日志</value></data>
+  <data name="LogsEmptyBody.Text" xml:space="preserve"><value>完成或运行一次翻译后，在此选择会话并查看 Debug 或全部级别记录。</value></data>
+  <data name="LogsContent.AutomationProperties.Name" xml:space="preserve"><value>所选翻译会话的日志内容</value></data>
+  <data name="LogViewModeDebug" xml:space="preserve"><value>Debug</value></data>
+  <data name="LogViewModeAllLevels" xml:space="preserve"><value>全部级别</value></data>
+  <data name="LogsLoadFailed" xml:space="preserve"><value>无法加载翻译日志。请检查设置中的日志目录及其权限后重试。</value></data>
   <data name="ModelSourcesTitle.Text" xml:space="preserve"><value>模型源</value></data>
   <data name="NewModelSourceButtonText.Text" xml:space="preserve"><value>新建</value></data>
   <data name="ModelSourcesList.AutomationProperties.Name" xml:space="preserve"><value>已配置模型源</value></data>
@@ -105,7 +131,8 @@
   <data name="ModelSourcePreset.Header" xml:space="preserve"><value>提供方预设（默认值可编辑）</value></data>
   <data name="ModelSourcePresetDocumentation.Content" xml:space="preserve"><value>打开官方 API 文档</value></data>
   <data name="ModelSourceTokenLimitParameter.Header" xml:space="preserve"><value>补全 Token 参数</value></data>
-  <data name="ModelSourceTokenLimitParameterHelp.Text" xml:space="preserve"><value>请使用提供方推荐的字段；自定义兼容端点可手动切换。连接测试会省略这个可选字段。</value></data>
+  <data name="ModelSourceTokenLimitParameterHelp.Text" xml:space="preserve"><value>可使用推荐字段、切换兼容字段，或选择不发送并由服务端决定。连接测试与翻译请求会遵循同一选择。</value></data>
+  <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>由服务端决定（不发送）</value></data>
   <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>服务地址</value></data>
   <data name="ModelSourceModelName.Header" xml:space="preserve"><value>模型名称（可手动输入）</value></data>
   <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>本机已下载模型</value></data>
@@ -140,11 +167,16 @@
   <data name="SettingsWorkspacePath.Header" xml:space="preserve"><value>翻译工作区根目录</value></data>
   <data name="SettingsWorkspacePath.AutomationProperties.Name" xml:space="preserve"><value>翻译工作区根目录路径</value></data>
   <data name="SettingsWorkspaceHelp.Text" xml:space="preserve"><value>输出会写入此目录下的 LocaleSmith.Output；禁止磁盘根目录、重解析路径，以及将目录包输出到其自身内部。</value></data>
+  <data name="LogDirectorySectionTitle.Text" xml:space="preserve"><value>翻译日志</value></data>
+  <data name="SettingsLogDirectoryPath.Header" xml:space="preserve"><value>日志存储目录</value></data>
+  <data name="SettingsLogDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>翻译日志存储目录路径</value></data>
+  <data name="BrowseLogDirectoryButton.Content" xml:space="preserve"><value>浏览…</value></data>
+  <data name="BrowseLogDirectoryButton.AutomationProperties.Name" xml:space="preserve"><value>选择翻译日志目录</value></data>
+  <data name="SettingsLogDirectoryHelp.Text" xml:space="preserve"><value>请选择本地目录并保存；下一次翻译起以有界后台队列写入 .log，并保留最新 500 次会话。慢速日志不会阻塞翻译，也不会记录 API Key 或完整提示词。</value></data>
   <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>CLI 安全边界</value></data>
   <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>允许的沙箱根目录</value></data>
   <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>策略始终保留系统临时目录，并拒绝磁盘根、系统目录、重解析路径、超时及黑名单命令。</value></data>
   <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>内置 MCP 的 CLI 执行工具默认隐藏且禁用；仅启用上下文与只读能力。</value></data>
-  <data name="OpenCliDiagnosticButton.Content" xml:space="preserve"><value>验证安全命令确认流程</value></data>
   <data name="SaveSettingsButton.Content" xml:space="preserve"><value>保存设置</value></data>
   <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>模型建议执行命令</value></data>
   <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>执行命令</value></data>
@@ -168,8 +200,8 @@
   <data name="OnboardingEncrypting" xml:space="preserve"><value>正在创建主密钥并加密保存设置…</value></data>
   <data name="OnboardingComplete" xml:space="preserve"><value>首次设置已完成。</value></data>
   <data name="OnboardingSaveFailed" xml:space="preserve"><value>无法安全保存设置：{0}</value></data>
-  <data name="OnboardingPathsRequired" xml:space="preserve"><value>工作区和沙箱路径均为必填项。</value></data>
-  <data name="OnboardingPathsInvalid" xml:space="preserve"><value>工作区或沙箱路径无效。</value></data>
+  <data name="OnboardingPathsRequired" xml:space="preserve"><value>工作区、沙箱和日志目录路径均为必填项。</value></data>
+  <data name="OnboardingPathsInvalid" xml:space="preserve"><value>工作区、沙箱或日志目录路径无效。</value></data>
   <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>请输入绝对 HTTP 或 HTTPS Ollama 地址。</value></data>
   <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>未加密 HTTP 仅允许用于本机回环 Ollama 服务。</value></data>
   <data name="OnboardingModelRequired" xml:space="preserve"><value>请输入已安装的 Ollama 模型名称。</value></data>
@@ -207,6 +239,7 @@
   <data name="QueueStyleFormalDescription" xml:space="preserve"><value>采用官方术语和一致的书面表达。</value></data>
   <data name="QueueStyleInformal" xml:space="preserve"><value>语气翻译</value></data>
   <data name="QueueStyleInformalDescription" xml:space="preserve"><value>采用自然的玩家社区用语和非正式语气。</value></data>
+  <data name="QueueHardcodedSummary" xml:space="preserve"><value>硬编码候选：{0}；已外部化：{1}。</value></data>
   <data name="QueueModelSelectFailed" xml:space="preserve"><value>无法选择模型源：{0}</value></data>
   <data name="QueueProgressDetailsPending" xml:space="preserve"><value>处理开始后，将在此显示详细阶段信息。</value></data>
   <data name="QueueRollbackStatus" xml:space="preserve"><value>回滚：{0}</value></data>
@@ -299,6 +332,7 @@
   <data name="SettingsLoadBeforeSave" xml:space="preserve"><value>请先加载设置再保存更改。</value></data>
   <data name="SettingsSandboxRequired" xml:space="preserve"><value>必须提供沙箱路径。</value></data>
   <data name="SettingsWorkspaceAndSandboxRequired" xml:space="preserve"><value>必须同时提供工作区和沙箱路径。</value></data>
+  <data name="SettingsWorkspaceSandboxAndLogRequired" xml:space="preserve"><value>必须同时提供工作区、沙箱和日志目录路径。</value></data>
   <data name="SettingsSaved" xml:space="preserve"><value>设置已安全保存。</value></data>
   <data name="SettingsSaveFailed" xml:space="preserve"><value>无法保存设置：{0}</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>无法打开命令审阅：{0}</value></data>

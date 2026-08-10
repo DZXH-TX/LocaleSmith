@@ -313,6 +313,11 @@ public sealed class ModelAssistantServiceTests
             AppConfiguration configuration,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task SaveSettingsAsync(
+            AppSettingsUpdate settings,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class PermitPolicy(bool permit = true) : ICliCommandPolicy

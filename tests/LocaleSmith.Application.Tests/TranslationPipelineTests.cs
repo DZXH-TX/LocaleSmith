@@ -28,6 +28,10 @@ public sealed class TranslationPipelineTests
             Path.Combine(prefix, "input.jar"),
             Path.Combine(prefix, "output.jar"),
             styles: new HashSet<TranslationStyle> { (TranslationStyle)99 }));
+        Assert.Throws<ArgumentException>(() => new PipelineRequest(
+            Path.Combine(prefix, "input.jar"),
+            Path.Combine(prefix, "output.jar"),
+            requestedJobId: Guid.Empty));
     }
 
     [Fact]
@@ -94,12 +98,14 @@ public sealed class TranslationPipelineTests
             new StubTranslationEngine(),
             new StubMemoryStore());
         await using var scheduler = new PipelineJobScheduler(pipeline);
+        var requestedJobId = Guid.NewGuid();
 
         var handle = await scheduler.EnqueueAsync(
-            CreateRequest(),
+            CreateRequest(requestedJobId: requestedJobId),
             TestContext.Current.CancellationToken);
         await handle.Completion.WaitAsync(TestContext.Current.CancellationToken);
 
+        Assert.Equal(requestedJobId, handle.JobId);
         var latest = Assert.IsType<PipelineProgress>(handle.LatestProgress);
         Assert.Equal(PipelineStage.Completed, latest.Stage);
         Assert.Equal(1, latest.Fraction);
@@ -414,7 +420,8 @@ public sealed class TranslationPipelineTests
     private static PipelineRequest CreateRequest(
         string? modelSourceId = null,
         HardcodedStringMode hardcodedStringMode = HardcodedStringMode.ScanOnly,
-        TranslationStyle translationStyle = TranslationStyle.Formal)
+        TranslationStyle translationStyle = TranslationStyle.Formal,
+        Guid? requestedJobId = null)
     {
         var prefix = Path.Combine(Path.GetTempPath(), "localesmith-tests");
         return new PipelineRequest(
@@ -422,7 +429,8 @@ public sealed class TranslationPipelineTests
             Path.Combine(prefix, "output.jar"),
             styles: new HashSet<TranslationStyle> { translationStyle },
             hardcodedStringMode: hardcodedStringMode,
-            modelSourceId: modelSourceId);
+            modelSourceId: modelSourceId,
+            requestedJobId: requestedJobId);
     }
 
     private sealed class StubWorkspaceBackend(StubWorkspace workspace) : IArchiveWorkspaceBackend

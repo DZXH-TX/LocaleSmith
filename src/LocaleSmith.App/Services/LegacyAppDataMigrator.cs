@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LocaleSmith.Core.Abstractions;
 using LocaleSmith.Infrastructure.Security;
 using LocaleSmith.Presentation.Models;
@@ -5,8 +6,9 @@ using LocaleSmith.Presentation.Models;
 namespace LocaleSmith.App.Services;
 
 /// <summary>
-/// Copies pre-LocaleSmith application state into the new storage namespace without deleting
-/// the legacy state. The operation is idempotent so rollback to an older build remains possible.
+/// Imports essential pre-LocaleSmith configuration and credentials without deleting legacy state.
+/// Translation memory is promoted lazily by <see cref="FileTranslationMemoryStore"/>; historical
+/// logs remain in the legacy root so startup work is bounded.
 /// </summary>
 public sealed class LegacyAppDataMigrator
 {
@@ -46,9 +48,16 @@ public sealed class LegacyAppDataMigrator
     public async Task MigrateAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await MigrateConfigurationAsync(cancellationToken).ConfigureAwait(false);
-        await CopyDirectoryMissingFilesBestEffortAsync("translation-memory", cancellationToken).ConfigureAwait(false);
-        await CopyDirectoryMissingFilesBestEffortAsync("logs", cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await MigrateConfigurationAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (IsNonFatalLegacyFailure(exception))
+        {
+            // Legacy state is optional. A stale master key, corrupt envelope, inaccessible file,
+            // or malformed credential reference must never prevent a clean LocaleSmith startup.
+            Debug.WriteLine($"Legacy application-data migration was skipped: {exception}");
+        }
     }
 
     private async Task MigrateConfigurationAsync(CancellationToken cancellationToken)
@@ -78,7 +87,7 @@ public sealed class LegacyAppDataMigrator
             return;
         }
 
-        configuration = LegacyDefaultPathNormalizer.Normalize(configuration, out _);
+        configuration = LegacyDefaultPathNormalizer.Normalize(configuration, out _, _currentRoot);
 
         foreach (var reference in configuration.ModelSources
                      .Select(static profile => profile.CredentialReference)
@@ -99,118 +108,6 @@ public sealed class LegacyAppDataMigrator
             .ConfigureAwait(false);
     }
 
-    private async Task CopyDirectoryMissingFilesBestEffortAsync(
-        string relativeDirectory,
-        CancellationToken cancellationToken)
-    {
-        var sourceRoot = Path.Combine(_legacyRoot, relativeDirectory);
-        if (!Directory.Exists(sourceRoot))
-        {
-            return;
-        }
-
-        var destinationRoot = Path.Combine(_currentRoot, relativeDirectory);
-        var enumeration = new EnumerationOptions
-        {
-            RecurseSubdirectories = true,
-            IgnoreInaccessible = false,
-            AttributesToSkip = FileAttributes.ReparsePoint
-        };
-
-        IEnumerable<string> sourcePaths;
-        try
-        {
-            sourcePaths = Directory.EnumerateFiles(sourceRoot, "*", enumeration).ToArray();
-        }
-        catch (IOException)
-        {
-            return;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return;
-        }
-
-        foreach (var sourcePath in sourcePaths)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                var relativePath = Path.GetRelativePath(sourceRoot, sourcePath);
-                var destinationPath = ResolveContainedPath(destinationRoot, relativePath);
-                if (File.Exists(destinationPath))
-                {
-                    continue;
-                }
-
-                var destinationDirectory = Path.GetDirectoryName(destinationPath)
-                    ?? throw new InvalidOperationException("A migrated file has no parent directory.");
-                EnsureNoReparsePoint(destinationRoot, destinationDirectory);
-                Directory.CreateDirectory(destinationDirectory);
-                EnsureNoReparsePoint(destinationRoot, destinationDirectory);
-                var temporaryPath = $"{destinationPath}.{Guid.NewGuid():N}.migrating";
-                try
-                {
-                    await using (var source = new FileStream(
-                                     sourcePath,
-                                     FileMode.Open,
-                                     FileAccess.Read,
-                                     FileShare.ReadWrite | FileShare.Delete,
-                                     16 * 1024,
-                                     FileOptions.Asynchronous | FileOptions.SequentialScan))
-                    await using (var destination = new FileStream(
-                                     temporaryPath,
-                                     FileMode.CreateNew,
-                                     FileAccess.Write,
-                                     FileShare.None,
-                                     16 * 1024,
-                                     FileOptions.Asynchronous | FileOptions.WriteThrough))
-                    {
-                        await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
-                        await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
-                    }
-
-                    try
-                    {
-                        File.Move(temporaryPath, destinationPath, overwrite: false);
-                    }
-                    catch (IOException) when (File.Exists(destinationPath))
-                    {
-                        // A concurrent application instance completed the same migration first.
-                    }
-                }
-                finally
-                {
-                    if (File.Exists(temporaryPath))
-                    {
-                        File.Delete(temporaryPath);
-                    }
-                }
-            }
-            catch (IOException)
-            {
-                // Non-critical caches and logs remain in the legacy root and are retried next launch.
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Non-critical caches and logs must not prevent secure configuration migration.
-            }
-        }
-    }
-
-    private static string ResolveContainedPath(string root, string relativePath)
-    {
-        var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        var candidate = Path.GetFullPath(Path.Combine(normalizedRoot, relativePath));
-        if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException("A legacy application-data path escaped its migration root.");
-        }
-
-        return candidate;
-    }
-
     private static bool PathsOverlap(string first, string second)
     {
         var normalizedFirst = first.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
@@ -228,33 +125,7 @@ public sealed class LegacyAppDataMigrator
         }
     }
 
-    private static void EnsureNoReparsePoint(string root, string candidateDirectory)
-    {
-        var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        var candidate = Path.GetFullPath(candidateDirectory);
-        if (!candidate.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(
-                candidate.TrimEnd(Path.DirectorySeparatorChar),
-                root.TrimEnd(Path.DirectorySeparatorChar),
-                StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException("A migration destination escaped its application-data root.");
-        }
-
-        for (var current = new DirectoryInfo(candidate);
-             current is not null
-             && (current.FullName.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
-                 || string.Equals(
-                     current.FullName.TrimEnd(Path.DirectorySeparatorChar),
-                     root.TrimEnd(Path.DirectorySeparatorChar),
-                     StringComparison.OrdinalIgnoreCase));
-             current = current.Parent)
-        {
-            if (current.Exists && (current.Attributes & FileAttributes.ReparsePoint) != 0)
-            {
-                throw new InvalidDataException("A migration destination ancestor cannot be a reparse point.");
-            }
-        }
-    }
+    private static bool IsNonFatalLegacyFailure(Exception exception) =>
+        exception is not OperationCanceledException
+        and not OutOfMemoryException;
 }

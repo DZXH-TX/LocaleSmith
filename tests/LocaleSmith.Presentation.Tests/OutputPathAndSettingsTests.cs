@@ -244,6 +244,59 @@ public sealed class OutputPathAndSettingsTests
         }
     }
 
+    [Fact]
+    public async Task SettingsLoadAndSaveRoundTripsNormalizedLogDirectoryPath()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var originalLogDirectory = Path.Combine(testRoot, "logs-old");
+            var configuration = new MutableConfigurationService(
+                CreateConfiguration(Path.Combine(testRoot, "workspace")) with
+                {
+                    LogDirectoryPath = originalLogDirectory
+                });
+            using var viewModel = new SettingsViewModel(configuration);
+            await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(originalLogDirectory, viewModel.LogDirectoryPath);
+            var updatedLogDirectory = Path.Combine(testRoot, "logs-new", "..");
+            viewModel.LogDirectoryPath = updatedLogDirectory;
+
+            await viewModel.SaveCommand.ExecuteAsync(null);
+
+            Assert.NotNull(configuration.SavedConfiguration);
+            Assert.Equal(
+                Path.GetFullPath(updatedLogDirectory),
+                configuration.SavedConfiguration.LogDirectoryPath);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LogDirectoryNormalizationRejectsFilesystemRoots()
+    {
+        var root = Path.GetPathRoot(Path.GetFullPath(AppContext.BaseDirectory));
+        Assert.False(string.IsNullOrWhiteSpace(root));
+
+        Assert.Throws<ArgumentException>(() =>
+            AppConfiguration.NormalizeLogDirectoryPath(root!));
+    }
+
+    [Fact]
+    public void LogDirectoryNormalizationRejectsWindowsNetworkShares()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Assert.Throws<ArgumentException>(() =>
+            AppConfiguration.NormalizeLogDirectoryPath(@"\\server\share\LocaleSmithLogs"));
+    }
+
     private static AppConfiguration CreateConfiguration(string workspacePath) => new()
     {
         IsOnboardingComplete = true,
@@ -279,5 +332,20 @@ public sealed class OutputPathAndSettingsTests
             Configuration = configurationToSave;
             return Task.CompletedTask;
         }
+
+        public Task SaveSettingsAsync(
+            AppSettingsUpdate settings,
+            CancellationToken cancellationToken = default) =>
+            SaveAsync(
+                Configuration with
+                {
+                    Language = settings.Language,
+                    Theme = settings.Theme,
+                    ForceAppAnimations = settings.ForceAppAnimations,
+                    WorkspacePath = settings.WorkspacePath,
+                    SandboxPath = settings.SandboxPath,
+                    LogDirectoryPath = settings.LogDirectoryPath ?? Configuration.LogDirectoryPath
+                },
+                cancellationToken);
     }
 }

@@ -1,22 +1,31 @@
+using System.Text;
 using System.Text.Json;
 
 namespace LocaleSmith.Archive;
 
-internal sealed class TransactionJournal
+internal sealed class TransactionJournal : IDisposable
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
     private readonly object _sync = new();
     private readonly Guid _jobId;
+    private readonly StreamWriter _writer;
+    private bool _disposed;
 
     public TransactionJournal(Guid jobId, string logPath)
     {
         _jobId = jobId;
         LogPath = logPath;
-        using var stream = new FileStream(
+        var stream = new FileStream(
             logPath,
             FileMode.CreateNew,
             FileAccess.Write,
-            FileShare.Read);
+            FileShare.Read,
+            bufferSize: 4096,
+            FileOptions.WriteThrough);
+        _writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false))
+        {
+            AutoFlush = true
+        };
     }
 
     public string LogPath { get; }
@@ -32,7 +41,22 @@ internal sealed class TransactionJournal
         string line = JsonSerializer.Serialize(entry, SerializerOptions) + Environment.NewLine;
         lock (_sync)
         {
-            File.AppendAllText(LogPath, line);
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _writer.Write(line);
+        }
+    }
+
+    public void Dispose()
+    {
+        lock (_sync)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _writer.Dispose();
         }
     }
 

@@ -22,11 +22,12 @@ internal static class FolderSnapshotBuilder
         ReturnSpecialDirectories = false
     };
 
-    public static async Task CreateSnapshotZipAsync(
+    public static async Task<FolderSnapshotResult> CreateSnapshotZipAsync(
         string sourceDirectory,
         string snapshotPath,
         ArchiveWorkspaceOptions options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DirectoryMutationGuard? sourceRootGuard = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         string sourceRoot = ArchivePathSafety.Canonicalize(sourceDirectory);
@@ -37,6 +38,11 @@ internal static class FolderSnapshotBuilder
         }
 
         ArchivePathSafety.RejectReparsePointsInExistingDirectoryAncestry(sourceRoot);
+        using DirectoryMutationGuard? ownedRootGuard = sourceRootGuard is null
+            ? DirectoryMutationGuard.OpenDirectoryForTraversalWithValidatedAncestry(sourceRoot)
+            : null;
+        DirectoryMutationGuard activeRootGuard = sourceRootGuard ?? ownedRootGuard!;
+        activeRootGuard.EnsurePinsDirectory(sourceRoot);
 
         if (ArchivePathSafety.IsSameOrChildPath(sourceRoot, target))
         {
@@ -47,11 +53,13 @@ internal static class FolderSnapshotBuilder
                 sourceRoot,
                 options,
                 includeHashes: true,
+                activeRootGuard,
                 cancellationToken)
             .ConfigureAwait(false);
 
         try
         {
+            byte[] snapshotSha256;
             await using (var output = new FileStream(
                              target,
                              FileMode.CreateNew,
@@ -60,35 +68,44 @@ internal static class FolderSnapshotBuilder
                              bufferSize: 128 * 1024,
                              FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                using var archive = new ZipArchive(
-                    output,
-                    ZipArchiveMode.Create,
-                    leaveOpen: true,
-                    entryNameEncoding: Encoding.UTF8);
-                foreach (FolderEntry entry in baseline)
+                using (var archive = new ZipArchive(
+                           output,
+                           ZipArchiveMode.Create,
+                           leaveOpen: true,
+                           entryNameEncoding: Encoding.UTF8))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (entry.IsDirectory)
+                    foreach (FolderEntry entry in baseline)
                     {
-                        ZipArchiveEntry directoryEntry = archive.CreateEntry(
-                            entry.RelativePath + '/',
-                            CompressionLevel.NoCompression);
-                        directoryEntry.LastWriteTime = ClampZipTimestamp(entry.LastWriteTimeUtc);
-                        directoryEntry.ExternalAttributes = checked((int)entry.Attributes);
-                        continue;
-                    }
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (entry.IsDirectory)
+                        {
+                            ZipArchiveEntry directoryEntry = archive.CreateEntry(
+                                entry.RelativePath + '/',
+                                CompressionLevel.NoCompression);
+                            directoryEntry.LastWriteTime = ClampZipTimestamp(entry.LastWriteTimeUtc);
+                            directoryEntry.ExternalAttributes = checked((int)entry.Attributes);
+                            continue;
+                        }
 
-                    await AddFileAsync(archive, entry, cancellationToken).ConfigureAwait(false);
+                        await AddFileAsync(archive, sourceRoot, entry, cancellationToken).ConfigureAwait(false);
+                    }
                 }
+
+                output.Position = 0;
+                snapshotSha256 = await SHA256.HashDataAsync(output, cancellationToken).ConfigureAwait(false);
             }
 
             IReadOnlyList<FolderEntry> finalInventory = await CaptureInventoryAsync(
                     sourceRoot,
                     options,
                     includeHashes: true,
+                    activeRootGuard,
                     cancellationToken)
                 .ConfigureAwait(false);
             EnsureInventoriesMatch(baseline, finalInventory);
+            return new FolderSnapshotResult(
+                ComputeInventoryDigest(baseline, cancellationToken),
+                snapshotSha256);
         }
         catch
         {
@@ -104,14 +121,29 @@ internal static class FolderSnapshotBuilder
     public static async Task<byte[]> ComputeTreeDigestAsync(
         string sourceDirectory,
         ArchiveWorkspaceOptions options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DirectoryMutationGuard? sourceRootGuard = null)
     {
+        string sourceRoot = ArchivePathSafety.Canonicalize(sourceDirectory);
+        using DirectoryMutationGuard? ownedRootGuard = sourceRootGuard is null
+            ? DirectoryMutationGuard.OpenDirectoryForTraversalWithValidatedAncestry(sourceRoot)
+            : null;
+        DirectoryMutationGuard activeRootGuard = sourceRootGuard ?? ownedRootGuard!;
+        activeRootGuard.EnsurePinsDirectory(sourceRoot);
         IReadOnlyList<FolderEntry> inventory = await CaptureInventoryAsync(
-                ArchivePathSafety.Canonicalize(sourceDirectory),
+                sourceRoot,
                 options,
                 includeHashes: true,
+                activeRootGuard,
                 cancellationToken)
             .ConfigureAwait(false);
+        return ComputeInventoryDigest(inventory, cancellationToken);
+    }
+
+    private static byte[] ComputeInventoryDigest(
+        IReadOnlyList<FolderEntry> inventory,
+        CancellationToken cancellationToken)
+    {
         using IncrementalHash digest = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (FolderEntry entry in inventory)
         {
@@ -134,170 +166,162 @@ internal static class FolderSnapshotBuilder
         string sourceRoot,
         ArchiveWorkspaceOptions options,
         bool includeHashes,
+        DirectoryMutationGuard sourceRootGuard,
         CancellationToken cancellationToken)
     {
-        RejectUnsafeFileSystemObject(new DirectoryInfo(sourceRoot));
+        sourceRootGuard.EnsurePinsDirectory(sourceRoot);
+        var root = new DirectoryInfo(sourceRoot);
+        RejectUnsafeFileSystemObject(root);
         RejectAlternateDataStreams(sourceRoot);
-        var entries = new List<FolderEntry>();
-        var collisionKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var pending = new Stack<(string Path, int Depth)>();
-        pending.Push((sourceRoot, 0));
-        long totalBytes = 0;
+        var state = new InventoryCaptureState();
+        await CaptureDirectoryInventoryAsync(
+                sourceRoot,
+                sourceRoot,
+                parentDepth: 0,
+                options,
+                includeHashes,
+                state,
+                cancellationToken)
+            .ConfigureAwait(false);
+        state.Entries.Sort(
+            static (left, right) => StringComparer.Ordinal.Compare(left.RelativePath, right.RelativePath));
+        return state.Entries.AsReadOnly();
+    }
 
-        while (pending.Count > 0)
+    private static async Task CaptureDirectoryInventoryAsync(
+        string sourceRoot,
+        string directory,
+        int parentDepth,
+        ArchiveWorkspaceOptions options,
+        bool includeHashes,
+        InventoryCaptureState state,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        FileSystemInfo[] children = new DirectoryInfo(directory)
+            .EnumerateFileSystemInfos("*", SafeEnumeration)
+            .OrderBy(static child => child.Name, StringComparer.Ordinal)
+            .ToArray();
+        foreach (FileSystemInfo child in children)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            (string directory, int parentDepth) = pending.Pop();
-            var children = new DirectoryInfo(directory)
-                .EnumerateFileSystemInfos("*", SafeEnumeration)
-                .OrderBy(static child => child.Name, StringComparer.Ordinal)
-                .ToArray();
-            for (int index = children.Length - 1; index >= 0; index--)
+            child.Refresh();
+            RejectUnsafeFileSystemObject(child);
+            string fullPath = ArchivePathSafety.Canonicalize(child.FullName);
+            ArchivePathSafety.EnsureChildPath(sourceRoot, fullPath);
+            string relativePath = Path.GetRelativePath(sourceRoot, fullPath).Replace('\\', '/');
+            relativePath = ArchivePathSafety.ValidateArchiveRelativePath(relativePath).TrimEnd('/');
+            if (!state.CollisionKeys.Add(relativePath))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                FileSystemInfo child = children[index];
-                child.Refresh();
-                RejectUnsafeFileSystemObject(child);
-                string fullPath = ArchivePathSafety.Canonicalize(child.FullName);
-                ArchivePathSafety.EnsureChildPath(sourceRoot, fullPath);
-                string relativePath = Path.GetRelativePath(sourceRoot, fullPath).Replace('\\', '/');
-                relativePath = ArchivePathSafety.ValidateArchiveRelativePath(relativePath).TrimEnd('/');
-                if (!collisionKeys.Add(relativePath))
-                {
-                    throw new InvalidDataException(
-                        $"Folder entries collide under Windows path normalization: '{relativePath}'.");
-                }
+                throw new InvalidDataException(
+                    $"Folder entries collide under Windows path normalization: '{relativePath}'.");
+            }
 
-                int depth = parentDepth + 1;
-                if (depth > options.MaximumDirectoryDepth)
-                {
-                    throw new InvalidDataException(
-                        $"Folder exceeds the configured maximum depth at '{relativePath}'.");
-                }
+            int depth = parentDepth + 1;
+            if (depth > options.MaximumDirectoryDepth)
+            {
+                throw new InvalidDataException(
+                    $"Folder exceeds the configured maximum depth at '{relativePath}'.");
+            }
 
-                if (entries.Count >= options.MaximumEntryCount)
-                {
-                    throw new InvalidDataException("Folder exceeds the configured entry-count limit.");
-                }
+            if (state.Entries.Count >= options.MaximumEntryCount)
+            {
+                throw new InvalidDataException("Folder exceeds the configured entry-count limit.");
+            }
 
+            bool isDirectory = (child.Attributes & FileAttributes.Directory) != 0;
+            if (isDirectory)
+            {
+                using var childGuard = DirectoryMutationGuard.OpenDirectoryForTraversal(fullPath);
+                var directoryEntry = new DirectoryInfo(fullPath);
+                RejectUnsafeFileSystemObject(directoryEntry);
                 RejectAlternateDataStreams(fullPath);
-                bool isDirectory = (child.Attributes & FileAttributes.Directory) != 0;
-                if (isDirectory)
-                {
-                    var directoryEntry = new DirectoryInfo(fullPath);
-                    entries.Add(new FolderEntry(
-                        relativePath,
-                        fullPath,
-                        IsDirectory: true,
-                        Length: 0,
-                        directoryEntry.LastWriteTimeUtc,
-                        directoryEntry.CreationTimeUtc,
-                        directoryEntry.Attributes,
-                        Sha256: null));
-                    pending.Push((fullPath, depth));
-                    continue;
-                }
-
-                var file = new FileInfo(fullPath);
-                if (file.Length < 0 || file.Length > options.MaximumEntryBytes)
-                {
-                    throw new InvalidDataException(
-                        $"Folder file exceeds the configured size limit: '{relativePath}'.");
-                }
-
-                totalBytes = checked(totalBytes + file.Length);
-                if (totalBytes > options.MaximumTotalBytes)
-                {
-                    throw new InvalidDataException("Folder exceeds the configured total-size limit.");
-                }
-
-                byte[]? hash = includeHashes
-                    ? await ComputeLockedFileHashAsync(file, cancellationToken).ConfigureAwait(false)
-                    : null;
-                file.Refresh();
-                RejectUnsafeFileSystemObject(file);
-                entries.Add(new FolderEntry(
+                state.Entries.Add(new FolderEntry(
                     relativePath,
                     fullPath,
-                    IsDirectory: false,
-                    file.Length,
-                    file.LastWriteTimeUtc,
-                    file.CreationTimeUtc,
-                    file.Attributes,
-                    hash));
+                    IsDirectory: true,
+                    Length: 0,
+                    directoryEntry.LastWriteTimeUtc,
+                    directoryEntry.CreationTimeUtc,
+                    directoryEntry.Attributes,
+                    Sha256: null));
+                await CaptureDirectoryInventoryAsync(
+                        sourceRoot,
+                        fullPath,
+                        depth,
+                        options,
+                        includeHashes,
+                        state,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                continue;
             }
-        }
 
-        entries.Sort(static (left, right) => StringComparer.Ordinal.Compare(left.RelativePath, right.RelativePath));
-        return entries.AsReadOnly();
+            using var fileGuard = DirectoryMutationGuard.OpenFileForMutation(fullPath);
+            var file = new FileInfo(fullPath);
+            RejectUnsafeFileSystemObject(file);
+            RejectAlternateDataStreams(fullPath);
+            if (file.Length < 0 || file.Length > options.MaximumEntryBytes)
+            {
+                throw new InvalidDataException(
+                    $"Folder file exceeds the configured size limit: '{relativePath}'.");
+            }
+
+            state.TotalBytes = checked(state.TotalBytes + file.Length);
+            if (state.TotalBytes > options.MaximumTotalBytes)
+            {
+                throw new InvalidDataException("Folder exceeds the configured total-size limit.");
+            }
+
+            byte[]? hash = includeHashes
+                ? await fileGuard.ComputeFileSha256Async(cancellationToken).ConfigureAwait(false)
+                : null;
+            file.Refresh();
+            RejectUnsafeFileSystemObject(file);
+            state.Entries.Add(new FolderEntry(
+                relativePath,
+                fullPath,
+                IsDirectory: false,
+                file.Length,
+                file.LastWriteTimeUtc,
+                file.CreationTimeUtc,
+                file.Attributes,
+                hash));
+        }
     }
 
     private static async Task AddFileAsync(
         ZipArchive archive,
+        string sourceRoot,
         FolderEntry entry,
         CancellationToken cancellationToken)
     {
-        await using var source = new FileStream(
-            entry.FullPath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 128 * 1024,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        string parent = Path.GetDirectoryName(entry.FullPath)
+            ?? throw new InvalidDataException($"Folder entry has no safe parent: '{entry.RelativePath}'.");
+        using DirectoryMutationGuard? parentGuard =
+            DirectoryMutationGuard.OpenExistingChildDirectoryForMutation(sourceRoot, parent);
+        using var sourceGuard = DirectoryMutationGuard.OpenFileForMutation(entry.FullPath);
         EnsureMetadataMatches(entry, new FileInfo(entry.FullPath));
-        byte[] beforeHash = await SHA256.HashDataAsync(source, cancellationToken).ConfigureAwait(false);
+        byte[] beforeHash = await sourceGuard.ComputeFileSha256Async(cancellationToken).ConfigureAwait(false);
         EnsureHashMatches(entry, beforeHash);
-        source.Position = 0;
 
         ZipArchiveEntry archiveEntry = archive.CreateEntry(entry.RelativePath, CompressionLevel.Optimal);
         archiveEntry.LastWriteTime = ClampZipTimestamp(entry.LastWriteTimeUtc);
         archiveEntry.ExternalAttributes = checked((int)entry.Attributes);
         await using Stream target = archiveEntry.Open();
-        using IncrementalHash copiedHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var buffer = new byte[128 * 1024];
-        long copied = 0;
-        while (true)
-        {
-            int read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0)
-            {
-                break;
-            }
-
-            copied = checked(copied + read);
-            if (copied > entry.Length)
-            {
-                throw new InvalidDataException($"Source file grew while snapshotting: '{entry.RelativePath}'.");
-            }
-
-            copiedHash.AppendData(buffer.AsSpan(0, read));
-            await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-        }
+        (long copied, byte[] copiedHash) = await sourceGuard
+            .CopyFileToStreamAsync(target, entry.Length, cancellationToken)
+            .ConfigureAwait(false);
 
         if (copied != entry.Length)
         {
             throw new InvalidDataException($"Source file size changed while snapshotting: '{entry.RelativePath}'.");
         }
 
-        EnsureHashMatches(entry, copiedHash.GetHashAndReset());
-        source.Position = 0;
-        byte[] afterHash = await SHA256.HashDataAsync(source, cancellationToken).ConfigureAwait(false);
+        EnsureHashMatches(entry, copiedHash);
+        byte[] afterHash = await sourceGuard.ComputeFileSha256Async(cancellationToken).ConfigureAwait(false);
         EnsureHashMatches(entry, afterHash);
         EnsureMetadataMatches(entry, new FileInfo(entry.FullPath));
-    }
-
-    private static async Task<byte[]> ComputeLockedFileHashAsync(
-        FileInfo file,
-        CancellationToken cancellationToken)
-    {
-        await using var stream = new FileStream(
-            file.FullName,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 128 * 1024,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
-        return await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
     }
 
     private static void EnsureInventoriesMatch(
@@ -466,6 +490,15 @@ internal static class FolderSnapshotBuilder
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool FindClose(nint findFile);
 
+    private sealed class InventoryCaptureState
+    {
+        public List<FolderEntry> Entries { get; } = [];
+
+        public HashSet<string> CollisionKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public long TotalBytes { get; set; }
+    }
+
     private sealed record FolderEntry(
         string RelativePath,
         string FullPath,
@@ -475,4 +508,6 @@ internal static class FolderSnapshotBuilder
         DateTime CreationTimeUtc,
         FileAttributes Attributes,
         byte[]? Sha256);
+
+    internal sealed record FolderSnapshotResult(byte[] TreeSha256, byte[] SnapshotSha256);
 }
