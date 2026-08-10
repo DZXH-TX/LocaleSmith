@@ -1,0 +1,168 @@
+using LocaleSmith.Core.Models;
+
+namespace LocaleSmith.Application.Models;
+
+public enum ArchiveSignatureState
+{
+    None,
+    PresentUnverified,
+    Valid,
+    Invalid
+}
+
+public enum SignedArchiveHandling
+{
+    Block,
+    CreateUnsignedCopy,
+    Resign
+}
+
+public enum HardcodedStringMode
+{
+    ScanOnly,
+    ExternalizeRecognizedSafePatterns
+}
+
+public enum PipelineStage
+{
+    Queued,
+    Inspecting,
+    Extracting,
+    Analyzing,
+    Translating,
+    Writing,
+    Repacking,
+    Verifying,
+    Committing,
+    RollingBack,
+    Completed,
+    Failed,
+    Cancelled
+}
+
+public enum PipelineStageStatus
+{
+    Pending,
+    Current,
+    Completed,
+    Failed,
+    Cancelled,
+    Skipped
+}
+
+public sealed record PipelineRequest
+{
+    public PipelineRequest(
+        string sourcePath,
+        string outputPath,
+        string targetLanguage = "zh_CN",
+        IReadOnlySet<TranslationStyle>? styles = null,
+        SignedArchiveHandling signedArchiveHandling = SignedArchiveHandling.Block,
+        HardcodedStringMode hardcodedStringMode = HardcodedStringMode.ScanOnly,
+        string? modelSourceId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguage);
+
+        SourcePath = Path.GetFullPath(sourcePath);
+        OutputPath = Path.GetFullPath(outputPath);
+        if (string.Equals(SourcePath, OutputPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The source and output paths must be different.", nameof(outputPath));
+        }
+
+        TargetLanguage = targetLanguage.Trim();
+        Styles = styles is null
+            ? new HashSet<TranslationStyle> { TranslationStyle.Formal }
+            : new HashSet<TranslationStyle>(styles);
+        if (Styles.Count != 1 || !Enum.IsDefined(Styles.Single()))
+        {
+            throw new ArgumentException("Exactly one valid translation style is required per pipeline job.", nameof(styles));
+        }
+
+        SignedArchiveHandling = signedArchiveHandling;
+        HardcodedStringMode = hardcodedStringMode;
+        ModelSourceId = string.IsNullOrWhiteSpace(modelSourceId) ? null : modelSourceId.Trim();
+    }
+
+    public string SourcePath { get; }
+
+    public string OutputPath { get; }
+
+    public string TargetLanguage { get; }
+
+    public IReadOnlySet<TranslationStyle> Styles { get; }
+
+    public SignedArchiveHandling SignedArchiveHandling { get; }
+
+    public HardcodedStringMode HardcodedStringMode { get; }
+
+    public string? ModelSourceId { get; }
+}
+
+public sealed record ArchiveInspection(
+    string PackageIdentity,
+    string ModId,
+    string Loader,
+    bool UsedFileNameFallback,
+    ArchiveSignatureState SignatureState,
+    bool CanResign,
+    IReadOnlyList<string> Warnings)
+{
+    public bool IsSigned => SignatureState != ArchiveSignatureState.None;
+}
+
+public sealed record HardcodedStringCandidate(
+    ulong ArchiveIndex,
+    string ArchivePath,
+    string ClassName,
+    string MethodName,
+    string MethodDescriptor,
+    int BytecodeOffset,
+    string Opcode,
+    ushort ConstantPoolIndex,
+    string Value,
+    string SuggestedKey,
+    bool IsRecognizedSafePattern);
+
+public sealed record ExternalizationReport(
+    int CandidateCount,
+    int ExternalizedCount,
+    IReadOnlyList<string> Warnings);
+
+public sealed record PackageArtifact(TranslationStyle Style, string Path);
+
+public sealed record PackageVerification(
+    bool IsValidArchive,
+    bool MetadataPreserved,
+    IReadOnlyList<string> Errors,
+    IReadOnlyList<PackageArtifact>? Artifacts = null);
+
+public sealed record PipelineProgress(
+    Guid JobId,
+    PipelineStage Stage,
+    double Fraction,
+    string Message,
+    PipelineStage? NextStage = null,
+    IReadOnlyList<PipelineStageProgress>? Stages = null,
+    PipelineStageStatus? RollbackStatus = null);
+
+public sealed record PipelineStageProgress(
+    PipelineStage Stage,
+    PipelineStageStatus Status,
+    DateTimeOffset? StartedAtUtc,
+    DateTimeOffset? FinishedAtUtc);
+
+public sealed record PipelineResult(
+    Guid JobId,
+    string OutputPath,
+    ArchiveInspection Inspection,
+    int SourceEntryCount,
+    int TranslatedEntryCount,
+    int ReusedEntryCount,
+    IReadOnlyList<HardcodedStringCandidate> HardcodedCandidates,
+    ExternalizationReport Externalization,
+    IReadOnlyList<PackageArtifact> Artifacts,
+    PackageVerification Verification,
+    IReadOnlyList<string> Warnings);

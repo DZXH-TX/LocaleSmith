@@ -2,12 +2,12 @@
 
 <div align="center">
   <img
-    src="./packaging/JaxI18n.Package/Assets/Square150x150Logo.png"
+    src="./packaging/LocaleSmith.Package/Assets/Square150x150Logo.png"
     width="132"
     alt="LocaleSmith 标志"
   />
 
-  <h1>LocaleSmith · 译匠</h1>
+  <h1>LocaleSmith | 译匠</h1>
 
   <p><strong>为 Minecraft Java 内容打造的 Windows 原生 AI 本地化工作台</strong></p>
   <p>安全扫描模组与资源包，连接本地或云端模型，以可验证、可回滚的流水线生成本地化产物。</p>
@@ -34,7 +34,7 @@
 
 ## 项目概览
 
-LocaleSmith（译匠）面向 Minecraft: Java Edition 模组、资源包与光影包，将**安全扫描、增量翻译、结构验证和事务重建**整合进一个 Windows 原生桌面工作台。
+**LocaleSmith | 译匠**，面向 Minecraft: Java Edition 模组、资源包与光影包，将**安全扫描、增量翻译、结构验证和事务重建**整合进一个 Windows 原生桌面工作台。
 
 项目采用 Rust 原生扫描核心与 .NET 10 / WinUI 3 桌面应用：Rust 负责 JAR、ZIP、Loader 元数据和受支持字节码模式的解析，.NET 负责归档事务、模型接入、安全存储、翻译队列与用户界面。
 
@@ -96,24 +96,24 @@ flowchart LR
 git clone https://github.com/DZXH-TX/LocaleSmith.git
 Set-Location LocaleSmith
 
-cargo build --manifest-path native/jax_i18n_core/Cargo.toml --release
-dotnet restore JaxI18n.slnx
-dotnet build JaxI18n.slnx -c Release
+cargo build --manifest-path native/localesmith_core/Cargo.toml --release
+dotnet restore LocaleSmith.slnx
+dotnet build LocaleSmith.slnx -c Release
 ```
 
 > [!NOTE]
-> `dotnet build JaxI18n.slnx` 不会生成 WAP / MSIX；打包工程位于 `packaging/JaxI18n.Package`，需要在具备对应 Visual Studio targets 的开发环境中单独构建。
+> `dotnet build LocaleSmith.slnx` 不会生成 WAP / MSIX；打包工程位于 `packaging/LocaleSmith.Package`，需要在具备对应 Visual Studio targets 的开发环境中单独构建。
 
 <details>
 <summary><strong>运行完整验证门</strong></summary>
 
 ```powershell
-cargo fmt --manifest-path native/jax_i18n_core/Cargo.toml --all -- --check
-cargo clippy --manifest-path native/jax_i18n_core/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/jax_i18n_core/Cargo.toml --all-targets
+cargo fmt --manifest-path native/localesmith_core/Cargo.toml --all -- --check
+cargo clippy --manifest-path native/localesmith_core/Cargo.toml --all-targets --all-features -- -D warnings
+cargo test --manifest-path native/localesmith_core/Cargo.toml --all-targets
 
-dotnet test JaxI18n.slnx -c Release
-dotnet format JaxI18n.slnx --verify-no-changes --no-restore
+dotnet test LocaleSmith.slnx -c Release
+dotnet format LocaleSmith.slnx --verify-no-changes --no-restore
 ```
 
 </details>
@@ -121,16 +121,16 @@ dotnet format JaxI18n.slnx --verify-no-changes --no-restore
 ## 源码结构
 
 ```text
-native/jax_i18n_core/       Rust ZIP/JAR、metadata 与 classfile 扫描核心
-src/JaxI18n.Core/           领域模型和统一服务契约
-src/JaxI18n.NativeInterop/  C ABI 投影、DLL 解析与类型化清单
-src/JaxI18n.Application/    翻译编排、增量计划、队列与事务边界
-src/JaxI18n.Archive/        安全快照、提取、重建、验证与回滚
-src/JaxI18n.Infrastructure/ 模型适配、凭据、加密、CLI 与环境检测
-src/JaxI18n.Mcp/            MCP JSON-RPC / stdio 协议与工具目录
-src/JaxI18n.McpHost/        独立 MCP 控制台宿主
-src/JaxI18n.Presentation/   可测试的 MVVM ViewModel 与 UI 契约
-src/JaxI18n.App/            WinUI 3 视图、组合根和本地应用服务
+native/localesmith_core/       Rust ZIP/JAR、metadata 与 classfile 扫描核心
+src/LocaleSmith.Core/           领域模型和统一服务契约
+src/LocaleSmith.NativeInterop/  C ABI 投影、DLL 解析与类型化清单
+src/LocaleSmith.Application/    翻译编排、增量计划、队列与事务边界
+src/LocaleSmith.Archive/        安全快照、提取、重建、验证与回滚
+src/LocaleSmith.Infrastructure/ 模型适配、凭据、加密、CLI 与环境检测
+src/LocaleSmith.Mcp/            MCP JSON-RPC / stdio 协议与工具目录
+src/LocaleSmith.McpHost/        独立 MCP 控制台宿主
+src/LocaleSmith.Presentation/   可测试的 MVVM ViewModel 与 UI 契约
+src/LocaleSmith.App/            WinUI 3 视图、组合根和本地应用服务
 tests/                      八个 .NET 测试项目和受限 CLI probe
 packaging/                  x64 WAP / MSIX manifest、双语资源和图标
 ```
@@ -167,7 +167,7 @@ MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.exe
 <details>
 <summary><strong>MSIX 开发包状态</strong></summary>
 
-当前 manifest 版本为 `0.1.0.1`，开发包已完成 payload、PRI、MCP Host、开发签名和 loose AppsFolder 启动验证。但其证书为未受信任、无可信时间戳的自签名开发证书，尚未完成生产证书替换及干净机安装、升级、修复和卸载验证。
+当前 manifest 版本为 `0.1.0.2`。MSIX 已完成 payload、PRI、MCP Host、SignPath Authenticode 签名、本机安装与启动验证；微软商店上架前仍需使用 Partner Center 分配的正式包身份重新生成清单并完成商店认证。
 
 </details>
 

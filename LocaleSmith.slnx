@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LocaleSmith.App/LocaleSmith.App.csproj" />
+    <Project Path="src/LocaleSmith.Application/LocaleSmith.Application.csproj" />
+    <Project Path="src/LocaleSmith.Archive/LocaleSmith.Archive.csproj" />
+    <Project Path="src/LocaleSmith.Core/LocaleSmith.Core.csproj" />
+    <Project Path="src/LocaleSmith.Infrastructure/LocaleSmith.Infrastructure.csproj" />
+    <Project Path="src/LocaleSmith.Mcp/LocaleSmith.Mcp.csproj" />
+    <Project Path="src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj" />
+    <Project Path="src/LocaleSmith.NativeInterop/LocaleSmith.NativeInterop.csproj" />
+    <Project Path="src/LocaleSmith.Presentation/LocaleSmith.Presentation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LocaleSmith.App.Tests/LocaleSmith.App.Tests.csproj" />
+    <Project Path="tests/LocaleSmith.Application.Tests/LocaleSmith.Application.Tests.csproj" />
+    <Project Path="tests/LocaleSmith.Archive.Tests/LocaleSmith.Archive.Tests.csproj" />
+    <Project Path="tests/LocaleSmith.Core.Tests/LocaleSmith.Core.Tests.csproj" />
+    <Project Path="tests/LocaleSmith.Infrastructure.Tests/LocaleSmith.Infrastructure.Tests.csproj" />
+    <Project Path="tests/LocaleSmith.Mcp.Tests/LocaleSmith.Mcp.Tests.csproj" />
+    <Project Path="tests/LocaleSmith.NativeInterop.Tests/LocaleSmith.NativeInterop.Tests.csproj" />
+    <Project Path="tests/LocaleSmith.Presentation.Tests/LocaleSmith.Presentation.Tests.csproj" />
+  </Folder>
+</Solution>
