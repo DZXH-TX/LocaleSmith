@@ -1,0 +1,323 @@
+<Page
+    x:Class="JaxI18n.App.Pages.OnboardingPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behaviors="using:JaxI18n.App.Behaviors"
+    NavigationCacheMode="Required">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <ScrollViewer HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel
+                MaxWidth="920"
+                Margin="32"
+                HorizontalAlignment="Stretch"
+                Spacing="24">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock x:Uid="OnboardingStepPrefix" />
+                        <TextBlock Text="{Binding CurrentStepNumber}" />
+                        <TextBlock x:Uid="OnboardingStepSuffix" />
+                    </StackPanel>
+                    <ProgressBar
+                        x:Uid="OnboardingProgress"
+                        Maximum="4"
+                        Value="{Binding CurrentStepNumber}"
+                        AutomationProperties.LiveSetting="Polite" />
+                </StackPanel>
+
+                <InfoBar
+                    x:Uid="OnboardingError"
+                    behaviors:AppMotion.StatusFeedback="True"
+                    IsOpen="{Binding HasError}"
+                    IsClosable="False"
+                    Message="{Binding ErrorMessage}"
+                    Severity="Error" />
+                <InfoBar
+                    x:Uid="OnboardingStatus"
+                    behaviors:AppMotion.StatusFeedback="True"
+                    IsOpen="{Binding HasStatus}"
+                    IsClosable="False"
+                    Message="{Binding StatusMessage}"
+                    Severity="Informational" />
+
+                <Border
+                    behaviors:AppMotion.Reveal="True"
+                    Style="{ThemeResource CardBorderStyle}"
+                    Visibility="{Binding IsWelcomeStep, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Spacing="20">
+                        <FontIcon
+                            Glyph="&#xE946;"
+                            FontSize="40"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock x:Uid="WelcomeTitle" Style="{ThemeResource PageTitleStyle}" />
+                        <TextBlock x:Uid="WelcomeBody" TextWrapping="WrapWholeWords" />
+                        <TextBlock x:Uid="WelcomePrivacy" TextWrapping="WrapWholeWords" />
+                        <TextBlock x:Uid="ModelPathChoiceTitle" Style="{ThemeResource SectionTitleStyle}" />
+                        <Grid x:Name="ModelPathChoiceGrid" ColumnSpacing="16" RowSpacing="16">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup>
+                                    <VisualState x:Name="NarrowModelChoices">
+                                        <VisualState.StateTriggers>
+                                            <AdaptiveTrigger MinWindowWidth="0" />
+                                        </VisualState.StateTriggers>
+                                        <VisualState.Setters>
+                                            <Setter Target="LocalModelChoice.(Grid.ColumnSpan)" Value="2" />
+                                            <Setter Target="NetworkModelChoice.(Grid.Row)" Value="1" />
+                                            <Setter Target="NetworkModelChoice.(Grid.Column)" Value="0" />
+                                            <Setter Target="NetworkModelChoice.(Grid.ColumnSpan)" Value="2" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="WideModelChoices">
+                                        <VisualState.StateTriggers>
+                                            <AdaptiveTrigger MinWindowWidth="760" />
+                                        </VisualState.StateTriggers>
+                                        <VisualState.Setters>
+                                            <Setter Target="LocalModelChoice.(Grid.ColumnSpan)" Value="1" />
+                                            <Setter Target="NetworkModelChoice.(Grid.Row)" Value="0" />
+                                            <Setter Target="NetworkModelChoice.(Grid.Column)" Value="1" />
+                                            <Setter Target="NetworkModelChoice.(Grid.ColumnSpan)" Value="1" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <RadioButton
+                                x:Name="LocalModelChoice"
+                                x:Uid="LocalModelChoice"
+                                behaviors:AppMotion.ButtonFeedback="True"
+                                behaviors:AppMotion.SelectionFeedback="True"
+                                MinHeight="176"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                GroupName="OnboardingModelPath"
+                                IsChecked="{Binding IsLocalModelPath, Mode=OneWay}"
+                                Tag="OllamaLocal"
+                                Checked="OnModelPathChecked">
+                                <Border Padding="20" Style="{ThemeResource CardBorderStyle}">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="10">
+                                        <FontIcon
+                                            Glyph="&#xE770;"
+                                            FontSize="32"
+                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock
+                                            x:Uid="LocalModelChoiceTitle"
+                                            HorizontalAlignment="Center"
+                                            Style="{ThemeResource SectionTitleStyle}"
+                                            TextAlignment="Center" />
+                                        <TextBlock
+                                            x:Uid="LocalModelChoiceBody"
+                                            HorizontalAlignment="Center"
+                                            TextAlignment="Center"
+                                            TextWrapping="WrapWholeWords" />
+                                        <Grid Height="20">
+                                            <StackPanel
+                                                HorizontalAlignment="Center"
+                                                Orientation="Horizontal"
+                                                Spacing="6"
+                                                Visibility="{Binding IsLocalModelPath, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <FontIcon Glyph="&#xE73E;" FontSize="14" />
+                                                <TextBlock x:Uid="ModelPathSelectedStatus" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </RadioButton>
+                            <RadioButton
+                                x:Name="NetworkModelChoice"
+                                x:Uid="NetworkModelChoice"
+                                behaviors:AppMotion.ButtonFeedback="True"
+                                behaviors:AppMotion.SelectionFeedback="True"
+                                Grid.Column="1"
+                                MinHeight="176"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                GroupName="OnboardingModelPath"
+                                IsChecked="{Binding IsNetworkModelPath, Mode=OneWay}"
+                                Tag="NetworkProvider"
+                                Checked="OnModelPathChecked">
+                                <Border Padding="20" Style="{ThemeResource CardBorderStyle}">
+                                    <StackPanel HorizontalAlignment="Center" Spacing="10">
+                                        <FontIcon
+                                            Glyph="&#xE753;"
+                                            FontSize="32"
+                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                        <TextBlock
+                                            x:Uid="NetworkModelChoiceTitle"
+                                            HorizontalAlignment="Center"
+                                            Style="{ThemeResource SectionTitleStyle}"
+                                            TextAlignment="Center" />
+                                        <TextBlock
+                                            x:Uid="NetworkModelChoiceBody"
+                                            HorizontalAlignment="Center"
+                                            TextAlignment="Center"
+                                            TextWrapping="WrapWholeWords" />
+                                        <Grid Height="20">
+                                            <StackPanel
+                                                HorizontalAlignment="Center"
+                                                Orientation="Horizontal"
+                                                Spacing="6"
+                                                Visibility="{Binding IsNetworkModelPath, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <FontIcon Glyph="&#xE73E;" FontSize="14" />
+                                                <TextBlock x:Uid="NetworkModelPathSelectedStatus" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </RadioButton>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    behaviors:AppMotion.Reveal="True"
+                    Style="{ThemeResource CardBorderStyle}"
+                    Visibility="{Binding IsWorkspaceStep, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="WorkspaceTitle" Style="{ThemeResource PageTitleStyle}" />
+                        <TextBlock x:Uid="WorkspaceBody" TextWrapping="WrapWholeWords" />
+                        <TextBox
+                            x:Uid="WorkspacePathInput"
+                            Text="{Binding WorkspacePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox
+                            x:Uid="SandboxPathInput"
+                            Text="{Binding SandboxPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock x:Uid="SandboxHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    behaviors:AppMotion.Reveal="True"
+                    Style="{ThemeResource CardBorderStyle}"
+                    Visibility="{Binding IsModelStep, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="OnboardingModelTitle" Style="{ThemeResource PageTitleStyle}" />
+                        <TextBlock x:Uid="OnboardingModelBody" TextWrapping="WrapWholeWords" />
+                        <StackPanel
+                            Spacing="16"
+                            Visibility="{Binding IsLocalModelPath, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <CheckBox
+                                x:Uid="ConfigureOllamaCheckBox"
+                                IsChecked="{Binding ConfigureOllama, Mode=TwoWay}" />
+                            <TextBox
+                                x:Uid="OllamaEndpointInput"
+                                IsEnabled="{Binding ConfigureOllama}"
+                                Text="{Binding OllamaEndpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBox
+                                x:Uid="OllamaModelInput"
+                                IsEnabled="{Binding ConfigureOllama}"
+                                Text="{Binding OllamaModelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel
+                            Spacing="16"
+                            Visibility="{Binding IsNetworkModelPath, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ComboBox
+                                x:Uid="OnboardingNetworkPresetSelector"
+                                DisplayMemberPath="DisplayName"
+                                ItemsSource="{Binding NetworkPresetOptions}"
+                                SelectedItem="{Binding SelectedNetworkPreset, Mode=TwoWay}" />
+                            <TextBox
+                                x:Uid="OnboardingNetworkEndpointInput"
+                                Text="{Binding NetworkEndpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBox
+                                x:Uid="OnboardingNetworkModelInput"
+                                Text="{Binding NetworkModelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <ComboBox
+                                x:Uid="OnboardingNetworkTokenLimitParameter"
+                                DisplayMemberPath="DisplayName"
+                                ItemsSource="{Binding NetworkTokenLimitParameterOptions}"
+                                SelectedValue="{Binding NetworkTokenLimitParameter, Mode=TwoWay}"
+                                SelectedValuePath="Value" />
+                            <TextBlock
+                                x:Uid="OnboardingNetworkTokenLimitParameterHelp"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                TextWrapping="WrapWholeWords" />
+                            <PasswordBox
+                                x:Name="OnboardingNetworkApiKeyInput"
+                                x:Uid="OnboardingNetworkApiKeyInput"
+                                PasswordChanged="OnNetworkApiKeyChanged"
+                                PasswordRevealMode="Peek" />
+                            <TextBlock
+                                x:Uid="OnboardingNetworkCredentialHelp"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                        <Button
+                            x:Uid="SkipModelSetupButton"
+                            HorizontalAlignment="Left"
+                            Command="{Binding SkipModelSetupCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <Border
+                    behaviors:AppMotion.Reveal="True"
+                    Style="{ThemeResource CardBorderStyle}"
+                    Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Spacing="16">
+                        <TextBlock x:Uid="SummaryTitle" Style="{ThemeResource PageTitleStyle}" />
+                        <TextBlock x:Uid="SummaryBody" TextWrapping="WrapWholeWords" />
+                        <TextBlock Text="{Binding WorkspacePath}" TextWrapping="WrapWholeWords" />
+                        <TextBlock Text="{Binding SandboxPath}" TextWrapping="WrapWholeWords" />
+                        <StackPanel
+                            Spacing="4"
+                            Visibility="{Binding IsLocalConfigurationEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock x:Uid="SummaryLocalModelTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Text="{Binding OllamaEndpoint}" TextWrapping="WrapWholeWords" />
+                            <TextBlock Text="{Binding OllamaModelName}" TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                        <StackPanel
+                            Spacing="4"
+                            Visibility="{Binding IsNetworkConfigurationEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock x:Uid="SummaryNetworkModelTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Text="{Binding SelectedNetworkPreset.DisplayName}" TextWrapping="WrapWholeWords" />
+                            <TextBlock Text="{Binding NetworkEndpoint}" TextWrapping="WrapWholeWords" />
+                            <TextBlock Text="{Binding NetworkModelName}" TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                        <TextBlock
+                            x:Uid="SummaryModelSkipped"
+                            Visibility="{Binding IsModelConfigurationSkipped, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <TextBlock x:Uid="SummarySecurity" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                </Border>
+
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        x:Uid="OnboardingExitButton"
+                        Command="{Binding ExitCommand}" />
+                    <Button
+                        Grid.Column="2"
+                        x:Uid="OnboardingBackButton"
+                        Command="{Binding BackCommand}" />
+                    <Button
+                        Grid.Column="3"
+                        x:Uid="OnboardingNextButton"
+                        behaviors:AppMotion.ButtonFeedback="True"
+                        Command="{Binding NextCommand}"
+                        Style="{ThemeResource AccentButtonStyle}"
+                        Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}" />
+                    <Button
+                        Grid.Column="3"
+                        x:Uid="OnboardingCompleteButton"
+                        behaviors:AppMotion.ButtonFeedback="True"
+                        Command="{Binding CompleteCommand}"
+                        CommandParameter="{Binding Password, ElementName=OnboardingNetworkApiKeyInput}"
+                        Style="{ThemeResource AccentButtonStyle}"
+                        Visibility="{Binding IsSummaryStep, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

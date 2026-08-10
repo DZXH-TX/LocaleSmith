@@ -1,0 +1,6 @@
+{
+  "name": "@jax/locale-smith",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LocaleSmith (译匠) desktop localization workspace"
+}

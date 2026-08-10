@@ -1,0 +1,79 @@
+# .NET / Visual Studio
+bin/
+obj/
+.vs/
+TestResults/
+artifacts/
+coverage/
+*.user
+*.suo
+*.rsuser
+*.dll
+*.exe
+*.pdb
+*.winmd
+*.pri
+*.nupkg
+*.snupkg
+*.trx
+*.coverage
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.npm/
+.pnpm-store/
+*.log
+
+# Rust
+target/
+native/**/target/
+
+# Packaging and signing
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.appxsym
+*.appxupload
+*.msixupload
+*.appinstaller
+*.cer
+*.crt
+*.der
+*.pfx
+*.p12
+*.key
+*.snk
+*.pem
+*.pvk
+*.spc
+*.csr
+
+# Local secrets and generated state
+*.secrets.json
+secrets.json
+*.local.json
+.env
+.env.*
+!.env.example
+*.dpapi
+data/
+logs/
+sandbox/
+
+# Remote documentation policy: only the requested root README.md may be tracked.
+*.md
+!/README.md
+
+# Editors / OS
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# Test fixtures generated from third-party archives
+tests/fixtures/generated/

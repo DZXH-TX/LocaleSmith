@@ -1,0 +1,13 @@
+* text=auto
+*.sln text eol=crlf
+*.slnx text eol=crlf
+*.cs text eol=crlf
+*.xaml text eol=crlf
+*.rs text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.jar binary
+*.zip binary
+*.msix binary
+*.pfx binary
