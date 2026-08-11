@@ -262,9 +262,15 @@ public sealed class OutputPathAndSettingsTests
 
             viewModel.Language = AppDisplayLanguages.EnglishUnitedStates;
             Assert.True(viewModel.IsLanguageRestartRequired);
+            Assert.False(viewModel.TryGetPersistedDisplayLanguageForRestart(out _));
+
+            await viewModel.SaveCommand.ExecuteAsync(null);
+            Assert.True(viewModel.TryGetPersistedDisplayLanguageForRestart(out var persistedLanguage));
+            Assert.Equal(AppDisplayLanguages.EnglishUnitedStates, persistedLanguage);
 
             viewModel.Language = AppDisplayLanguages.DefaultLanguage;
             Assert.False(viewModel.IsLanguageRestartRequired);
+            Assert.False(viewModel.TryGetPersistedDisplayLanguageForRestart(out _));
         }
         finally
         {

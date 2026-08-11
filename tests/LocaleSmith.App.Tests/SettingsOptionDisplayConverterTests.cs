@@ -6,15 +6,12 @@ namespace LocaleSmith.App.Tests;
 public sealed class SettingsOptionDisplayConverterTests
 {
     [Theory]
-    [InlineData("zh-CN", "简体中文（中国）")]
-    [InlineData("en-US", "English (United States)")]
-    public void UsesLocalizedLanguageLabels(string value, string expected)
+    [InlineData("zh-CN", "LanguageOptionZhCn")]
+    [InlineData("en-US", "LanguageOptionEnUs")]
+    public void UsesLocalizedLanguageLabels(string value, string resourceKey)
     {
-        var labels = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["LanguageOptionZhCn"] = "简体中文（中国）",
-            ["LanguageOptionEnUs"] = "English (United States)"
-        };
+        var expected = $"localized:{resourceKey}";
+        var labels = new Dictionary<string, string>(StringComparer.Ordinal) { [resourceKey] = expected };
         var converter = new SettingsOptionDisplayConverter(labels.GetValueOrDefault);
 
         Assert.Equal(expected, converter.Convert(value, typeof(string), string.Empty, "zh-CN"));

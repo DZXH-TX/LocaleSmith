@@ -2,6 +2,11 @@ using LocaleSmith.Presentation.Models;
 
 namespace LocaleSmith.App.Services;
 
+public interface IAppLanguagePreferenceWriter
+{
+    void Save(string language);
+}
+
 internal static class AppLanguagePreferenceStore
 {
     private const string FileName = "display-language.txt";
@@ -53,4 +58,13 @@ internal static class AppLanguagePreferenceStore
             }
         }
     }
+}
+
+internal sealed class FileAppLanguagePreferenceWriter(string appDataRoot) :
+    IAppLanguagePreferenceWriter
+{
+    private readonly string _appDataRoot = Path.GetFullPath(
+        appDataRoot ?? throw new ArgumentNullException(nameof(appDataRoot)));
+
+    public void Save(string language) => AppLanguagePreferenceStore.Save(_appDataRoot, language);
 }

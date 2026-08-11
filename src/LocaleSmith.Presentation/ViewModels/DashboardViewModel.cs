@@ -654,6 +654,8 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public bool IsQueueEmpty => QueueItems.Count == 0;
 
+    public bool HasActiveTranslationJobs => _handles.Count != 0;
+
     public bool HasModelSources => ModelSources.Count > 0;
 
     public bool HasSelectedModelSource => SelectedModelSource is not null;

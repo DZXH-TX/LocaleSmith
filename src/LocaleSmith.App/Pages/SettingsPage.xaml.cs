@@ -67,8 +67,13 @@ public sealed partial class SettingsPage : Page
             return;
         }
 
-        var button = (Button)sender;
-        button.IsEnabled = false;
+        if (App.Services.GetRequiredService<DashboardViewModel>().HasActiveTranslationJobs)
+        {
+            ViewModel.ReportLanguageRestartBlockedByActiveTranslations();
+            return;
+        }
+
+        SettingsForm.IsEnabled = false;
         try
         {
             if (!ViewModel.SaveCommand.CanExecute(null))
@@ -82,7 +87,12 @@ public sealed partial class SettingsPage : Page
                 return;
             }
 
-            var failureReason = App.RestartWithDisplayLanguage(ViewModel.Language);
+            if (!ViewModel.TryGetPersistedDisplayLanguageForRestart(out var persistedLanguage))
+            {
+                return;
+            }
+
+            var failureReason = App.RestartWithDisplayLanguage(persistedLanguage);
             ViewModel.ReportLanguageRestartFailure(failureReason);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -91,7 +101,7 @@ public sealed partial class SettingsPage : Page
         }
         finally
         {
-            button.IsEnabled = true;
+            SettingsForm.IsEnabled = true;
         }
     }
 

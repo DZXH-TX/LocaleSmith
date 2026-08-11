@@ -26,10 +26,10 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        LocalizeWindowTitle();
-        ApplyWindowIcon();
+        TryLocalizeWindowTitle();
+        TryApplyWindowIcon();
         InitializeNavigationPaneBackground();
-        LocalizeSettingsItem();
+        TryLocalizeSettingsItem();
         _viewModel = App.Services.GetRequiredService<ShellViewModel>();
         _motion = App.Services.GetRequiredService<AppMotionService>();
         _viewModel.NavigationRequested += OnNavigationRequested;
@@ -45,10 +45,10 @@ public sealed partial class MainWindow : Window
     public MainWindow(string startupError)
     {
         InitializeComponent();
-        LocalizeWindowTitle();
-        ApplyWindowIcon();
+        TryLocalizeWindowTitle();
+        TryApplyWindowIcon();
         InitializeNavigationPaneBackground();
-        LocalizeSettingsItem();
+        TryLocalizeSettingsItem();
         RootSurface.ActualThemeChanged += OnActualThemeChanged;
         Closed += OnClosedForChromeSynchronization;
         RootNavigation.Visibility = Visibility.Collapsed;
@@ -126,43 +126,64 @@ public sealed partial class MainWindow : Window
         RootNavigation.Resources["NavigationViewTopPaneBackground"] = _navigationPaneBackground;
     }
 
-    private void LocalizeSettingsItem()
+    private void TryLocalizeSettingsItem()
     {
-        if (RootNavigation.SettingsItem is not NavigationViewItem settingsItem)
+        try
         {
-            return;
+            if (RootNavigation.SettingsItem is not NavigationViewItem settingsItem)
+            {
+                return;
+            }
+
+            var label = new ResourceLoader().GetString("SettingsNavigationLabel");
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                return;
+            }
+
+            settingsItem.Content = label;
+            AutomationProperties.SetName(settingsItem, label);
         }
-
-        var label = new ResourceLoader().GetString("SettingsNavigationLabel");
-        if (string.IsNullOrWhiteSpace(label))
+        catch
         {
-            return;
-        }
-
-        settingsItem.Content = label;
-        AutomationProperties.SetName(settingsItem, label);
-    }
-
-    private void LocalizeWindowTitle()
-    {
-        var title = new ResourceLoader().GetString("MainWindowTitle");
-        if (!string.IsNullOrWhiteSpace(title))
-        {
-            Title = title;
+            // Optional navigation chrome must not prevent the main or startup-error window opening.
         }
     }
 
-    private void ApplyWindowIcon()
+    private void TryLocalizeWindowTitle()
     {
-        var iconPath = Path.Combine(
-            AppContext.BaseDirectory,
-            "Assets",
-            "Icons",
-            "favicon_512.ico");
-
-        if (File.Exists(iconPath))
+        try
         {
-            AppWindow.SetIcon(iconPath);
+            var title = new ResourceLoader().GetString("MainWindowTitle");
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                Title = title;
+            }
+        }
+        catch
+        {
+            // The XAML fallback title remains usable when MRT initialization is unavailable.
+        }
+    }
+
+    private void TryApplyWindowIcon()
+    {
+        try
+        {
+            var iconPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "Assets",
+                "Icons",
+                "favicon_512.ico");
+
+            if (File.Exists(iconPath))
+            {
+                AppWindow.SetIcon(iconPath);
+            }
+        }
+        catch
+        {
+            // The platform-provided fallback icon is preferable to failing window creation.
         }
     }
 

@@ -4,7 +4,6 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="MainWindow.Title" xml:space="preserve"><value>译匠</value></data>
   <data name="MainWindowTitle" xml:space="preserve"><value>译匠</value></data>
   <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>译匠</value></data>
   <data name="DashboardNavigationItem.Content" xml:space="preserve"><value>处理队列</value></data>
@@ -348,6 +347,7 @@
   <data name="SettingsSaved" xml:space="preserve"><value>设置已安全保存。</value></data>
   <data name="SettingsSaveFailed" xml:space="preserve"><value>无法保存设置：{0}</value></data>
   <data name="SettingsRestartFailed" xml:space="preserve"><value>应用无法重启以应用显示语言：{0}</value></data>
+  <data name="SettingsRestartBlockedByActiveTranslations" xml:space="preserve"><value>请等待正在进行的翻译任务完成，或先取消任务，再重启应用。</value></data>
   <data name="SettingsNavigationLabel" xml:space="preserve"><value>设置</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>无法打开命令审阅：{0}</value></data>
   <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>模型助手</value></data>

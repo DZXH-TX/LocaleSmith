@@ -10,7 +10,12 @@
     </Page.Resources>
     <Grid Padding="24" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <ScrollViewer HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="760" HorizontalAlignment="Left" Spacing="20">
+            <ContentControl
+                x:Name="SettingsForm"
+                MaxWidth="760"
+                HorizontalAlignment="Left"
+                HorizontalContentAlignment="Stretch">
+                <StackPanel Spacing="20">
                 <StackPanel Spacing="4">
                     <TextBlock
                         x:Uid="SettingsTitle"
@@ -125,7 +130,8 @@
                     HorizontalAlignment="Left"
                     Command="{Binding SaveCommand}"
                     Style="{ThemeResource AccentButtonStyle}" />
-            </StackPanel>
+                </StackPanel>
+            </ContentControl>
         </ScrollViewer>
     </Grid>
 </Page>

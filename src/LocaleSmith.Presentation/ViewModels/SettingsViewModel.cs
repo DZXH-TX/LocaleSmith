@@ -272,6 +272,25 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
         StatusMessage = null;
     }
 
+    public void ReportLanguageRestartBlockedByActiveTranslations()
+    {
+        ErrorMessage = Text(
+            "SettingsRestartBlockedByActiveTranslations",
+            "Wait for active translation jobs to finish or cancel them before restarting the app.");
+        StatusMessage = null;
+    }
+
+    public bool TryGetPersistedDisplayLanguageForRestart(out string language)
+    {
+        lock (_stateGate)
+        {
+            language = _language;
+            return _loadedConfiguration is not null &&
+                _changeVersion == _persistedVersion &&
+                !string.Equals(_language, _appliedLanguage, StringComparison.Ordinal);
+        }
+    }
+
     private void MarkChanged()
     {
         lock (_stateGate)

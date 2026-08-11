@@ -24,6 +24,7 @@ public sealed partial class SecureAppStateService :
     private readonly ModelServiceRegistry _registry;
     private readonly HttpClient _modelHttpClient;
     private readonly ICliSandboxRootManager _sandboxRootManager;
+    private readonly IAppLanguagePreferenceWriter? _languagePreferenceWriter;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private AppConfiguration _configuration = new();
     private bool _initialized;
@@ -34,13 +35,15 @@ public sealed partial class SecureAppStateService :
         ISecretStore secretStore,
         ModelServiceRegistry registry,
         HttpClient modelHttpClient,
-        ICliSandboxRootManager sandboxRootManager)
+        ICliSandboxRootManager sandboxRootManager,
+        IAppLanguagePreferenceWriter? languagePreferenceWriter = null)
     {
         _configurationStore = configurationStore ?? throw new ArgumentNullException(nameof(configurationStore));
         _secretStore = secretStore ?? throw new ArgumentNullException(nameof(secretStore));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _modelHttpClient = modelHttpClient ?? throw new ArgumentNullException(nameof(modelHttpClient));
         _sandboxRootManager = sandboxRootManager ?? throw new ArgumentNullException(nameof(sandboxRootManager));
+        _languagePreferenceWriter = languagePreferenceWriter;
     }
 
     public IReadOnlyList<ModelSource> Sources => _registry.Sources;
@@ -120,6 +123,7 @@ public sealed partial class SecureAppStateService :
             _configuration = normalized with { ModelSources = normalized.ModelSources.ToArray() };
             ApplySandboxRoots(_configuration);
             selectionStateChanged = ReconcileRegistry(_configuration);
+            _languagePreferenceWriter?.Save(_configuration.Language);
         }
         finally
         {
@@ -157,6 +161,7 @@ public sealed partial class SecureAppStateService :
             await _configurationStore.SaveAsync(updated, cancellationToken).ConfigureAwait(false);
             _configuration = updated with { ModelSources = updated.ModelSources.ToArray() };
             ApplySandboxRoots(_configuration);
+            _languagePreferenceWriter?.Save(_configuration.Language);
         }
         finally
         {

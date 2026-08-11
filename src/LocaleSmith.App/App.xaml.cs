@@ -72,8 +72,15 @@ public partial class App : Microsoft.UI.Xaml.Application
             await state.InitializeAsync().ConfigureAwait(true);
             var configuration = await state.LoadAsync().ConfigureAwait(true);
             var configuredLanguage = AppDisplayLanguages.ResolveOrDefault(configuration.Language);
+            if (SynchronizeBootstrapLanguageBestEffort(currentAppDataRoot, configuredLanguage))
+            {
+                // This is the one-time upgrade/recovery path for a missing or stale bootstrap file.
+                // A successful call terminates this process; a failure returns and we continue with
+                // the best available late-applied language for the current launch.
+                _ = AppInstance.Restart(string.Empty);
+            }
+
             ApplyDisplayLanguage(configuredLanguage);
-            SynchronizeBootstrapLanguageBestEffort(currentAppDataRoot, configuredLanguage);
             _host.Services.GetRequiredService<AppMotionService>()
                 .SetForceAppAnimations(configuration.ForceAppAnimations);
             MainWindow = _host.Services.GetRequiredService<MainWindow>();
@@ -115,16 +122,17 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
     }
 
-    private void SynchronizeBootstrapLanguageBestEffort(string appDataRoot, string language)
+    private bool SynchronizeBootstrapLanguageBestEffort(string appDataRoot, string language)
     {
         if (string.Equals(_bootstrapLanguage, language, StringComparison.Ordinal))
         {
-            return;
+            return false;
         }
 
         try
         {
             AppLanguagePreferenceStore.Save(appDataRoot, language);
+            return true;
         }
         catch (Exception exception) when (exception is
             IOException or
@@ -135,6 +143,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         {
             // The encrypted configuration remains authoritative. A later explicit restart action
             // will surface bootstrap preference write failures to the user.
+            return false;
         }
     }
 
@@ -188,6 +197,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             services.GetRequiredService<SecureAppStateService>());
         builder.Services.AddSingleton<IModelSelectionService>(static services =>
             services.GetRequiredService<SecureAppStateService>());
+        builder.Services.AddSingleton<IAppLanguagePreferenceWriter>(
+            _ => new FileAppLanguagePreferenceWriter(appDataRoot));
 
         builder.Services.AddSingleton<IArchiveWorkspaceBackend, ArchiveWorkspaceBackend>();
         builder.Services.AddSingleton<ITranslationMemoryStore>(_ =>
