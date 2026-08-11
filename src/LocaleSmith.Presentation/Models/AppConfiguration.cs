@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using LocaleSmith.Core.Models;
 
 namespace LocaleSmith.Presentation.Models;
@@ -7,6 +8,68 @@ public enum AppThemePreference
     System,
     Light,
     Dark
+}
+
+public sealed record AppDisplayLanguageOption(
+    string LanguageTag,
+    string ResourceKey,
+    string FallbackDisplayName);
+
+public static class AppDisplayLanguages
+{
+    public const string DefaultLanguage = "zh-CN";
+    public const string EnglishUnitedStates = "en-US";
+    public const string JapaneseJapan = "ja-JP";
+    public const string FrenchFrance = "fr-FR";
+    public const string RussianRussia = "ru-RU";
+
+    private static readonly ReadOnlyCollection<AppDisplayLanguageOption> CatalogValues =
+        Array.AsReadOnly(
+        new AppDisplayLanguageOption[]
+        {
+            new(DefaultLanguage, "LanguageOptionZhCn", "简体中文（中国）"),
+            new(EnglishUnitedStates, "LanguageOptionEnUs", "English (United States)"),
+            new(JapaneseJapan, "LanguageOptionJaJp", "日本語（日本）"),
+            new(FrenchFrance, "LanguageOptionFrFr", "Français (France)"),
+            new(RussianRussia, "LanguageOptionRuRu", "Русский (Россия)")
+        });
+
+    private static readonly ReadOnlyCollection<string> SupportedValues =
+        Array.AsReadOnly(CatalogValues.Select(static option => option.LanguageTag).ToArray());
+
+    public static IReadOnlyList<AppDisplayLanguageOption> Catalog => CatalogValues;
+
+    public static IReadOnlyList<string> Supported => SupportedValues;
+
+    public static bool TryGet(string? language, out AppDisplayLanguageOption option)
+    {
+        foreach (var candidate in CatalogValues)
+        {
+            if (string.Equals(language, candidate.LanguageTag, StringComparison.OrdinalIgnoreCase))
+            {
+                option = candidate;
+                return true;
+            }
+        }
+
+        option = CatalogValues[0];
+        return false;
+    }
+
+    public static string ResolveOrDefault(string? language) =>
+        TryGet(language, out var option) ? option.LanguageTag : DefaultLanguage;
+
+    public static string ResolveSupported(string language, string? parameterName = null)
+    {
+        if (TryGet(language, out var option))
+        {
+            return option.LanguageTag;
+        }
+
+        throw new ArgumentException(
+            $"Display language '{language}' is not supported.",
+            parameterName ?? nameof(language));
+    }
 }
 
 public sealed record ModelSourceProfile
@@ -107,7 +170,7 @@ public sealed record AppConfiguration
     /// </summary>
     public string LogDirectoryPath { get; init; } = GetDefaultLogDirectoryPath();
 
-    public string Language { get; init; } = "zh-CN";
+    public string Language { get; init; } = AppDisplayLanguages.DefaultLanguage;
 
     public AppThemePreference Theme { get; init; } = AppThemePreference.System;
 

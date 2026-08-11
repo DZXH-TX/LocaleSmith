@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Abstractions;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Application.Services;
@@ -35,7 +36,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
         var pipelineRequest = new PipelineRequest(
             request.SourcePath,
             request.OutputPath,
-            targetLanguage: "zh_CN",
+            targetLanguage: request.TargetLanguage,
             styles: new HashSet<TranslationStyle> { request.Style },
             // Signed archives remain blocked until a dedicated, explicit signature-choice dialog exists.
             signedArchiveHandling: SignedArchiveHandling.Block,
@@ -68,9 +69,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             _translationLogs?.CompleteSession(
                 jobId,
                 TranslationLogLevel.Error,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Translation queue rejected the job | type={exception.GetType().Name} | hresult=0x{exception.HResult:X8}"));
+                CreateFailureLogMessage("Translation queue rejected the job", exception));
             throw;
         }
 
@@ -100,6 +99,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             ConvertAndLogResultAsync(
                 pipelineHandle.Completion,
                 request.Style,
+                pipelineRequest.TargetLanguage,
                 pipelineHandle.JobId),
             () =>
             {
@@ -136,11 +136,16 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
     private async Task<TranslationQueueResult> ConvertAndLogResultAsync(
         Task<PipelineResult> completion,
         TranslationStyle requestedStyle,
+        string targetLanguage,
         Guid jobId)
     {
         try
         {
-            var result = await ConvertResultAsync(completion, requestedStyle).ConfigureAwait(false);
+            var result = await ConvertResultAsync(
+                    completion,
+                    requestedStyle,
+                    targetLanguage)
+                .ConfigureAwait(false);
             _translationLogs?.CompleteSession(
                 jobId,
                 TranslationLogLevel.Information,
@@ -162,9 +167,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             _translationLogs?.CompleteSession(
                 jobId,
                 TranslationLogLevel.Error,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Translation failed | type={exception.GetType().Name} | hresult=0x{exception.HResult:X8}"));
+                CreateFailureLogMessage("Translation failed", exception));
             throw;
         }
         finally
@@ -173,9 +176,30 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
         }
     }
 
+    internal static string CreateFailureLogMessage(string operation, Exception exception)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(operation);
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var pipelineException = exception as PipelineException;
+        var cause = pipelineException?.InnerException ?? exception;
+        var stage = pipelineException?.FailedStage.ToString() ?? "none";
+        var modelFailure = cause as ModelServiceException;
+        var httpStatus = modelFailure?.StatusCode is { } statusCode
+            ? ((int)statusCode).ToString(CultureInfo.InvariantCulture)
+            : "none";
+        var requestId = modelFailure?.RequestId ?? "none";
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{operation} | stage={stage} | type={exception.GetType().Name} | cause={cause.GetType().Name} | " +
+            $"http={httpStatus} | request={requestId} | hresult=0x{exception.HResult:X8} | detail={cause.Message}");
+    }
+
     private static async Task<TranslationQueueResult> ConvertResultAsync(
         Task<PipelineResult> completion,
-        TranslationStyle requestedStyle)
+        TranslationStyle requestedStyle,
+        string targetLanguage)
     {
         var result = await completion.ConfigureAwait(false);
         if (result.Artifacts.Count != 1 || result.Artifacts[0].Style != requestedStyle)
@@ -192,7 +216,8 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             result.Artifacts.Select(static artifact => artifact.Path).ToArray(),
             result.HardcodedCandidates.ToArray(),
             result.Externalization.ExternalizedCount,
-            requestedStyle);
+            requestedStyle,
+            targetLanguage);
     }
 
     private void OnPipelineProgressChanged(object? sender, PipelineProgress progress)

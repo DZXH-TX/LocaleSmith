@@ -1,5 +1,8 @@
+using System.Net;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
+using LocaleSmith.Core.Services;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
 using LocaleSmith.Presentation.ViewModels;
@@ -20,6 +23,8 @@ public sealed class DashboardViewModelTests
         viewModel.SelectedModelSource = viewModel.ModelSources.Single(source => source.Id == "two");
         viewModel.SelectedTranslationStyle = viewModel.TranslationStyles.Single(
             option => option.Style == TranslationStyle.Informal);
+        viewModel.SelectedTargetLanguage = viewModel.TargetLanguages.Single(
+            option => option.CanonicalLocale == "ja_JP");
 
         await selection.SelectionObserved.Task.WaitAsync(TestContext.Current.CancellationToken);
         Assert.Equal("two", selection.SelectedSource?.Id);
@@ -29,8 +34,12 @@ public sealed class DashboardViewModelTests
         {
             await viewModel.EnqueuePackagesAsync([input], TestContext.Current.CancellationToken);
             var pending = Assert.Single(queue.Pending);
+            viewModel.SelectedTargetLanguage = viewModel.TargetLanguages.Single(
+                option => option.CanonicalLocale == "fr_FR");
             Assert.Equal("two", pending.Request.ModelSourceId);
             Assert.Equal(TranslationStyle.Informal, pending.Request.Style);
+            Assert.Equal("ja_JP", pending.Request.TargetLanguage);
+            Assert.Equal("ja_JP", output.LastTargetLanguage);
             queue.Report(pending.JobId, PipelineStage.Translating, 0.5);
             pending.Completion.SetResult(new TranslationQueueResult(
                 pending.JobId,
@@ -40,7 +49,8 @@ public sealed class DashboardViewModelTests
                 ["informal.jar"],
                 [],
                 0,
-                TranslationStyle.Informal));
+                TranslationStyle.Informal,
+                "ja_JP"));
 
             await WaitUntilAsync(
                 () => Assert.Single(viewModel.QueueItems).Stage == PipelineStage.Completed,
@@ -49,6 +59,8 @@ public sealed class DashboardViewModelTests
             Assert.Equal("examplemod", item.ModId);
             Assert.Equal(100, item.ProgressPercent);
             Assert.Equal(TranslationStyle.Informal, item.Style);
+            Assert.Equal("ja_JP", item.TargetLanguage);
+            Assert.Contains("Japanese", item.TranslationProfile, StringComparison.Ordinal);
             Assert.True(item.ArtifactReady);
         }
         finally
@@ -70,6 +82,12 @@ public sealed class DashboardViewModelTests
         Assert.False(viewModel.HasModelSources);
         Assert.False(viewModel.CanEnqueuePackages);
         Assert.Equal(TranslationStyle.Formal, viewModel.SelectedTranslationStyle.Style);
+        Assert.Equal(
+            ["zh_CN", "en_US", "ja_JP", "fr_FR", "ru_RU"],
+            viewModel.TargetLanguages.Select(static language => language.CanonicalLocale));
+        Assert.Equal(
+            TranslationLanguageCatalog.DefaultLocale,
+            viewModel.SelectedTargetLanguage.CanonicalLocale);
 
         var sourceOne = CreateSource("one", "Local translations", "llama3");
         var sourceTwo = CreateSource("two", "Team glossary", "qwen2.5:7b");
@@ -203,6 +221,102 @@ public sealed class DashboardViewModelTests
         item.Fail("backend technical detail");
         Assert.Equal("任务安全失败，源文件未改变。", item.ErrorDetails);
         Assert.Equal("backend technical detail", item.TechnicalErrorDetails);
+    }
+
+    [Fact]
+    public void UnauthorizedModelFailureShowsActionableLocalizedGuidance()
+    {
+        var text = new DictionaryTextProvider(new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["QueueFailureSummaryNoRollback"] = "任务安全失败。",
+            ["QueueFailureModelCredentials"] = "请更新 API Key 并测试连接。"
+        });
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"),
+            text);
+        var modelFailure = new ModelServiceException(
+            "OpenAI-compatible endpoint returned HTTP 401 (Unauthorized).",
+            HttpStatusCode.Unauthorized,
+            responseBody: "provider body must not be displayed",
+            requestId: "request-401");
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Translating,
+            "generic outer message",
+            modelFailure);
+
+        item.Fail(pipelineFailure);
+
+        Assert.Equal("任务安全失败。 请更新 API Key 并测试连接。", item.ErrorDetails);
+        Assert.Contains("stage=Translating", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=ModelServiceException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("http=401", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("request=request-401", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("provider body", item.TechnicalErrorDetails, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnknownFailureDoesNotExposeItsArbitraryMessage()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"));
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Analyzing,
+            "generic outer message",
+            new InvalidOperationException("authorization=Bearer must-not-be-displayed"));
+
+        item.Fail(pipelineFailure);
+
+        Assert.Contains("stage=Analyzing", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=InvalidOperationException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-be-displayed", item.TechnicalErrorDetails, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ModelContractFailureDoesNotExposeModelControlledDetails()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"));
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Translating,
+            "generic outer message",
+            new TranslationContractException(
+                "model-id\r\nauthorization=Bearer must-not-be-displayed"));
+
+        item.Fail(pipelineFailure);
+
+        Assert.Contains("stage=Translating", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=TranslationContractException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("model-id", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-be-displayed", item.TechnicalErrorDetails, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DirectPipelineFailureDoesNotExposeArchiveControlledDetails()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"));
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Verifying,
+            "archive-error\r\nauthorization=Bearer must-not-be-displayed");
+
+        item.Fail(pipelineFailure);
+
+        Assert.Contains("stage=Verifying", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=PipelineException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("archive-error", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-be-displayed", item.TechnicalErrorDetails, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -517,11 +631,15 @@ public sealed class DashboardViewModelTests
     {
         public string OutputPath { get; } = Path.Combine(Path.GetTempPath(), "translated.jar");
 
+        public string? LastTargetLanguage { get; private set; }
+
         public Task<string> CreateOutputPathAsync(
             string sourcePath,
+            string targetLanguage,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            LastTargetLanguage = targetLanguage;
             return Task.FromResult(OutputPath);
         }
     }

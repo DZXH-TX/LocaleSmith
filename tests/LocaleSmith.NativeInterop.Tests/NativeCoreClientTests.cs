@@ -10,6 +10,8 @@ public sealed class NativeCoreClientTests
         using var fixture = new ArchiveFixture("fabric-example.jar");
         fixture.AddText("fabric.mod.json", """{"schemaVersion":1,"id":"fabric_example","version":"1.0.0"}""");
         fixture.AddText("assets/fabric_example/lang/en_us.json", """{"item.fabric_example.demo":"Demo"}""");
+        fixture.AddText("assets/fabric_example/lang/en_us.old.json", """{"backup":"Ignored"}""");
+        fixture.AddText("assets/@shaderpack/lang/en_us.json", """{"collision":"Ignored"}""");
         fixture.AddText("pack.mcmeta", """{"pack":{"pack_format":34,"description":"Demo pack"}}""");
         fixture.Complete();
 
@@ -27,9 +29,31 @@ public sealed class NativeCoreClientTests
         Assert.Contains(
             manifest.Resources,
             resource => resource.Path == "pack.mcmeta" && resource.Kind == "mcmeta");
+        Assert.DoesNotContain(
+            manifest.Resources,
+            resource => resource.Path is "assets/fabric_example/lang/en_us.old.json" or
+                "assets/@shaderpack/lang/en_us.json");
         Assert.NotNull(manifest.ClassStringScan);
         Assert.Equal(0UL, manifest.ClassStringScan.DiscoveredClassCount);
         Assert.Contains("never rewritten", manifest.ClassStringScan.MutationPolicy, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ScanArchiveReadsShaderPackLanguageResources()
+    {
+        using var fixture = new ArchiveFixture("shader-example.zip");
+        fixture.AddText("shaders/lang/ja_jp.lang", "option.BLOOM=\u30d6\u30eb\u30fc\u30e0");
+        fixture.Complete();
+
+        var client = new NativeCoreClient();
+        var manifest = client.ScanArchive(fixture.ArchivePath);
+
+        Assert.Contains(
+            manifest.Resources,
+            resource => resource.Path == "shaders/lang/ja_jp.lang" &&
+                resource.Kind == "language_lang" &&
+                resource.Namespace == "@shaderpack" &&
+                resource.Locale == "ja_jp");
     }
 
     [Fact]

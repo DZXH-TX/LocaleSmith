@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.Input;
@@ -12,8 +13,12 @@ public sealed class OnboardingViewModel : ViewModelBase
     public const int StepCount = 4;
 
     private readonly IOnboardingService _onboardingService;
+    private readonly IAppDisplayLanguageService? _displayLanguageService;
     private readonly IUiTextProvider _text;
+    private readonly string _appliedLanguage;
     private int _currentStep;
+    private string _selectedLanguage;
+    private string? _persistedDisplayLanguage;
     private string _workspacePath = Path.Combine(
         System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments),
         "LocaleSmith");
@@ -33,10 +38,14 @@ public sealed class OnboardingViewModel : ViewModelBase
 
     public OnboardingViewModel(
         IOnboardingService onboardingService,
-        IUiTextProvider? text = null)
+        IUiTextProvider? text = null,
+        IAppDisplayLanguageService? displayLanguageService = null)
     {
         _onboardingService = onboardingService ?? throw new ArgumentNullException(nameof(onboardingService));
+        _displayLanguageService = displayLanguageService;
         _text = text ?? FallbackUiTextProvider.Instance;
+        _appliedLanguage = AppDisplayLanguages.ResolveOrDefault(CultureInfo.CurrentUICulture.Name);
+        _selectedLanguage = _appliedLanguage;
         NetworkTokenLimitParameterOptions =
         [
             new(
@@ -102,6 +111,29 @@ public sealed class OnboardingViewModel : ViewModelBase
     public IReadOnlyList<ModelProviderPreset> NetworkPresetOptions { get; } = ModelProviderPresets.All;
 
     public IReadOnlyList<TokenLimitParameterOption> NetworkTokenLimitParameterOptions { get; }
+
+    public IReadOnlyList<string> LanguageOptions { get; } = AppDisplayLanguages.Supported;
+
+    public string SelectedLanguage
+    {
+        get => _selectedLanguage;
+        set
+        {
+            var canonicalLanguage = AppDisplayLanguages.ResolveSupported(value);
+            if (!SetProperty(ref _selectedLanguage, canonicalLanguage))
+            {
+                return;
+            }
+
+            _persistedDisplayLanguage = null;
+            ErrorMessage = null;
+            StatusMessage = null;
+            OnPropertyChanged(nameof(IsLanguageRestartRequired));
+        }
+    }
+
+    public bool IsLanguageRestartRequired =>
+        !string.Equals(_selectedLanguage, _appliedLanguage, StringComparison.Ordinal);
 
     public OnboardingModelPath SelectedModelPath
     {
@@ -266,6 +298,75 @@ public sealed class OnboardingViewModel : ViewModelBase
 
     public void SetNetworkApiKeyPresent(bool isPresent) => _hasNetworkApiKey = isPresent;
 
+    public async Task<bool> SaveDisplayLanguageForRestartAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsLanguageRestartRequired)
+        {
+            return false;
+        }
+
+        if (_displayLanguageService is null)
+        {
+            ErrorMessage = Text(
+                "OnboardingLanguageSaveFailed",
+                "The display language could not be saved: {0}",
+                "The language service is unavailable.");
+            StatusMessage = null;
+            return false;
+        }
+
+        var language = _selectedLanguage;
+        IsBusy = true;
+        NotifyCommands();
+        ErrorMessage = null;
+        StatusMessage = Text(
+            "OnboardingLanguageSaving",
+            "Saving the display language before restart…");
+        try
+        {
+            await _displayLanguageService
+                .SaveDisplayLanguageAsync(language, cancellationToken)
+                .ConfigureAwait(true);
+            _persistedDisplayLanguage = language;
+            StatusMessage = Text(
+                "OnboardingLanguageSaved",
+                "Display language saved. Restarting LocaleSmith…");
+            return string.Equals(_selectedLanguage, language, StringComparison.Ordinal);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            ErrorMessage = Text(
+                "OnboardingLanguageSaveFailed",
+                "The display language could not be saved: {0}",
+                exception.Message);
+            StatusMessage = null;
+            return false;
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyCommands();
+        }
+    }
+
+    public bool TryGetPersistedDisplayLanguageForRestart(out string language)
+    {
+        language = _selectedLanguage;
+        return _persistedDisplayLanguage is not null &&
+            string.Equals(_persistedDisplayLanguage, _selectedLanguage, StringComparison.Ordinal) &&
+            IsLanguageRestartRequired;
+    }
+
+    public void ReportLanguageRestartFailure(string detail)
+    {
+        ErrorMessage = Text(
+            "OnboardingLanguageRestartFailed",
+            "LocaleSmith could not restart to apply the display language: {0}",
+            detail);
+        StatusMessage = null;
+    }
+
     private void Back()
     {
         ErrorMessage = null;
@@ -366,13 +467,26 @@ public sealed class OnboardingViewModel : ViewModelBase
 
     private bool ValidateCurrentStep() => CurrentStep switch
     {
-        0 => true,
+        0 => ValidateWelcomeStep(),
         1 => ValidatePaths(),
         2 => ValidateModel(),
         _ => true
     };
 
     private bool ValidateAll() => ValidatePaths() && ValidateModel();
+
+    private bool ValidateWelcomeStep()
+    {
+        if (!IsLanguageRestartRequired)
+        {
+            return true;
+        }
+
+        ErrorMessage = Text(
+            "OnboardingLanguageRestartRequired",
+            "Save and restart to apply the selected display language before continuing.");
+        return false;
+    }
 
     private bool ValidatePaths()
     {

@@ -52,7 +52,7 @@ public sealed class TranslationPipeline
 
         try
         {
-            progressTracker.Advance(stage = PipelineStage.Inspecting, "正在检查归档与模组元数据");
+            progressTracker.Advance(stage = PipelineStage.Inspecting, "正在检查归档结构与内容类型");
             workspace = await _workspaceBackend
                 .BeginAsync(jobId, request, cancellationToken)
                 .ConfigureAwait(false);
@@ -83,7 +83,8 @@ public sealed class TranslationPipeline
                 inspection.PackageIdentity,
                 request.TargetLanguage,
                 request.ModelSourceId,
-                _translationEngine.TranslationContractVersion).Normalize();
+                _translationEngine.TranslationContractVersion,
+                inspection.ContentKind).Normalize();
             var previous = await _translationMemory.LoadAsync(memoryKey, cancellationToken).ConfigureAwait(false);
             var (pending, reused) = SelectPendingEntries(entries, previous, request.Styles);
 
@@ -99,7 +100,8 @@ public sealed class TranslationPipeline
                             pending,
                             request.TargetLanguage,
                             request.Styles,
-                            request.ModelSourceId),
+                            request.ModelSourceId,
+                            inspection.ContentKind),
                         cancellationToken)
                     .ConfigureAwait(false);
                 newTranslations = translated.Entries;
@@ -215,7 +217,11 @@ public sealed class TranslationPipeline
                 progressTracker.Finish(PipelineStage.Failed, "处理失败");
             }
 
-            throw new PipelineException(jobId, stage, "The translation pipeline failed and was rolled back.", exception);
+            throw new PipelineException(
+                jobId,
+                stage,
+                CreateFailureMessage(stage, exception),
+                exception);
         }
         catch
         {
@@ -243,6 +249,9 @@ public sealed class TranslationPipeline
             }
         }
     }
+
+    private static string CreateFailureMessage(PipelineStage stage, Exception exception)
+        => $"The translation pipeline failed during {stage}. {exception.GetType().Name}.";
 
     private static async Task<ExternalizationReport> HandleExternalizationAsync(
         IArchiveWorkspace workspace,

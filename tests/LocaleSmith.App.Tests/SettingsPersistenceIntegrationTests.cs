@@ -48,7 +48,8 @@ public sealed class SettingsPersistenceIntegrationTests
                     secrets,
                     firstRegistry,
                     firstHttpClient,
-                    new StubSandboxRootManager());
+                    new StubSandboxRootManager(),
+                    new FileAppLanguagePreferenceWriter(testRoot));
                 using var settings = new SettingsViewModel(firstState);
                 await settings.LoadAsync(cancellationToken);
                 settings.Language = "en-US";
@@ -68,6 +69,9 @@ public sealed class SettingsPersistenceIntegrationTests
                     cancellationToken);
 
                 Assert.True(await settings.FlushPendingChangesAsync(cancellationToken));
+                Assert.Equal(
+                    AppDisplayLanguages.EnglishUnitedStates,
+                    AppLanguagePreferenceStore.LoadOrDefault(testRoot));
             }
 
             var encryptedBytes = await File.ReadAllTextAsync(configurationPath, cancellationToken);

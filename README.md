@@ -45,6 +45,8 @@
 | --- | --- |
 | **安全归档扫描** | 识别路径穿越、Loader 元数据、语言资源、签名证据与受支持的 Java 字符串引用。 |
 | **增量翻译流水线** | 按内容哈希复用译文，校验占位符与结构，并在失败时回滚整个作业。 |
+| **专业提示与术语** | 自动区分模组、资源包与光影包，使用独立领域提示；简体中文任务附带各自的专业术语对照表。 |
+| **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
 | **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
 | **提供方预设** | DeepSeek、Qwen、MiMo、MiniMax、OpenAI、豆包、智谱与 Kimi 等预设会同步填充服务地址、模型名和推荐 Token 字段；也可明确选择不发送 Token 上限字段。 |
 | **持久化诊断日志** | 日志目录可写时，每次翻译在后台有界写入独立的 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
@@ -58,11 +60,12 @@
 | --- | --- |
 | 输入 | JAR、ZIP、展开后的资源包或光影包目录 |
 | Loader 元数据 | Fabric、Forge、NeoForge、Quilt、Legacy Forge |
-| 文本资源 | Minecraft 语言 JSON、Legacy `.lang`、`pack.txt`、受支持的 `pack.mcmeta` 显示文本 |
+| 文本资源 | Minecraft 语言 JSON、Legacy `.lang`、光影包 `shaders/lang/*.lang`、`pack.txt`、受支持的 `pack.mcmeta` 显示文本 |
 | 字节码 | 经结构证明的 `Component.literal(String)` 精确模式；其他候选仅报告、不改写 |
 | 模型接口 | Ollama、OpenAI-compatible Chat Completions、Anthropic Messages |
 | 模型预设 | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM、Kimi，以及自定义入口 |
-| 输出 | 当前作业选择的正式版或语气版；现代 Minecraft 资源名使用小写 `zh_cn` |
+| 目标语言 | `zh_CN`、`en_US`、`ja_JP`、`fr_FR`、`ru_RU` |
+| 输出 | 当前作业选择的一种目标语言与一种翻译风格；包内资源名使用小写 Minecraft locale，如 `ja_jp` |
 | 平台 | Windows x64，最低 Windows 10 1809 |
 
 ## 处理流程
@@ -71,12 +74,12 @@
 flowchart LR
     A["导入<br/>JAR / ZIP / 文件夹"] --> B["安全扫描<br/>路径 / 元数据 / 资源"]
     B --> C["提取与规划<br/>增量缓存"]
-    C --> D["模型翻译<br/>正式版 / 语气版"]
+    C --> D["模型翻译<br/>目标语言 + 正式版 / 语气版"]
     D --> E["验证与重建<br/>事务回滚"]
     E --> F["输出<br/>LocaleSmith.Output"]
 ```
 
-每个作业只生成用户选择的一种翻译风格。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
+每个作业会冻结用户选择的目标语言、模型源和一种翻译风格。语言资源优先使用非目标语言的 `en_us`、`en_gb` 或其他现有 locale 作为源文；例如目标为英语但包内只有日语时，会从日语生成 `en_us`。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
 
 ## 翻译日志与持久化设置
 
@@ -201,5 +204,11 @@ MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.exe
 ## 开源许可
 
 本项目依据 [Apache License 2.0](./LICENSE) 开源。
+
+## 人工智能使用申明
+
+本项目允许在需求分析、代码与文档草拟、重构建议、测试设计和本地化等环节使用生成式人工智能工具。所有 AI 辅助产出必须经过人工审阅、必要测试以及安全与许可核验后方可提交；维护者和贡献者仍对其提交内容的正确性、安全性、合规性和可维护性承担完整责任，AI 输出不构成事实、法律或专业保证。
+
+使用 AI 工具时，不得向未经授权的外部服务上传密钥、凭据、个人信息、未公开源码或受限制的第三方内容，并应遵守相应服务条款与第三方许可证。对项目有实质影响的 AI 辅助内容，贡献者应在 Pull Request 中如实说明；本申明不改变 Apache License 2.0 下的许可、版权与贡献归属。
 
 Copyright © 2026 **DZXH-TX（道泽星河-天仙）**（版权所有者与许可人）。

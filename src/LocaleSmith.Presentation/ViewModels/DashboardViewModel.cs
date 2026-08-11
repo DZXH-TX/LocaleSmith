@@ -1,9 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
+using LocaleSmith.Core.Services;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
 
@@ -38,6 +41,29 @@ public sealed class TranslationStyleOptionViewModel(
     public string DisplayName { get; } = displayName;
 
     public string Description { get; } = description;
+}
+
+public sealed class TargetLanguageOptionViewModel(
+    TranslationLanguage language,
+    IUiTextProvider text)
+{
+    public TranslationLanguage Language { get; } = language ?? throw new ArgumentNullException(nameof(language));
+
+    public string CanonicalLocale => Language.CanonicalLocale;
+
+    public string DisplayName { get; } = TargetLanguageDisplay.GetName(
+        text ?? throw new ArgumentNullException(nameof(text)),
+        language);
+
+    public string DetailText => $"{Language.NativeName} · {CanonicalLocale}";
+
+    public string AccessibleLabel => $"{DisplayName}, {Language.NativeName}, {CanonicalLocale}";
+}
+
+internal static class TargetLanguageDisplay
+{
+    public static string GetName(IUiTextProvider text, TranslationLanguage language) =>
+        text.GetText($"TargetLanguage_{language.CanonicalLocale}", language.EnglishName);
 }
 
 public sealed class QueueStageDetailViewModel(
@@ -102,13 +128,15 @@ public sealed class QueueItemViewModel : ObservableObject
         string sourcePath,
         string outputPath,
         IUiTextProvider? text = null,
-        TranslationStyle style = TranslationStyle.Formal)
+        TranslationStyle style = TranslationStyle.Formal,
+        string targetLanguage = TranslationLanguageCatalog.DefaultLocale)
     {
         _text = text ?? FallbackUiTextProvider.Instance;
         JobId = jobId;
         SourcePath = sourcePath;
         OutputPath = outputPath;
         Style = style;
+        TargetLanguage = TranslationLanguageCatalog.NormalizeLocale(targetLanguage);
         FileName = Directory.Exists(sourcePath)
             ? new DirectoryInfo(sourcePath).Name
             : Path.GetFileName(sourcePath);
@@ -132,12 +160,24 @@ public sealed class QueueItemViewModel : ObservableObject
 
     public TranslationStyle Style { get; }
 
+    public string TargetLanguage { get; }
+
+    public string TargetLanguageName => TargetLanguageDisplay.GetName(
+        _text,
+        TranslationLanguageCatalog.GetRequired(TargetLanguage));
+
     public string TranslationStyleName => Style switch
     {
         TranslationStyle.Formal => _text.GetText("QueueStyleFormal", "Formal translation"),
         TranslationStyle.Informal => _text.GetText("QueueStyleInformal", "Tone translation"),
         _ => Style.ToString()
     };
+
+    public string TranslationProfile => _text.GetText(
+        "QueueTranslationProfile",
+        "{0} · {1}",
+        TargetLanguageName,
+        TranslationStyleName);
 
     public PipelineStage Stage
     {
@@ -401,11 +441,23 @@ public sealed class QueueItemViewModel : ObservableObject
 
     public void Fail(string message)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        FailCore(message, guidance: null);
+    }
+
+    public void Fail(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        FailCore(CreateTechnicalErrorDetails(exception), CreateFailureGuidance(exception));
+    }
+
+    private void FailCore(string technicalDetails, string? guidance)
+    {
         Stage = PipelineStage.Failed;
         IsCancellationRequested = false;
         NextAction = string.Empty;
         Status = _text.GetText("QueueStatusFailed", "Failed — review details and retry.");
-        ErrorDetails = RollbackStatus switch
+        var rollbackSummary = RollbackStatus switch
         {
             PipelineStageStatus.Completed => _text.GetText(
                 "QueueFailureSummaryRolledBack",
@@ -419,8 +471,62 @@ public sealed class QueueItemViewModel : ObservableObject
                     "QueueFailureSummary",
                     "The job failed before output was committed; no rollback was needed."))
         };
-        TechnicalErrorDetails = message;
+        ErrorDetails = string.IsNullOrWhiteSpace(guidance)
+            ? rollbackSummary
+            : $"{rollbackSummary} {guidance}";
+        TechnicalErrorDetails = technicalDetails;
     }
+
+    private string? CreateFailureGuidance(Exception exception)
+    {
+        var cause = GetFailureCause(exception);
+        return cause switch
+        {
+            ModelServiceException
+            {
+                StatusCode: HttpStatusCode.Unauthorized
+            } => _text.GetText(
+                "QueueFailureModelCredentials",
+                "The model service rejected the saved credential. Update the API key in Model sources, test the connection, and retry."),
+            ModelServiceException => _text.GetText(
+                "QueueFailureModelService",
+                "The model service request failed. Review the saved endpoint, model, credential, and connection test before retrying."),
+            TranslationContractException => _text.GetText(
+                "QueueFailureModelResponse",
+                "The model returned a response that could not be applied safely. Review the technical details and retry."),
+            _ => null
+        };
+    }
+
+    private static string CreateTechnicalErrorDetails(Exception exception)
+    {
+        var pipelineFailure = exception as PipelineException;
+        var cause = GetFailureCause(exception);
+        var stage = pipelineFailure?.FailedStage.ToString() ?? "none";
+        var prefix = $"stage={stage} | cause={cause.GetType().Name}";
+
+        return cause switch
+        {
+            ModelServiceException modelFailure => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{prefix} | http={FormatHttpStatus(modelFailure.StatusCode)} | " +
+                $"request={modelFailure.RequestId ?? "none"}"),
+            TranslationContractException => prefix,
+            _ => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{prefix} | hresult=0x{exception.HResult:X8}")
+        };
+    }
+
+    private static Exception GetFailureCause(Exception exception) =>
+        exception is PipelineException { InnerException: { } innerException }
+            ? innerException
+            : exception;
+
+    private static string FormatHttpStatus(HttpStatusCode? statusCode) =>
+        statusCode is { } status
+            ? ((int)status).ToString(CultureInfo.InvariantCulture)
+            : "none";
 
     public void Cancelled()
     {
@@ -536,6 +642,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly Dictionary<Guid, QueueItemViewModel> _items = [];
     private ModelSourceOptionViewModel? _selectedModelSource;
     private TranslationStyleOptionViewModel _selectedTranslationStyle;
+    private TargetLanguageOptionViewModel _selectedTargetLanguage;
     private Task<bool> _modelSelectionTask = Task.FromResult(true);
     private string? _requestedModelSourceId;
     private int _modelSelectionVersion;
@@ -566,6 +673,14 @@ public sealed class DashboardViewModel : ViewModelBase
                 Text("QueueStyleInformalDescription", "Natural player-community wording with an informal tone."))
         ];
         _selectedTranslationStyle = TranslationStyles[0];
+        TargetLanguages = TranslationLanguageCatalog.SupportedLanguages
+            .Select(language => new TargetLanguageOptionViewModel(language, _text))
+            .ToArray();
+        _selectedTargetLanguage = TargetLanguages.Single(language =>
+            string.Equals(
+                language.CanonicalLocale,
+                TranslationLanguageCatalog.DefaultLocale,
+                StringComparison.Ordinal));
         CancelCommand = new RelayCommand<QueueItemViewModel>(Cancel, static item => item?.CanCancel == true);
         if (_modelSelectionService is IModelSelectionStateNotifier notifier)
         {
@@ -582,9 +697,13 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public IReadOnlyList<TranslationStyleOptionViewModel> TranslationStyles { get; }
 
+    public IReadOnlyList<TargetLanguageOptionViewModel> TargetLanguages { get; }
+
     public IRelayCommand<QueueItemViewModel> CancelCommand { get; }
 
     public bool IsQueueEmpty => QueueItems.Count == 0;
+
+    public bool HasActiveTranslationJobs => _handles.Count != 0;
 
     public bool HasModelSources => ModelSources.Count > 0;
 
@@ -613,6 +732,14 @@ public sealed class DashboardViewModel : ViewModelBase
         get => _selectedTranslationStyle;
         set => SetProperty(
             ref _selectedTranslationStyle,
+            value ?? throw new ArgumentNullException(nameof(value)));
+    }
+
+    public TargetLanguageOptionViewModel SelectedTargetLanguage
+    {
+        get => _selectedTargetLanguage;
+        set => SetProperty(
+            ref _selectedTargetLanguage,
             value ?? throw new ArgumentNullException(nameof(value)));
     }
 
@@ -699,9 +826,11 @@ public sealed class DashboardViewModel : ViewModelBase
             return;
         }
 
-        // A multi-package add operation captures one source. Later selector changes affect only later operations.
+        // A multi-package add operation captures one model, target language and style. Later
+        // selector changes affect only later operations.
         var modelSourceId = selectedSource.Id;
         var translationStyle = SelectedTranslationStyle.Style;
+        var targetLanguage = SelectedTargetLanguage.CanonicalLocale;
 
         foreach (var path in paths.Where(static path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -716,12 +845,23 @@ public sealed class DashboardViewModel : ViewModelBase
             try
             {
                 var outputPath = await _outputPathStrategy
-                    .CreateOutputPathAsync(fullPath, cancellationToken)
+                    .CreateOutputPathAsync(fullPath, targetLanguage, cancellationToken)
                     .ConfigureAwait(true);
                 var handle = await _translationQueueService.EnqueueAsync(
-                    new TranslationQueueRequest(fullPath, outputPath, modelSourceId, translationStyle),
+                    new TranslationQueueRequest(
+                        fullPath,
+                        outputPath,
+                        modelSourceId,
+                        translationStyle,
+                        targetLanguage),
                     cancellationToken).ConfigureAwait(true);
-                var item = new QueueItemViewModel(handle.JobId, fullPath, outputPath, _text, translationStyle);
+                var item = new QueueItemViewModel(
+                    handle.JobId,
+                    fullPath,
+                    outputPath,
+                    _text,
+                    translationStyle,
+                    targetLanguage);
                 _handles[handle.JobId] = handle;
                 _items[handle.JobId] = item;
                 QueueItems.Add(item);
@@ -927,7 +1067,7 @@ public sealed class DashboardViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            _dispatcher.Post(() => item.Fail(exception.Message));
+            _dispatcher.Post(() => item.Fail(exception));
         }
         finally
         {

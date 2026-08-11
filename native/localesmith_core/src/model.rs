@@ -252,7 +252,7 @@ pub struct ResourceEntry {
 pub enum ResourceKind {
     /// Modern JSON Minecraft language file.
     LanguageJson,
-    /// Legacy Forge/Minecraft `.lang` language file.
+    /// Legacy Forge/Minecraft or shader-pack `.lang` language file.
     LanguageLang,
     /// Legacy resource-pack description file.
     PackText,

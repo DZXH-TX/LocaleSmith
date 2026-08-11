@@ -167,6 +167,79 @@ public sealed class SecureAppStateServiceTests
     }
 
     [Fact]
+    public async Task SettingsSaveCanRetryBootstrapProjectionAfterItsFirstWriteFails()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var directories = new TemporaryTestDirectory();
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(
+            new AppConfiguration
+            {
+                IsOnboardingComplete = true,
+                WorkspacePath = directories.WorkspacePath,
+                SandboxPath = directories.SandboxPath,
+                LogDirectoryPath = directories.LogDirectoryPath
+            },
+            events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        var languageWriter = new FailOnceLanguagePreferenceWriter();
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager(),
+            languageWriter);
+        var update = new AppSettingsUpdate(
+            AppDisplayLanguages.EnglishUnitedStates,
+            AppThemePreference.System,
+            false,
+            directories.WorkspacePath,
+            directories.SandboxPath,
+            directories.LogDirectoryPath);
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            service.SaveSettingsAsync(update, cancellationToken));
+
+        Assert.Equal(AppDisplayLanguages.EnglishUnitedStates, configurationStore.Persisted.Language);
+        Assert.Equal(AppDisplayLanguages.EnglishUnitedStates, (await service.LoadAsync(cancellationToken)).Language);
+        Assert.Equal(1, languageWriter.Attempts);
+        Assert.Null(languageWriter.PersistedLanguage);
+
+        await service.SaveSettingsAsync(update, cancellationToken);
+
+        Assert.Equal(2, languageWriter.Attempts);
+        Assert.Equal(AppDisplayLanguages.EnglishUnitedStates, languageWriter.PersistedLanguage);
+    }
+
+    [Fact]
+    public async Task DisplayLanguageServicePersistsCanonicalLanguageToConfigurationAndBootstrap()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        var languageWriter = new RecordingLanguagePreferenceWriter();
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager(),
+            languageWriter);
+
+        await service.SaveDisplayLanguageAsync("JA-jp", cancellationToken);
+
+        Assert.Equal(AppDisplayLanguages.JapaneseJapan, configurationStore.Persisted.Language);
+        Assert.Equal(AppDisplayLanguages.JapaneseJapan, (await service.LoadAsync(cancellationToken)).Language);
+        Assert.Equal(AppDisplayLanguages.JapaneseJapan, languageWriter.PersistedLanguage);
+    }
+
+    [Fact]
     public async Task InitializationPreservesCurrentSchemaEditablePresetValues()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -1050,6 +1123,31 @@ public sealed class SecureAppStateServiceTests
 
         public void ReplaceSandboxRoots(IEnumerable<string> sandboxRoots) =>
             _roots = sandboxRoots.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class FailOnceLanguagePreferenceWriter : IAppLanguagePreferenceWriter
+    {
+        public int Attempts { get; private set; }
+
+        public string? PersistedLanguage { get; private set; }
+
+        public void Save(string language)
+        {
+            Attempts++;
+            if (Attempts == 1)
+            {
+                throw new IOException("Injected bootstrap preference write failure.");
+            }
+
+            PersistedLanguage = language;
+        }
+    }
+
+    private sealed class RecordingLanguagePreferenceWriter : IAppLanguagePreferenceWriter
+    {
+        public string? PersistedLanguage { get; private set; }
+
+        public void Save(string language) => PersistedLanguage = language;
     }
 
     private sealed class RejectingHttpHandler : HttpMessageHandler

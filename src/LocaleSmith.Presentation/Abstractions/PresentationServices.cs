@@ -19,6 +19,15 @@ public interface IOnboardingService
     Task CompleteAsync(OnboardingSubmission submission, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Persists the display language in both the encrypted configuration and the bootstrap preference
+/// that must be available before WinUI loads application resources.
+/// </summary>
+public interface IAppDisplayLanguageService
+{
+    Task SaveDisplayLanguageAsync(string language, CancellationToken cancellationToken = default);
+}
+
 public interface IModelSourceCatalog
 {
     Task<IReadOnlyList<ModelSourceProfile>> GetAllAsync(CancellationToken cancellationToken = default);
@@ -86,6 +95,7 @@ public interface IOutputPathStrategy
 {
     Task<string> CreateOutputPathAsync(
         string sourcePath,
+        string targetLanguage,
         CancellationToken cancellationToken = default);
 }
 

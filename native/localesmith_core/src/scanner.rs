@@ -561,6 +561,20 @@ fn truncate_diagnostic(mut value: String, max_bytes: usize) -> String {
     value
 }
 
+fn is_valid_resource_namespace(value: &str) -> bool {
+    !value.is_empty()
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'_' | b'-' | b'.')
+        })
+}
+
+fn is_valid_locale_token(value: &str) -> bool {
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+}
+
 fn classify_resource(
     path: &str,
     is_directory: bool,
@@ -576,20 +590,22 @@ fn classify_resource(
     }
 
     let parts: Vec<_> = path.split('/').collect();
-    if parts.len() != 4 || parts[0] != "assets" || parts[2] != "lang" {
+    let (namespace, filename, shader_language) = match parts.as_slice() {
+        ["assets", namespace, "lang", filename] => (*namespace, *filename, false),
+        // OptiFine/Iris shader-pack option labels use /shaders/lang/<locale>.lang.
+        // A synthetic namespace keeps this resource family isolated from normal assets.
+        ["shaders", "lang", filename] => ("@shaderpack", *filename, true),
+        _ => return None,
+    };
+    if !shader_language && !is_valid_resource_namespace(namespace) {
         return None;
     }
-    let namespace = parts[1];
-    let filename = parts[3];
-    if namespace.is_empty() {
-        return None;
-    }
-    let (locale, kind) = if let Some(locale) = filename.strip_suffix(".json") {
+    let (locale, kind) = if !shader_language && let Some(locale) = filename.strip_suffix(".json") {
         (locale, ResourceKind::LanguageJson)
     } else {
         (filename.strip_suffix(".lang")?, ResourceKind::LanguageLang)
     };
-    if locale.is_empty() {
+    if !is_valid_locale_token(locale) {
         return None;
     }
     Some((kind, Some(namespace.to_owned()), Some(locale.to_owned())))
@@ -877,6 +893,16 @@ mod tests {
         );
         assert!(classify_resource("assets/example/text/en_us.json", false).is_none());
         assert!(classify_resource("assets/example/lang/nested/en_us.json", false).is_none());
+        let (shader_kind, shader_namespace, shader_locale) =
+            classify_resource("shaders/lang/fr_fr.lang", false).unwrap();
+        assert_eq!(shader_kind, ResourceKind::LanguageLang);
+        assert_eq!(shader_namespace.as_deref(), Some("@shaderpack"));
+        assert_eq!(shader_locale.as_deref(), Some("fr_fr"));
+        assert!(classify_resource("shaders/lang/en_us.json", false).is_none());
+        assert!(classify_resource("assets/example/lang/en_us.old.json", false).is_none());
+        assert!(classify_resource("assets/@shaderpack/lang/en_us.json", false).is_none());
+        assert!(classify_resource("assets/Example/lang/en_us.json", false).is_none());
+        assert!(classify_resource("shaders/lang/EN_US.lang", false).is_none());
     }
 
     #[test]

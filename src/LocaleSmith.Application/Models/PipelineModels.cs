@@ -1,4 +1,5 @@
 using LocaleSmith.Core.Models;
+using LocaleSmith.Core.Services;
 
 namespace LocaleSmith.Application.Models;
 
@@ -55,7 +56,7 @@ public sealed record PipelineRequest
     public PipelineRequest(
         string sourcePath,
         string outputPath,
-        string targetLanguage = "zh_CN",
+        string targetLanguage = TranslationLanguageCatalog.DefaultLocale,
         IReadOnlySet<TranslationStyle>? styles = null,
         SignedArchiveHandling signedArchiveHandling = SignedArchiveHandling.Block,
         HardcodedStringMode hardcodedStringMode = HardcodedStringMode.ScanOnly,
@@ -73,7 +74,7 @@ public sealed record PipelineRequest
             throw new ArgumentException("The source and output paths must be different.", nameof(outputPath));
         }
 
-        TargetLanguage = targetLanguage.Trim();
+        TargetLanguage = TranslationLanguageCatalog.NormalizeLocale(targetLanguage);
         Styles = styles is null
             ? new HashSet<TranslationStyle> { TranslationStyle.Formal }
             : new HashSet<TranslationStyle>(styles);
@@ -121,7 +122,8 @@ public sealed record ArchiveInspection(
     bool UsedFileNameFallback,
     ArchiveSignatureState SignatureState,
     bool CanResign,
-    IReadOnlyList<string> Warnings)
+    IReadOnlyList<string> Warnings,
+    MinecraftContentKind ContentKind = MinecraftContentKind.Unknown)
 {
     public bool IsSigned => SignatureState != ArchiveSignatureState.None;
 }

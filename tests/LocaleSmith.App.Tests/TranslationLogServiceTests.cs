@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Net;
 using LocaleSmith.App.Services;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Abstractions;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Application.Services;
@@ -12,6 +14,51 @@ namespace LocaleSmith.App.Tests;
 
 public sealed class TranslationLogServiceTests
 {
+    [Fact]
+    public async Task PipelineFailureDiagnosticsAreSingleLineAndRedactedOnDisk()
+    {
+        using var artifacts = new TestArtifactDirectory();
+        var configuration = new RecordingConfigurationService(Path.Combine(artifacts.Path, "logs"));
+        using var logs = new TranslationLogService(configuration);
+        var jobId = Guid.NewGuid();
+        var session = Assert.IsType<TranslationLogSessionInfo>(await logs.TryStartSessionAsync(
+            jobId,
+            Path.Combine(artifacts.Path, "input.jar"),
+            "saved-model",
+            TestContext.Current.CancellationToken));
+        var modelFailure = new ModelServiceException(
+            "HTTP 401; authorization=Bearer very-secret-token\r\n" +
+            "api_key=sk-supersecret1234; source=C:\\private\\input.jar",
+            HttpStatusCode.Unauthorized,
+            requestId: "request-401");
+        var pipelineFailure = new PipelineException(
+            jobId,
+            PipelineStage.Translating,
+            "generic outer message",
+            modelFailure);
+
+        await logs.CompleteSessionAndWaitAsync(
+            jobId,
+            TranslationLogLevel.Error,
+            PipelineTranslationQueueService.CreateFailureLogMessage("Translation failed", pipelineFailure));
+        var persisted = await File.ReadAllTextAsync(
+            session.AllLevelsLogPath,
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains("stage=Translating", persisted, StringComparison.Ordinal);
+        Assert.Contains("cause=ModelServiceException", persisted, StringComparison.Ordinal);
+        Assert.Contains("http=401", persisted, StringComparison.Ordinal);
+        Assert.Contains("request=request-401", persisted, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", persisted, StringComparison.Ordinal);
+        Assert.Contains("[PATH]", persisted, StringComparison.Ordinal);
+        Assert.DoesNotContain("very-secret-token", persisted, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-supersecret1234", persisted, StringComparison.Ordinal);
+        Assert.DoesNotContain(@"C:\private\input.jar", persisted, StringComparison.OrdinalIgnoreCase);
+        Assert.All(
+            persisted.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries),
+            static line => Assert.StartsWith("[", line, StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task TranslationQueueRecordsLifecycleAndProgressWithoutExposingFullPaths()
     {

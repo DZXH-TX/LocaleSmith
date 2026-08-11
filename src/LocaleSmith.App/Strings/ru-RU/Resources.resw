@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="MainWindowTitle" xml:space="preserve"><value>LocaleSmith</value></data>
+  <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>LocaleSmith</value></data>
+  <data name="DashboardNavigationItem.Content" xml:space="preserve"><value>Очередь обработки</value></data>
+  <data name="ModelSourcesNavigationItem.Content" xml:space="preserve"><value>Источники моделей</value></data>
+  <data name="LogsNavigationItem.Content" xml:space="preserve"><value>Журналы</value></data>
+  <data name="StartupErrorTitle.Text" xml:space="preserve"><value>Не удалось безопасно запустить приложение</value></data>
+  <data name="OnboardingStepPrefix.Text" xml:space="preserve"><value>Шаг</value></data>
+  <data name="OnboardingStepSuffix.Text" xml:space="preserve"><value>из 4</value></data>
+  <data name="OnboardingProgress.AutomationProperties.Name" xml:space="preserve"><value>Ход первоначальной настройки</value></data>
+  <data name="OnboardingError.Title" xml:space="preserve"><value>Требуется действие</value></data>
+  <data name="OnboardingStatus.Title" xml:space="preserve"><value>Состояние настройки</value></data>
+  <data name="WelcomeTitle.Text" xml:space="preserve"><value>Добро пожаловать в LocaleSmith</value></data>
+  <data name="WelcomeBody.Text" xml:space="preserve"><value>Извлекайте, поэтапно переводите и пересобирайте моды и наборы ресурсов Minecraft. Каждое задание использует один выбранный стиль перевода и создаёт один соответствующий артефакт.</value></data>
+  <data name="WelcomePrivacy.Text" xml:space="preserve"><value>Ollama может работать полностью локально на этом компьютере. Облачные модели используются только после их настройки. Ключи API никогда не записываются в настройки или журналы.</value></data>
+  <data name="OnboardingLanguageSelector.Header" xml:space="preserve"><value>Язык интерфейса</value></data>
+  <data name="OnboardingLanguageHelp.Text" xml:space="preserve"><value>Для смены языка интерфейса требуется перезапуск. После выбора сохраните язык и перезапустите LocaleSmith — откроется этот мастер настройки.</value></data>
+  <data name="OnboardingLanguageRestartButton.Content" xml:space="preserve"><value>Сохранить язык и перезапустить</value></data>
+  <data name="OnboardingLanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>Сохранить язык интерфейса и перезапустить LocaleSmith</value></data>
+  <data name="ModelPathChoiceTitle.Text" xml:space="preserve"><value>Выберите первое подключение к модели</value></data>
+  <data name="LocalModelChoice.AutomationProperties.Name" xml:space="preserve"><value>Выбрать локальную модель Ollama</value></data>
+  <data name="LocalModelChoiceTitle.Text" xml:space="preserve"><value>Локальная модель Ollama</value></data>
+  <data name="LocalModelChoiceBody.Text" xml:space="preserve"><value>Запускайте уже загруженную модель на этом компьютере без облачного ключа API.</value></data>
+  <data name="ModelPathSelectedStatus.Text" xml:space="preserve"><value>Выбрана локальная модель</value></data>
+  <data name="NetworkModelChoice.AutomationProperties.Name" xml:space="preserve"><value>Выбрать сетевой API большой языковой модели</value></data>
+  <data name="NetworkModelChoiceTitle.Text" xml:space="preserve"><value>Сетевой API большой языковой модели</value></data>
+  <data name="NetworkModelChoiceBody.Text" xml:space="preserve"><value>Настройте DeepSeek, Qwen, Xiaomi MiMo, MiniMax, OpenAI, Doubao, Zhipu GLM, Kimi или собственный совместимый сервис.</value></data>
+  <data name="NetworkModelPathSelectedStatus.Text" xml:space="preserve"><value>Выбрана сетевая модель</value></data>
+  <data name="WorkspaceTitle.Text" xml:space="preserve"><value>Выберите рабочую область и песочницу CLI</value></data>
+  <data name="WorkspaceBody.Text" xml:space="preserve"><value>В рабочей области хранятся выходные данные. Рабочие каталоги команд и явно указанные пути ограничены песочницей или временным каталогом.</value></data>
+  <data name="WorkspacePathInput.Header" xml:space="preserve"><value>Рабочая область перевода</value></data>
+  <data name="WorkspacePathInput.AutomationProperties.Name" xml:space="preserve"><value>Путь к рабочей области перевода</value></data>
+  <data name="SandboxPathInput.Header" xml:space="preserve"><value>Каталог песочницы CLI</value></data>
+  <data name="SandboxPathInput.AutomationProperties.Name" xml:space="preserve"><value>Путь к каталогу песочницы CLI</value></data>
+  <data name="SandboxHelp.Text" xml:space="preserve"><value>Корни дисков, каталоги Windows и Program Files, символические ссылки и точки соединения запрещены.</value></data>
+  <data name="OnboardingLogDirectoryPath.Header" xml:space="preserve"><value>Каталог журналов перевода</value></data>
+  <data name="OnboardingLogDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>Путь к каталогу хранения журналов перевода</value></data>
+  <data name="OnboardingBrowseLogDirectoryButton.Content" xml:space="preserve"><value>Обзор…</value></data>
+  <data name="OnboardingBrowseLogDirectoryButton.AutomationProperties.Name" xml:space="preserve"><value>Выбрать каталог журналов перевода</value></data>
+  <data name="OnboardingLogDirectoryHelp.Text" xml:space="preserve"><value>Выберите локальный каталог. При каждом переводе приложение по возможности записывает в фоне отдельные файлы .log для Debug и всех уровней; сохраняются последние 500 сеансов. Журналирование с ограниченным объёмом никогда не блокирует перевод.</value></data>
+  <data name="OnboardingModelTitle.Text" xml:space="preserve"><value>Настройте подключение к модели</value></data>
+  <data name="OnboardingModelBody.Text" xml:space="preserve"><value>Настройте локальную Ollama или сетевую модель в соответствии с выбором на первой странице. Адрес сервиса и имя модели можно изменить.</value></data>
+  <data name="ConfigureOllamaCheckBox.Content" xml:space="preserve"><value>Настроить локальную Ollama сейчас</value></data>
+  <data name="OllamaEndpointInput.Header" xml:space="preserve"><value>Адрес сервиса</value></data>
+  <data name="OllamaModelInput.Header" xml:space="preserve"><value>Имя загруженной модели</value></data>
+  <data name="OnboardingNetworkPresetSelector.Header" xml:space="preserve"><value>Провайдер сетевой модели</value></data>
+  <data name="OnboardingNetworkPresetSelector.AutomationProperties.Name" xml:space="preserve"><value>Предустановка провайдера сетевой модели</value></data>
+  <data name="OnboardingNetworkEndpointInput.Header" xml:space="preserve"><value>Конечная точка сервиса HTTPS</value></data>
+  <data name="OnboardingNetworkEndpointInput.AutomationProperties.Name" xml:space="preserve"><value>Конечная точка HTTPS сервиса сетевой модели</value></data>
+  <data name="OnboardingNetworkModelInput.Header" xml:space="preserve"><value>Имя модели</value></data>
+  <data name="OnboardingNetworkTokenLimitParameter.Header" xml:space="preserve"><value>Параметр ограничения токенов ответа</value></data>
+  <data name="OnboardingNetworkTokenLimitParameter.AutomationProperties.Name" xml:space="preserve"><value>Параметр ограничения токенов ответа сетевой модели</value></data>
+  <data name="OnboardingNetworkTokenLimitParameterHelp.Text" xml:space="preserve"><value>Предустановка выбирает рекомендуемое поле. Выберите другое совместимое поле либо не указывайте его и позвольте провайдеру принять решение.</value></data>
+  <data name="OnboardingNetworkApiKeyInput.Header" xml:space="preserve"><value>Ключ API</value></data>
+  <data name="OnboardingNetworkApiKeyInput.AutomationProperties.Name" xml:space="preserve"><value>Ключ API сетевой модели</value></data>
+  <data name="OnboardingNetworkCredentialHelp.Text" xml:space="preserve"><value>Ключ API записывается только в Диспетчер учётных данных Windows. В настройках и журналах сохраняется лишь ссылка на учётные данные.</value></data>
+  <data name="SkipModelSetupButton.Content" xml:space="preserve"><value>Настроить модели позже</value></data>
+  <data name="SummaryTitle.Text" xml:space="preserve"><value>Всё готово к завершению безопасной настройки</value></data>
+  <data name="SummaryBody.Text" xml:space="preserve"><value>Проверьте указанные расположения. При завершении будет создан главный ключ, а настройки будут зашифрованы.</value></data>
+  <data name="SummaryLanguageTitle.Text" xml:space="preserve"><value>Язык интерфейса</value></data>
+  <data name="SummarySecurity.Text" xml:space="preserve"><value>Настройки защищены с помощью AES-256-GCM. Главный ключ хранится только в Диспетчере учётных данных Windows.</value></data>
+  <data name="SummaryLocalModelTitle.Text" xml:space="preserve"><value>Локальная модель: Ollama</value></data>
+  <data name="SummaryNetworkModelTitle.Text" xml:space="preserve"><value>Сетевая модель (ключ API будет сохранён безопасно)</value></data>
+  <data name="SummaryModelSkipped.Text" xml:space="preserve"><value>Настройка модели пока пропущена. Позже её можно добавить в разделе «Источники моделей».</value></data>
+  <data name="OnboardingExitButton.Content" xml:space="preserve"><value>Выйти</value></data>
+  <data name="OnboardingBackButton.Content" xml:space="preserve"><value>Назад</value></data>
+  <data name="OnboardingNextButton.Content" xml:space="preserve"><value>Продолжить</value></data>
+  <data name="OnboardingCompleteButton.Content" xml:space="preserve"><value>Сохранить в защищённом виде и начать</value></data>
+  <data name="DashboardTitle.Text" xml:space="preserve"><value>Очередь обработки переводов</value></data>
+  <data name="DashboardSubtitle.Text" xml:space="preserve"><value>Добавляйте файлы JAR и ZIP или папки наборов ресурсов. Неудачные и отменённые задания откатываются автоматически.</value></data>
+  <data name="DashboardModelSelector.Header" xml:space="preserve"><value>Модель для новых запросов</value></data>
+  <data name="DashboardModelSelector.PlaceholderText" xml:space="preserve"><value>Нет настроенных моделей</value></data>
+  <data name="DashboardTargetLanguageSelector.Header" xml:space="preserve"><value>Новый целевой язык</value></data>
+  <data name="DashboardTargetLanguageSelector.AutomationProperties.Name" xml:space="preserve"><value>Целевой язык для новых запросов на перевод</value></data>
+  <data name="DashboardTargetLanguageSelector.AutomationProperties.HelpText" xml:space="preserve"><value>Исходный язык выбирается автоматически из ресурсов пакета. Если целевым является английский, а английских ресурсов нет, в качестве исходного будет использована другая доступная локаль.</value></data>
+  <data name="DashboardTargetLanguageHelp.Text" xml:space="preserve"><value>Исходный язык выбирается автоматически из ресурсов пакета. Если целевым является английский, а английских ресурсов нет, в качестве исходного будет использована другая доступная локаль.</value></data>
+  <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>Стиль перевода для новых запросов</value></data>
+  <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>Настроено</value></data>
+  <data name="AddPackageButtonText.Text" xml:space="preserve"><value>Добавить пакет</value></data>
+  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>Добавить папку</value></data>
+  <data name="DashboardError.Title" xml:space="preserve"><value>Невозможно продолжить</value></data>
+  <data name="DashboardStatus.Title" xml:space="preserve"><value>Состояние очереди</value></data>
+  <data name="QueueEmptyTitle.Text" xml:space="preserve"><value>В очереди нет заданий</value></data>
+  <data name="QueueEmptyBody.Text" xml:space="preserve"><value>Поддерживаются моды JAR, файлы ZIP с шейдерами или наборами ресурсов, а также распакованные папки наборов ресурсов.</value></data>
+  <data name="QueueEmptyAddButton.Content" xml:space="preserve"><value>Добавить первый пакет</value></data>
+  <data name="QueueList.AutomationProperties.Name" xml:space="preserve"><value>Очередь заданий перевода</value></data>
+  <data name="QueueDetailsExpander.AutomationProperties.HelpText" xml:space="preserve"><value>Щёлкните краткое описание карточки либо переведите на него фокус и нажмите Enter или Пробел, чтобы развернуть или свернуть сведения об этапах, полученные от серверной части.</value></data>
+  <data name="QueueCurrentActionLabel.Text" xml:space="preserve"><value>Текущее действие</value></data>
+  <data name="QueueNextActionLabel.Text" xml:space="preserve"><value>Следующее действие</value></data>
+  <data name="QueueNoNextAction.Text" xml:space="preserve"><value>Серверная часть сейчас не сообщает о последующем этапе.</value></data>
+  <data name="QueueTimelineTitle.Text" xml:space="preserve"><value>Общая шкала этапов</value></data>
+  <data name="QueueTimeline.AutomationProperties.Name" xml:space="preserve"><value>Шкала этапов перевода, полученная от серверной части</value></data>
+  <data name="QueueFailureDetailsTitle.Text" xml:space="preserve"><value>Сбой и откат</value></data>
+  <data name="QueueTechnicalDetailsTitle.Text" xml:space="preserve"><value>Технические сведения</value></data>
+  <data name="CancelQueueItemButtonText.Text" xml:space="preserve"><value>Отменить</value></data>
+  <data name="QueueCancelAccessibleName" xml:space="preserve"><value>Отменить задание перевода {0}</value></data>
+  <data name="CancelQueueItemButton.ToolTipService.ToolTip" xml:space="preserve"><value>Отменить задание</value></data>
+  <data name="FormalArtifactLabel.Text" xml:space="preserve"><value>Артефакт официального перевода:</value></data>
+  <data name="InformalArtifactLabel.Text" xml:space="preserve"><value>Артефакт неформального перевода:</value></data>
+  <data name="HardcodedFoundPrefix.Text" xml:space="preserve"><value>Возможные жёстко заданные строки:</value></data>
+  <data name="HardcodedExternalizedPrefix.Text" xml:space="preserve"><value>; вынесено в ресурсы:</value></data>
+  <data name="HardcodedReadonlySuffix.Text" xml:space="preserve"><value>(безопасный режим в этой версии)</value></data>
+  <data name="LogsTitle.Text" xml:space="preserve"><value>Журналы переводов</value></data>
+  <data name="LogsSubtitle.Text" xml:space="preserve"><value>Просматривайте каждую операцию перевода. По умолчанию выбран Debug; при необходимости переключитесь на все уровни.</value></data>
+  <data name="LogsSessionSelector.Header" xml:space="preserve"><value>Сеанс перевода</value></data>
+  <data name="LogsSessionSelector.PlaceholderText" xml:space="preserve"><value>Журналы отсутствуют</value></data>
+  <data name="LogsSessionSelector.AutomationProperties.Name" xml:space="preserve"><value>Выбрать журнал перевода</value></data>
+  <data name="LogsViewSelector.Header" xml:space="preserve"><value>Представление журнала</value></data>
+  <data name="LogsViewSelector.AutomationProperties.Name" xml:space="preserve"><value>Выбрать представление уровней журнала</value></data>
+  <data name="LogsRefreshButtonText.Text" xml:space="preserve"><value>Обновить</value></data>
+  <data name="LogsRefreshButton.AutomationProperties.Name" xml:space="preserve"><value>Обновить список журналов перевода</value></data>
+  <data name="LogsRefreshButton.ToolTipService.ToolTip" xml:space="preserve"><value>Повторно просканировать каталог журналов</value></data>
+  <data name="LogsDirectoryLabel.Text" xml:space="preserve"><value>Каталог журналов</value></data>
+  <data name="LogsDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>Настроенный каталог журналов перевода</value></data>
+  <data name="LogsError.Title" xml:space="preserve"><value>Не удалось прочитать журналы</value></data>
+  <data name="LogsBusy.AutomationProperties.Name" xml:space="preserve"><value>Чтение журналов перевода</value></data>
+  <data name="LogsEmptyTitle.Text" xml:space="preserve"><value>Пока нет журналов перевода для отображения</value></data>
+  <data name="LogsEmptyBody.Text" xml:space="preserve"><value>Запустите или завершите перевод, затем выберите здесь его сеанс для просмотра записей Debug или всех уровней.</value></data>
+  <data name="LogsContent.AutomationProperties.Name" xml:space="preserve"><value>Содержимое журнала выбранного сеанса перевода</value></data>
+  <data name="LogViewModeDebug" xml:space="preserve"><value>Debug</value></data>
+  <data name="LogViewModeAllLevels" xml:space="preserve"><value>Все уровни</value></data>
+  <data name="LogsLoadFailed" xml:space="preserve"><value>Не удалось загрузить журналы перевода. Проверьте настроенный каталог и разрешения для него, затем повторите попытку.</value></data>
+  <data name="ModelSourcesTitle.Text" xml:space="preserve"><value>Источники моделей</value></data>
+  <data name="NewModelSourceButtonText.Text" xml:space="preserve"><value>Создать</value></data>
+  <data name="ModelSourcesList.AutomationProperties.Name" xml:space="preserve"><value>Настроенные источники моделей</value></data>
+  <data name="ModelSourceEditorTitle.Text" xml:space="preserve"><value>Сведения об источнике модели</value></data>
+  <data name="CompactModelSourcesSelector.Header" xml:space="preserve"><value>Выберите источник модели</value></data>
+  <data name="ProviderChangeWarning.Title" xml:space="preserve"><value>Сохранить несохранённые данные?</value></data>
+  <data name="ProviderChangeWarning.Message" xml:space="preserve"><value>Запрошена смена провайдера. Примените её или оставьте текущего провайдера; содержимое формы не будет потеряно без предупреждения.</value></data>
+  <data name="KeepProviderButton.Content" xml:space="preserve"><value>Оставить текущего</value></data>
+  <data name="ApplyProviderButton.Content" xml:space="preserve"><value>Применить изменение</value></data>
+  <data name="ModelSourceError.Title" xml:space="preserve"><value>Ошибка источника модели</value></data>
+  <data name="ModelSourceStatus.Title" xml:space="preserve"><value>Сохранено</value></data>
+  <data name="ModelSourceDisplayName.Header" xml:space="preserve"><value>Отображаемое имя</value></data>
+  <data name="ModelSourceProvider.Header" xml:space="preserve"><value>Провайдер</value></data>
+  <data name="ModelSourcePreset.Header" xml:space="preserve"><value>Предустановка провайдера (изменяемые значения по умолчанию)</value></data>
+  <data name="ModelSourcePresetDocumentation.Content" xml:space="preserve"><value>Открыть официальную документацию API</value></data>
+  <data name="ModelSourceTokenLimitParameter.Header" xml:space="preserve"><value>Параметр ограничения токенов ответа</value></data>
+  <data name="ModelSourceTokenLimitParameterHelp.Text" xml:space="preserve"><value>Используйте рекомендуемое поле, выберите другое совместимое поле либо не указывайте его и позвольте провайдеру принять решение. Проверка подключения и запросы перевода учитывают один и тот же выбор.</value></data>
+  <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>По умолчанию у провайдера (не отправлять)</value></data>
+  <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>Адрес сервиса</value></data>
+  <data name="ModelSourceModelName.Header" xml:space="preserve"><value>Имя модели (можно ввести вручную)</value></data>
+  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Загруженные локальные модели</value></data>
+  <data name="RefreshModelsButtonText.Text" xml:space="preserve"><value>Обновить</value></data>
+  <data name="DownloadedModelsSelector.Header" xml:space="preserve"><value>Выбрать из Ollama</value></data>
+  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>При обновлении вызывается локальный /api/tags. Недоступный сервис никогда не перезаписывает имя модели, введённое вручную.</value></data>
+  <data name="ModelSourceApiKey.Header" xml:space="preserve"><value>Ключ API (оставьте поле пустым, чтобы сохранить текущие учётные данные)</value></data>
+  <data name="CredentialAliasPrefix.Text" xml:space="preserve"><value>Псевдоним учётных данных:</value></data>
+  <data name="ConnectionStatus.Title" xml:space="preserve"><value>Состояние подключения</value></data>
+  <data name="ConnectionErrorStatus.Title" xml:space="preserve"><value>Сбой подключения — проверьте адрес, модель и учётные данные</value></data>
+  <data name="DeleteModelSourceButtonText.Text" xml:space="preserve"><value>Удалить</value></data>
+  <data name="TestConnectionButton.Content" xml:space="preserve"><value>Проверить подключение</value></data>
+  <data name="SaveModelSourceButton.Content" xml:space="preserve"><value>Сохранить в защищённом виде</value></data>
+  <data name="DeleteModelSourceDialog.Title" xml:space="preserve"><value>Удалить источник модели?</value></data>
+  <data name="DeleteModelSourceDialog.Content" xml:space="preserve"><value>Связанные учётные данные Windows также будут удалены. Это действие нельзя отменить.</value></data>
+  <data name="DeleteModelSourceDialog.PrimaryButtonText" xml:space="preserve"><value>Удалить</value></data>
+  <data name="DeleteModelSourceDialog.CloseButtonText" xml:space="preserve"><value>Отмена</value></data>
+  <data name="SettingsTitle.Text" xml:space="preserve"><value>Настройки</value></data>
+  <data name="SettingsSubtitle.Text" xml:space="preserve"><value>Внешний вид, язык, рабочая область вывода и границы безопасного выполнения.</value></data>
+  <data name="SettingsError.Title" xml:space="preserve"><value>Ошибка настроек</value></data>
+  <data name="SettingsStatus.Title" xml:space="preserve"><value>Настройки сохранены</value></data>
+  <data name="AppearanceSectionTitle.Text" xml:space="preserve"><value>Внешний вид и язык</value></data>
+  <data name="LanguageSelector.Header" xml:space="preserve"><value>Язык интерфейса</value></data>
+  <data name="LanguageOptionZhCn" xml:space="preserve"><value>简体中文（中国）</value></data>
+  <data name="LanguageOptionEnUs" xml:space="preserve"><value>English (United States)</value></data>
+  <data name="LanguageOptionJaJp" xml:space="preserve"><value>Японский (Япония)</value></data>
+  <data name="LanguageOptionFrFr" xml:space="preserve"><value>Французский (Франция)</value></data>
+  <data name="LanguageOptionRuRu" xml:space="preserve"><value>Русский (Россия)</value></data>
+  <data name="LanguageRestartHelp.Text" xml:space="preserve"><value>После выбора языка нажмите «Сохранить и перезапустить», чтобы LocaleSmith заново загрузил все ресурсы интерфейса.</value></data>
+  <data name="LanguageRestartButton.Content" xml:space="preserve"><value>Сохранить и перезапустить</value></data>
+  <data name="LanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>Сохранить язык интерфейса и перезапустить LocaleSmith</value></data>
+  <data name="ThemeSelector.Header" xml:space="preserve"><value>Тема</value></data>
+  <data name="ThemeOptionSystem" xml:space="preserve"><value>Системная</value></data>
+  <data name="ThemeOptionLight" xml:space="preserve"><value>Светлая</value></data>
+  <data name="ThemeOptionDark" xml:space="preserve"><value>Тёмная</value></data>
+  <data name="ForceAppAnimationsToggle.Header" xml:space="preserve"><value>Принудительно включить анимацию приложения</value></data>
+  <data name="ForceAppAnimationsToggle.OffContent" xml:space="preserve"><value>Следовать системной настройке</value></data>
+  <data name="ForceAppAnimationsToggle.OnContent" xml:space="preserve"><value>Принудительно включено</value></data>
+  <data name="ForceAppAnimationsToggle.AutomationProperties.Name" xml:space="preserve"><value>Принудительно включить анимацию LocaleSmith</value></data>
+  <data name="ForceAppAnimationsHelp.Text" xml:space="preserve"><value>По умолчанию LocaleSmith следует настройке эффектов анимации Windows. Включите этот параметр, чтобы переходы между страницами и состояниями только в LocaleSmith продолжали работать, когда анимация Windows отключена. Настройки Windows и других приложений не изменяются.</value></data>
+  <data name="WorkspaceSectionTitle.Text" xml:space="preserve"><value>Рабочая область вывода</value></data>
+  <data name="SettingsWorkspacePath.Header" xml:space="preserve"><value>Корень рабочей области перевода</value></data>
+  <data name="SettingsWorkspacePath.AutomationProperties.Name" xml:space="preserve"><value>Путь к корню рабочей области перевода</value></data>
+  <data name="SettingsWorkspaceHelp.Text" xml:space="preserve"><value>Выходные данные записываются здесь в LocaleSmith.Output. Корни дисков, пути с точками повторной обработки и размещение результата внутри исходного каталога запрещены.</value></data>
+  <data name="LogDirectorySectionTitle.Text" xml:space="preserve"><value>Журналы переводов</value></data>
+  <data name="SettingsLogDirectoryPath.Header" xml:space="preserve"><value>Каталог хранения журналов</value></data>
+  <data name="SettingsLogDirectoryPath.AutomationProperties.Name" xml:space="preserve"><value>Путь к каталогу хранения журналов перевода</value></data>
+  <data name="BrowseLogDirectoryButton.Content" xml:space="preserve"><value>Обзор…</value></data>
+  <data name="BrowseLogDirectoryButton.AutomationProperties.Name" xml:space="preserve"><value>Выбрать каталог журналов перевода</value></data>
+  <data name="SettingsLogDirectoryHelp.Text" xml:space="preserve"><value>Выберите локальный каталог и сохраните настройки. Новые переводы записывают туда в фоне данные ограниченного объёма в файлы .log, сохраняя последние 500 сеансов. Медленная диагностика никогда не блокирует перевод; ключи API и полные запросы не журналируются.</value></data>
+  <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>Граница безопасности CLI</value></data>
+  <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>Разрешённый корень песочницы</value></data>
+  <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>Политика всегда оставляет разрешённым системный временный каталог и отклоняет корни дисков, системные каталоги, пути с точками повторной обработки, чрезмерные тайм-ауты и запрещённые команды.</value></data>
+  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>Встроенный инструмент выполнения команд MCP CLI по умолчанию скрыт и отключён; доступны только контекст и функции только для чтения.</value></data>
+  <data name="SaveSettingsButton.Content" xml:space="preserve"><value>Сохранить настройки</value></data>
+  <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>Команда, предложенная моделью</value></data>
+  <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>Выполнить команду</value></data>
+  <data name="CliConfirmationDialog.CloseButtonText" xml:space="preserve"><value>Отмена</value></data>
+  <data name="CliRiskSummary.Text" xml:space="preserve"><value>Эта команда запускается как ограниченный процесс с низким уровнем целостности, а не в полноценной файловой или сетевой песочнице. Даже одобренная программа всё ещё может читать доступные пользователю файлы или использовать сеть. Построчно проверьте команду со скрытыми конфиденциальными данными, рабочий каталог, тайм-аут и решение политики.</value></data>
+  <data name="CliPolicyDenied.Title" xml:space="preserve"><value>Запрещено политикой — переопределение невозможно</value></data>
+  <data name="CliPolicyAllowed.Title" xml:space="preserve"><value>Всё равно требуется ваше явное разрешение</value></data>
+  <data name="CliExecutableLabel.Text" xml:space="preserve"><value>Исполняемый файл</value></data>
+  <data name="CliCommandLabel.Text" xml:space="preserve"><value>Полная команда и аргументы со скрытыми конфиденциальными данными</value></data>
+  <data name="CliCommandDisplay.AutomationProperties.Name" xml:space="preserve"><value>Полная команда и аргументы со скрытыми конфиденциальными данными</value></data>
+  <data name="CliShellLabel.Text" xml:space="preserve"><value>Оболочка</value></data>
+  <data name="CliWorkingDirectoryLabel.Text" xml:space="preserve"><value>Нормализованный рабочий каталог</value></data>
+  <data name="CliTimeoutLabel.Text" xml:space="preserve"><value>Тайм-аут</value></data>
+  <data name="CliRiskAcknowledgement.Content" xml:space="preserve"><value>Я понимаю эти ограничения и подтверждаю выполнение показанной команды с ограничениями</value></data>
+  <data name="CliExecutionStatus.Title" xml:space="preserve"><value>Состояние выполнения</value></data>
+  <data name="CliExecutionError.Title" xml:space="preserve"><value>Сбой выполнения</value></data>
+  <data name="CliResultExpander.Header" xml:space="preserve"><value>Результат и запись аудита</value></data>
+  <data name="CliStdOutLabel.Text" xml:space="preserve"><value>Стандартный вывод</value></data>
+  <data name="CliStdErrLabel.Text" xml:space="preserve"><value>Стандартный поток ошибок</value></data>
+  <data name="CliExpandOutputButton.Content" xml:space="preserve"><value>Развернуть или свернуть полный вывод</value></data>
+  <data name="OnboardingEncrypting" xml:space="preserve"><value>Создание главного ключа и шифрование настроек…</value></data>
+  <data name="OnboardingComplete" xml:space="preserve"><value>Первоначальная настройка завершена.</value></data>
+  <data name="OnboardingLanguageSaving" xml:space="preserve"><value>Сохранение языка интерфейса перед перезапуском…</value></data>
+  <data name="OnboardingLanguageSaved" xml:space="preserve"><value>Язык интерфейса сохранён. Перезапуск LocaleSmith…</value></data>
+  <data name="OnboardingLanguageSaveFailed" xml:space="preserve"><value>Не удалось сохранить язык интерфейса: {0}</value></data>
+  <data name="OnboardingLanguageRestartFailed" xml:space="preserve"><value>Не удалось перезапустить LocaleSmith, чтобы применить язык интерфейса: {0}</value></data>
+  <data name="OnboardingLanguageRestartRequired" xml:space="preserve"><value>Перед продолжением сохраните выбранный язык интерфейса и перезапустите приложение.</value></data>
+  <data name="OnboardingSaveFailed" xml:space="preserve"><value>Не удалось сохранить настройки в защищённом виде: {0}</value></data>
+  <data name="OnboardingPathsRequired" xml:space="preserve"><value>Необходимо указать рабочую область, песочницу и каталог журналов.</value></data>
+  <data name="OnboardingPathsInvalid" xml:space="preserve"><value>Недопустимый путь к рабочей области, песочнице или каталогу журналов.</value></data>
+  <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>Введите абсолютный HTTP- или HTTPS-адрес Ollama.</value></data>
+  <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>Незашифрованный HTTP разрешён только для Ollama на loopback-интерфейсе.</value></data>
+  <data name="OnboardingModelRequired" xml:space="preserve"><value>Введите имя установленной модели Ollama.</value></data>
+  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>Введите абсолютный HTTPS-адрес выбранного сетевого провайдера.</value></data>
+  <data name="OnboardingNetworkModelRequired" xml:space="preserve"><value>Введите имя сетевой модели.</value></data>
+  <data name="OnboardingNetworkApiKeyRequired" xml:space="preserve"><value>Введите ключ API выбранного провайдера.</value></data>
+  <data name="QueueStatusQueued" xml:space="preserve"><value>В очереди</value></data>
+  <data name="QueueStatusDetecting" xml:space="preserve"><value>Определение…</value></data>
+  <data name="QueueStatusCompleted" xml:space="preserve"><value>Завершено</value></data>
+  <data name="QueueStatusFailed" xml:space="preserve"><value>Сбой — просмотрите сведения и повторите попытку.</value></data>
+  <data name="QueueStatusCancelled" xml:space="preserve"><value>Отменено.</value></data>
+  <data name="QueueProgressQueued" xml:space="preserve"><value>В очереди</value></data>
+  <data name="QueueProgressInspecting" xml:space="preserve"><value>Проверка метаданных пакета…</value></data>
+  <data name="QueueProgressExtracting" xml:space="preserve"><value>Создание безопасной рабочей области…</value></data>
+  <data name="QueueProgressAnalyzing" xml:space="preserve"><value>Анализ содержимого для перевода…</value></data>
+  <data name="QueueProgressTranslating" xml:space="preserve"><value>Перевод новых и изменённых записей…</value></data>
+  <data name="QueueProgressWriting" xml:space="preserve"><value>Запись локализованных ресурсов…</value></data>
+  <data name="QueueProgressRepacking" xml:space="preserve"><value>Пересборка артефактов пакета…</value></data>
+  <data name="QueueProgressVerifying" xml:space="preserve"><value>Проверка целостности пакета…</value></data>
+  <data name="QueueProgressCommitting" xml:space="preserve"><value>Фиксация проверенного результата…</value></data>
+  <data name="QueueProgressRollingBack" xml:space="preserve"><value>Безопасный откат…</value></data>
+  <data name="QueueProgressWorking" xml:space="preserve"><value>Выполнение…</value></data>
+  <data name="QueueFailureSummary" xml:space="preserve"><value>Задание завершилось с ошибкой, но исходный пакет сохранён.</value></data>
+  <data name="QueueTechnicalDetailsExpander.Header" xml:space="preserve"><value>Технические сведения</value></data>
+  <data name="QueueArtifactReady" xml:space="preserve"><value>Готово</value></data>
+  <data name="QueueArtifactPending" xml:space="preserve"><value>Ожидается</value></data>
+  <data name="QueueModelRequired" xml:space="preserve"><value>Настройте и выберите источник модели перед добавлением пакетов.</value></data>
+  <data name="QueueNoModelSources" xml:space="preserve"><value>Нет доступных источников моделей. Настройте источник в разделе «Источники моделей» перед добавлением пакетов.</value></data>
+  <data name="QueuePackageNotFound" xml:space="preserve"><value>Пакет не найден: {0}</value></data>
+  <data name="QueueEnqueueFailed" xml:space="preserve"><value>Не удалось добавить {0} в очередь. Проверьте параметры безопасности рабочей области вывода и повторите попытку.</value></data>
+  <data name="QueueModelUnavailable" xml:space="preserve"><value>Выбранный источник модели больше недоступен.</value></data>
+  <data name="QueueModelChanged" xml:space="preserve"><value>Источник модели изменён. Существующие запросы сохранят исходный источник.</value></data>
+  <data name="QueueModelFallback" xml:space="preserve"><value>Предыдущий источник модели недоступен. Новые запросы будут использовать {0} ({1}).</value></data>
+  <data name="QueueStyleFormal" xml:space="preserve"><value>Официальный перевод</value></data>
+  <data name="QueueStyleFormalDescription" xml:space="preserve"><value>Официальная терминология и единообразный письменный стиль.</value></data>
+  <data name="QueueStyleInformal" xml:space="preserve"><value>Неформальный перевод</value></data>
+  <data name="QueueStyleInformalDescription" xml:space="preserve"><value>Естественные формулировки игрового сообщества в неформальном тоне.</value></data>
+  <data name="TargetLanguage_zh_CN" xml:space="preserve"><value>Китайский, упрощённый (Китай)</value></data>
+  <data name="TargetLanguage_en_US" xml:space="preserve"><value>Английский (США)</value></data>
+  <data name="TargetLanguage_ja_JP" xml:space="preserve"><value>Японский (Япония)</value></data>
+  <data name="TargetLanguage_fr_FR" xml:space="preserve"><value>Французский (Франция)</value></data>
+  <data name="TargetLanguage_ru_RU" xml:space="preserve"><value>Русский (Россия)</value></data>
+  <data name="QueueTranslationProfile" xml:space="preserve"><value>{0} · {1}</value></data>
+  <data name="QueueHardcodedSummary" xml:space="preserve"><value>Возможные жёстко заданные строки: {0}; вынесено в ресурсы: {1}.</value></data>
+  <data name="QueueModelSelectFailed" xml:space="preserve"><value>Не удалось выбрать источник модели: {0}</value></data>
+  <data name="QueueProgressDetailsPending" xml:space="preserve"><value>Подробные сведения об этапах появятся после начала обработки.</value></data>
+  <data name="QueueRollbackStatus" xml:space="preserve"><value>Откат: {0}</value></data>
+  <data name="QueueStatusCancellationRequested" xml:space="preserve"><value>Запрошена отмена. Ожидание безопасной точки отката…</value></data>
+  <data name="QueueStatusCancelledRolledBack" xml:space="preserve"><value>Отменено; выполнен безопасный откат.</value></data>
+  <data name="QueueStatusCancelledRollbackFailed" xml:space="preserve"><value>Отменено, но откат не завершён. Проверьте рабочую область.</value></data>
+  <data name="QueueStatusCancelledNoRollback" xml:space="preserve"><value>Отменено до фиксации результата; откат не требовался.</value></data>
+  <data name="QueueFailureSummaryRolledBack" xml:space="preserve"><value>Задание завершилось с ошибкой; выполнен безопасный откат всех подготовленных изменений.</value></data>
+  <data name="QueueFailureSummaryRollbackFailed" xml:space="preserve"><value>Задание завершилось с ошибкой, откат не завершён. Проверьте рабочую область перед повторной попыткой.</value></data>
+  <data name="QueueFailureSummaryNoRollback" xml:space="preserve"><value>Задание завершилось с ошибкой до фиксации результата; откат не требовался.</value></data>
+  <data name="QueueFailureModelCredentials" xml:space="preserve"><value>Сервис модели отклонил сохранённые учётные данные. Обновите ключ API в разделе «Источники моделей», проверьте подключение и повторите попытку.</value></data>
+  <data name="QueueFailureModelService" xml:space="preserve"><value>Сбой запроса к сервису модели. Проверьте сохранённую конечную точку, модель, учётные данные и результат проверки подключения, затем повторите попытку.</value></data>
+  <data name="QueueFailureModelResponse" xml:space="preserve"><value>Ответ модели невозможно безопасно применить. Просмотрите технические сведения и повторите попытку.</value></data>
+  <data name="QueueStageQueued" xml:space="preserve"><value>В очереди</value></data>
+  <data name="QueueStageInspecting" xml:space="preserve"><value>Проверка пакета</value></data>
+  <data name="QueueStageExtracting" xml:space="preserve"><value>Создание безопасной рабочей области</value></data>
+  <data name="QueueStageAnalyzing" xml:space="preserve"><value>Анализ содержимого</value></data>
+  <data name="QueueStageTranslating" xml:space="preserve"><value>Перевод записей</value></data>
+  <data name="QueueStageWriting" xml:space="preserve"><value>Запись ресурсов</value></data>
+  <data name="QueueStageRepacking" xml:space="preserve"><value>Пересборка пакета</value></data>
+  <data name="QueueStageVerifying" xml:space="preserve"><value>Проверка целостности</value></data>
+  <data name="QueueStageCommitting" xml:space="preserve"><value>Фиксация результата</value></data>
+  <data name="QueueStageRollingBack" xml:space="preserve"><value>Безопасный откат</value></data>
+  <data name="QueueStageStatusPending" xml:space="preserve"><value>Ожидание</value></data>
+  <data name="QueueStageStatusCurrent" xml:space="preserve"><value>Выполняется</value></data>
+  <data name="QueueStageStatusCompleted" xml:space="preserve"><value>Завершено</value></data>
+  <data name="QueueStageStatusFailed" xml:space="preserve"><value>Сбой</value></data>
+  <data name="QueueStageStatusCancelled" xml:space="preserve"><value>Отменено</value></data>
+  <data name="QueueStageStatusSkipped" xml:space="preserve"><value>Не требуется</value></data>
+  <data name="QueueStageTimingStarted" xml:space="preserve"><value>Начало: {0:t}</value></data>
+  <data name="QueueStageTimingCompleted" xml:space="preserve"><value>{0:t}–{1:t} ({2})</value></data>
+  <data name="QueueStageDurationSeconds" xml:space="preserve"><value>{0:0.#} с</value></data>
+  <data name="QueueCancelling" xml:space="preserve"><value>Отмена… перед остановкой задания будет завершён откат.</value></data>
+  <data name="ModelSourcesLoadFailed" xml:space="preserve"><value>Не удалось загрузить источники моделей: {0}</value></data>
+  <data name="ModelSourceSaved" xml:space="preserve"><value>Источник модели сохранён. Ключ API перемещён в Диспетчер учётных данных Windows.</value></data>
+  <data name="ModelSourceSaveFailed" xml:space="preserve"><value>Не удалось сохранить источник модели: {0}</value></data>
+  <data name="ModelConnectionTesting" xml:space="preserve"><value>Проверка подключения…</value></data>
+  <data name="ModelConnectionSucceeded" xml:space="preserve"><value>Подключение установлено: {0}</value></data>
+  <data name="ModelConnectionRejected" xml:space="preserve"><value>Сбой подключения: {0}</value></data>
+  <data name="ModelConnectionFailed" xml:space="preserve"><value>Сбой подключения: {0}</value></data>
+  <data name="OllamaModelsEmpty" xml:space="preserve"><value>Сервис Ollama доступен, но не сообщил о загруженных моделях. Ручной ввод по-прежнему доступен.</value></data>
+  <data name="OllamaModelsFound" xml:space="preserve"><value>Загруженных моделей найдено: {0}.</value></data>
+  <data name="OllamaModelsRefreshFailed" xml:space="preserve"><value>Не удалось обновить локальные модели: {0}. Можно оставить имя модели, введённое вручную.</value></data>
+  <data name="ModelSourceDeleted" xml:space="preserve"><value>Источник модели и сохранённые для него учётные данные удалены.</value></data>
+  <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>Не удалось удалить источник модели: {0}</value></data>
+  <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>Необходимо указать отображаемое имя и имя модели.</value></data>
+  <data name="ModelSourceAddressInvalid" xml:space="preserve"><value>Введите абсолютный HTTP- или HTTPS-адрес сервиса.</value></data>
+  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>Удалённые источники моделей должны использовать HTTPS; HTTP разрешён только для Ollama на loopback-интерфейсе.</value></data>
+  <data name="ModelPresetDeepSeekHint" xml:space="preserve"><value>DeepSeek принимает базовый URL хоста; входные значения /v1 и полные chat/completions нормализуются.</value></data>
+  <data name="ModelPresetQwenHint" xml:space="preserve"><value>По умолчанию используется китайский тариф с оплатой по мере использования. При необходимости замените конечную точку на соответствующую рабочей области, региону или тарифу.</value></data>
+  <data name="ModelPresetXiaomiMimoHint" xml:space="preserve"><value>Для Xiaomi MiMo Token Plan замените конечную точку на https://token-plan-cn.xiaomimimo.com/v1.</value></data>
+  <data name="ModelPresetMiniMaxHint" xml:space="preserve"><value>MiniMax использует OpenAI-совместимый API /v1. Предложенное имя модели можно изменить.</value></data>
+  <data name="ModelPresetDoubaoHint" xml:space="preserve"><value>По умолчанию используется пекинский API ModelArk. Идентификатор конечной точки или региональный маршрут можно изменить для вашей учётной записи.</value></data>
+  <data name="ModelPresetZhipuGlmHint" xml:space="preserve"><value>По умолчанию используется общий API Zhipu. Для Coding Plan и других продуктов может потребоваться другая настраиваемая конечная точка.</value></data>
+  <data name="ModelPresetKimiHint" xml:space="preserve"><value>По умолчанию используется китайский API Kimi. Для международной платформы укажите https://api.moonshot.ai/v1.</value></data>
+  <data name="ModelPresetOpenAiHint" xml:space="preserve"><value>OpenAI использует API /v1. Предложенное имя модели можно изменить.</value></data>
+  <data name="ModelPresetCustomHint" xml:space="preserve"><value>Введите базовый HTTPS-URL совместимого с OpenAI сервиса и имя модели; оба значения можно изменить.</value></data>
+  <data name="CredentialNotStored" xml:space="preserve"><value>Не сохранено</value></data>
+  <data name="CliPolicyAllowedDynamic" xml:space="preserve"><value>Разрешено текущим динамическим списком разрешений и политикой песочницы.</value></data>
+  <data name="CliTimeoutFormat" xml:space="preserve"><value>{0:0.###} с</value></data>
+  <data name="CliPolicyExecutableNotAllowed" xml:space="preserve"><value>Исполняемый файл отсутствует в динамическом списке разрешений.</value></data>
+  <data name="CliPolicyInterpreterNotAllowed" xml:space="preserve"><value>Прямой запуск оболочки или интерпретатора запрещён.</value></data>
+  <data name="CliPolicyAbsoluteBlacklistMatch" xml:space="preserve"><value>Команда содержит безусловно запрещённый шаблон.</value></data>
+  <data name="CliPolicyWorkingDirectoryOutsideSandbox" xml:space="preserve"><value>Рабочий каталог находится за пределами разрешённых корней песочницы.</value></data>
+  <data name="CliPolicyPathArgumentOutsideSandbox" xml:space="preserve"><value>Аргумент пути выходит за пределы разрешённых корней песочницы.</value></data>
+  <data name="CliPolicyProtectedPathAccess" xml:space="preserve"><value>Команда пытается получить доступ к защищённому системному пути.</value></data>
+  <data name="CliPolicyTimeoutTooLong" xml:space="preserve"><value>Запрошенный тайм-аут превышает ограничение безопасности.</value></data>
+  <data name="CliPolicyShellSyntaxNotAllowed" xml:space="preserve"><value>Операторы оболочки и синтаксис перенаправления запрещены.</value></data>
+  <data name="CliPolicyEnvironmentExpansionNotAllowed" xml:space="preserve"><value>Подстановка переменных среды в аргументах команды запрещена.</value></data>
+  <data name="CliPolicyWorkingDirectoryMissing" xml:space="preserve"><value>Рабочий каталог песочницы не существует.</value></data>
+  <data name="CliPolicySensitiveArgumentNotAllowed" xml:space="preserve"><value>Аргументы, похожие на учётные данные, запрещены в командах, созданных моделью.</value></data>
+  <data name="CliPolicyRejected" xml:space="preserve"><value>Команда отклонена политикой безопасности.</value></data>
+  <data name="CliResultSummaryFormat" xml:space="preserve"><value>{0}; код завершения {1}; {2:0} мс</value></data>
+  <data name="CliExitCodeUnavailable" xml:space="preserve"><value>н/д</value></data>
+  <data name="CliResultStatusCompleted" xml:space="preserve"><value>Завершено</value></data>
+  <data name="CliResultStatusTimedOut" xml:space="preserve"><value>Превышено время ожидания</value></data>
+  <data name="CliResultStatusRejected" xml:space="preserve"><value>Отклонено</value></data>
+  <data name="CliResultStatusFailed" xml:space="preserve"><value>Сбой</value></data>
+  <data name="CliResultStatusUnknown" xml:space="preserve"><value>Неизвестно</value></data>
+  <data name="CliRejectedSummary" xml:space="preserve"><value>Команда отклонена до запуска.</value></data>
+  <data name="CliFailedSummary" xml:space="preserve"><value>Команда завершилась с ошибкой. Разверните результат для просмотра технических сведений.</value></data>
+  <data name="CliOutputPreviewTruncated" xml:space="preserve"><value>[Предварительный просмотр обрезан; разверните для просмотра]</value></data>
+  <data name="CliTechnicalReasonLabel.Text" xml:space="preserve"><value>Техническая причина</value></data>
+  <data name="CliExecuting" xml:space="preserve"><value>Выполнение в ограниченном процессе с низким уровнем целостности…</value></data>
+  <data name="CliCompleted" xml:space="preserve"><value>Команда завершена. Запись аудита сохранена.</value></data>
+  <data name="CliTimedOut" xml:space="preserve"><value>Время выполнения команды истекло, дерево её процессов завершено.</value></data>
+  <data name="CliRejected" xml:space="preserve"><value>Команда отклонена. Процесс не запускался.</value></data>
+  <data name="CliFailed" xml:space="preserve"><value>Сбой команды. Просмотрите вывод со скрытыми конфиденциальными данными и запись аудита.</value></data>
+  <data name="CliCancelled" xml:space="preserve"><value>Выполнение отменено.</value></data>
+  <data name="CliExecutionFailed" xml:space="preserve"><value>Сбой выполнения команды до получения безопасного результата. Дополнительные процессы не запускались.</value></data>
+  <data name="ShellSettingsLoadFailed" xml:space="preserve"><value>Не удалось загрузить зашифрованные настройки: {0}</value></data>
+  <data name="SettingsLoadFailed" xml:space="preserve"><value>Не удалось загрузить настройки: {0}</value></data>
+  <data name="SettingsLoadBeforeSave" xml:space="preserve"><value>Загрузите настройки перед сохранением изменений.</value></data>
+  <data name="SettingsSandboxRequired" xml:space="preserve"><value>Необходимо указать путь к песочнице.</value></data>
+  <data name="SettingsWorkspaceAndSandboxRequired" xml:space="preserve"><value>Необходимо указать пути к рабочей области и песочнице.</value></data>
+  <data name="SettingsWorkspaceSandboxAndLogRequired" xml:space="preserve"><value>Необходимо указать пути к рабочей области, песочнице и каталогу журналов.</value></data>
+  <data name="SettingsSaved" xml:space="preserve"><value>Настройки сохранены в защищённом виде.</value></data>
+  <data name="SettingsSaveFailed" xml:space="preserve"><value>Не удалось сохранить настройки: {0}</value></data>
+  <data name="SettingsRestartFailed" xml:space="preserve"><value>Не удалось перезапустить приложение для применения языка интерфейса: {0}</value></data>
+  <data name="SettingsRestartBlockedByActiveTranslations" xml:space="preserve"><value>Дождитесь завершения активных заданий перевода или отмените их перед перезапуском приложения.</value></data>
+  <data name="SettingsNavigationLabel" xml:space="preserve"><value>Настройки</value></data>
+  <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>Не удалось открыть проверку команды: {0}</value></data>
+  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>ИИ-помощник</value></data>
+  <data name="AssistantTitle.Text" xml:space="preserve"><value>Помощник по моделям и терминалу</value></data>
+  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Подготовьте диагностику текущей среды Windows и оболочки. Каждая команда требует отдельной проверки и подтверждения.</value></data>
+  <data name="AssistantModelSelector.Header" xml:space="preserve"><value>Модель для этого запроса</value></data>
+  <data name="AssistantModelSelector.AutomationProperties.Name" xml:space="preserve"><value>Источник модели, используемый помощником</value></data>
+  <data name="AssistantToolBoundary.Title" xml:space="preserve"><value>Ограничения безопасности инструментов</value></data>
+  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>Модель может читать системный контекст с удалёнными конфиденциальными данными и отправлять черновики команд. Она не может выполнять команды или выдавать токены подтверждения.</value></data>
+  <data name="AssistantError.Title" xml:space="preserve"><value>Сбой запроса помощника</value></data>
+  <data name="AssistantStatus.Title" xml:space="preserve"><value>Состояние помощника</value></data>
+  <data name="AssistantConversationList.AutomationProperties.Name" xml:space="preserve"><value>Диалог с ИИ-помощником</value></data>
+  <data name="AssistantEmptyTitle.Text" xml:space="preserve"><value>Начните с конкретного вопроса</value></data>
+  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Спросите о локализации модов, структуре пакета, текущей среде терминала или безопасной диагностической команде. Команды никогда не запускаются автоматически.</value></data>
+  <data name="AssistantDraft.Header" xml:space="preserve"><value>Сообщение</value></data>
+  <data name="AssistantDraft.PlaceholderText" xml:space="preserve"><value>Пример: подготовьте проверку версии Java только для чтения в текущей оболочке</value></data>
+  <data name="AssistantDraft.AutomationProperties.Name" xml:space="preserve"><value>Сообщение ИИ-помощнику</value></data>
+  <data name="AssistantLengthSuffix.Text" xml:space="preserve"><value> символов</value></data>
+  <data name="AssistantClearButton.Content" xml:space="preserve"><value>Очистить</value></data>
+  <data name="AssistantClearButton.AutomationProperties.Name" xml:space="preserve"><value>Очистить диалог с помощником</value></data>
+  <data name="AssistantCancelButton.Content" xml:space="preserve"><value>Отменить запрос</value></data>
+  <data name="AssistantCancelButton.AutomationProperties.Name" xml:space="preserve"><value>Отменить текущий запрос к модели</value></data>
+  <data name="AssistantSendButton.Content" xml:space="preserve"><value>Отправить</value></data>
+  <data name="AssistantSendButton.AutomationProperties.Name" xml:space="preserve"><value>Отправить сообщение, сочетание клавиш Control+Enter</value></data>
+  <data name="AssistantRoleUser" xml:space="preserve"><value>Вы</value></data>
+  <data name="AssistantRoleModel" xml:space="preserve"><value>ИИ-помощник</value></data>
+  <data name="AssistantNoModel" xml:space="preserve"><value>Настройте источник модели перед использованием помощника.</value></data>
+  <data name="AssistantThinking" xml:space="preserve"><value>Модель работает…</value></data>
+  <data name="AssistantComplete" xml:space="preserve"><value>Ответ готов.</value></data>
+  <data name="AssistantProposalReviewRequired" xml:space="preserve"><value>Ответ готов. Предложений команд, требующих отдельной проверки: {0}.</value></data>
+  <data name="AssistantCancelled" xml:space="preserve"><value>Запрос к помощнику отменён.</value></data>
+  <data name="AssistantRequestFailed" xml:space="preserve"><value>Сбой запроса к помощнику. Проверьте выбранный источник модели и повторите попытку.</value></data>
+  <data name="AssistantRequestFailedWithDetails" xml:space="preserve"><value>Сбой запроса к помощнику: {0}</value></data>
+  <data name="AssistantCleared" xml:space="preserve"><value>Диалог очищен.</value></data>
+  <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>Источник модели изменён. Предыдущий диалог очищен, чтобы предотвратить раскрытие данных между провайдерами.</value></data>
+  <data name="AssistantCliReviewFailed" xml:space="preserve"><value>Не удалось открыть предложение команды для проверки. Ничего не было выполнено.</value></data>
+</root>

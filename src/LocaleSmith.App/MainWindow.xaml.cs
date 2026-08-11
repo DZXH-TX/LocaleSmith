@@ -6,10 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace LocaleSmith.App;
 
@@ -17,12 +19,17 @@ public sealed partial class MainWindow : Window
 {
     private readonly ShellViewModel? _viewModel;
     private readonly AppMotionService? _motion;
+    private readonly SolidColorBrush _navigationPaneBackground = new();
     private bool _chromeSynchronizationQueued;
     private bool _isClosed;
 
     public MainWindow()
     {
         InitializeComponent();
+        TryLocalizeWindowTitle();
+        TryApplyWindowIcon();
+        InitializeNavigationPaneBackground();
+        TryLocalizeSettingsItem();
         _viewModel = App.Services.GetRequiredService<ShellViewModel>();
         _motion = App.Services.GetRequiredService<AppMotionService>();
         _viewModel.NavigationRequested += OnNavigationRequested;
@@ -38,6 +45,10 @@ public sealed partial class MainWindow : Window
     public MainWindow(string startupError)
     {
         InitializeComponent();
+        TryLocalizeWindowTitle();
+        TryApplyWindowIcon();
+        InitializeNavigationPaneBackground();
+        TryLocalizeSettingsItem();
         RootSurface.ActualThemeChanged += OnActualThemeChanged;
         Closed += OnClosedForChromeSynchronization;
         RootNavigation.Visibility = Visibility.Collapsed;
@@ -64,7 +75,6 @@ public sealed partial class MainWindow : Window
             _ => ElementTheme.Default
         };
         RootSurface.RequestedTheme = requestedTheme;
-        RootNavigation.RequestedTheme = requestedTheme;
         QueueWindowChromeSynchronization();
     }
 
@@ -107,6 +117,76 @@ public sealed partial class MainWindow : Window
     private void OnRootSurfaceLoaded(object sender, RoutedEventArgs args) =>
         QueueWindowChromeSynchronization();
 
+    private void InitializeNavigationPaneBackground()
+    {
+        // Install one stable brush before NavigationView applies its template. Theme changes can
+        // then update the existing pane visual instead of relying on a resource lookup refresh.
+        RootNavigation.Resources["NavigationViewExpandedPaneBackground"] = _navigationPaneBackground;
+        RootNavigation.Resources["NavigationViewDefaultPaneBackground"] = _navigationPaneBackground;
+        RootNavigation.Resources["NavigationViewTopPaneBackground"] = _navigationPaneBackground;
+    }
+
+    private void TryLocalizeSettingsItem()
+    {
+        try
+        {
+            if (RootNavigation.SettingsItem is not NavigationViewItem settingsItem)
+            {
+                return;
+            }
+
+            var label = new ResourceLoader().GetString("SettingsNavigationLabel");
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                return;
+            }
+
+            settingsItem.Content = label;
+            AutomationProperties.SetName(settingsItem, label);
+        }
+        catch
+        {
+            // Optional navigation chrome must not prevent the main or startup-error window opening.
+        }
+    }
+
+    private void TryLocalizeWindowTitle()
+    {
+        try
+        {
+            var title = new ResourceLoader().GetString("MainWindowTitle");
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                Title = title;
+            }
+        }
+        catch
+        {
+            // The XAML fallback title remains usable when MRT initialization is unavailable.
+        }
+    }
+
+    private void TryApplyWindowIcon()
+    {
+        try
+        {
+            var iconPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "Assets",
+                "Icons",
+                "favicon_512.ico");
+
+            if (File.Exists(iconPath))
+            {
+                AppWindow.SetIcon(iconPath);
+            }
+        }
+        catch
+        {
+            // The platform-provided fallback icon is preferable to failing window creation.
+        }
+    }
+
     private void QueueWindowChromeSynchronization()
     {
         if (_isClosed || _chromeSynchronizationQueued)
@@ -147,6 +227,8 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+
+        _navigationPaneBackground.Color = background.Color;
 
         if (!AppWindowTitleBar.IsCustomizationSupported())
         {

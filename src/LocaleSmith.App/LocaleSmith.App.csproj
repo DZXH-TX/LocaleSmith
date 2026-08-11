@@ -5,10 +5,11 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>LocaleSmith.App</RootNamespace>
     <AssemblyName>LocaleSmith.App</AssemblyName>
-    <AssemblyTitle>LocaleSmith | 译匠</AssemblyTitle>
-    <Product>LocaleSmith | 译匠</Product>
-    <Description>LocaleSmith | 译匠 — Minecraft 模组与资源包本地化工作台</Description>
+    <AssemblyTitle>LocaleSmith</AssemblyTitle>
+    <Product>LocaleSmith</Product>
+    <Description>LocaleSmith — Minecraft mod and resource-pack localization workspace</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Icons\favicon_512.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -36,6 +37,10 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="LocaleSmith.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Icons\favicon_512.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup Condition="Exists('$(NativeCoreDll)')">

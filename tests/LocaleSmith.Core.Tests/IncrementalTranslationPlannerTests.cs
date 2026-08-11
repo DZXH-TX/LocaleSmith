@@ -53,6 +53,19 @@ public sealed class IncrementalTranslationPlannerTests
     }
 
     [Fact]
+    public void TranslationRequestNormalizesSupportedLocaleAndRejectsUnknownLocale()
+    {
+        var entry = new TranslationEntry("pack.txt", null, "Description");
+
+        var request = new TranslationBatchRequest([entry], targetLanguage: " ja-jp ");
+
+        Assert.Equal("ja_JP", request.TargetLanguage);
+        Assert.Throws<ArgumentException>(() => new TranslationBatchRequest(
+            [entry],
+            targetLanguage: "de_DE"));
+    }
+
+    [Fact]
     public void TranslationRequestRejectsMultipleOrUnknownStyles()
     {
         var entry = new TranslationEntry("pack.txt", null, "Description");

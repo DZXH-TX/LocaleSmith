@@ -4,7 +4,6 @@ using LocaleSmith.Presentation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.Windows.Globalization;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -61,11 +60,48 @@ public sealed partial class SettingsPage : Page
         }
     }
 
-    private void OnLanguageChanged(object sender, SelectionChangedEventArgs args)
+    private async void OnLanguageRestartClicked(object sender, RoutedEventArgs args)
     {
-        if (_loaded && sender is ComboBox { SelectedItem: string language })
+        if (!_loaded || !ViewModel.IsLanguageRestartRequired || ViewModel.IsBusy)
         {
-            ApplicationLanguages.PrimaryLanguageOverride = language;
+            return;
+        }
+
+        if (App.Services.GetRequiredService<DashboardViewModel>().HasActiveTranslationJobs)
+        {
+            ViewModel.ReportLanguageRestartBlockedByActiveTranslations();
+            return;
+        }
+
+        SettingsForm.IsEnabled = false;
+        try
+        {
+            if (!ViewModel.SaveCommand.CanExecute(null))
+            {
+                return;
+            }
+
+            await ViewModel.SaveCommand.ExecuteAsync(null).ConfigureAwait(true);
+            if (ViewModel.HasError)
+            {
+                return;
+            }
+
+            if (!ViewModel.TryGetPersistedDisplayLanguageForRestart(out var persistedLanguage))
+            {
+                return;
+            }
+
+            var failureReason = App.RestartWithDisplayLanguage(persistedLanguage);
+            ViewModel.ReportLanguageRestartFailure(failureReason);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            ViewModel.ReportLanguageRestartFailure(exception.Message);
+        }
+        finally
+        {
+            SettingsForm.IsEnabled = true;
         }
     }
 
