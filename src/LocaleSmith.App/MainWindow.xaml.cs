@@ -64,7 +64,6 @@ public sealed partial class MainWindow : Window
             _ => ElementTheme.Default
         };
         RootSurface.RequestedTheme = requestedTheme;
-        RootNavigation.RequestedTheme = requestedTheme;
         QueueWindowChromeSynchronization();
     }
 
@@ -147,6 +146,15 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+
+        // NavigationView renders each pane mode with a separate theme resource. Keep those
+        // transparent/acrylic layers on the same semantic surface as the window content.
+        RootNavigation.Resources["NavigationViewExpandedPaneBackground"] =
+            new SolidColorBrush(background.Color);
+        RootNavigation.Resources["NavigationViewDefaultPaneBackground"] =
+            new SolidColorBrush(background.Color);
+        RootNavigation.Resources["NavigationViewTopPaneBackground"] =
+            new SolidColorBrush(background.Color);
 
         if (!AppWindowTitleBar.IsCustomizationSupported())
         {

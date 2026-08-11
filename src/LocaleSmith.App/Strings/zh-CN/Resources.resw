@@ -4,7 +4,8 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>LocaleSmith | 译匠</value></data>
+  <data name="MainWindow.Title" xml:space="preserve"><value>译匠</value></data>
+  <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>译匠</value></data>
   <data name="DashboardNavigationItem.Content" xml:space="preserve"><value>处理队列</value></data>
   <data name="ModelSourcesNavigationItem.Content" xml:space="preserve"><value>模型源</value></data>
   <data name="LogsNavigationItem.Content" xml:space="preserve"><value>日志</value></data>
@@ -14,7 +15,7 @@
   <data name="OnboardingProgress.AutomationProperties.Name" xml:space="preserve"><value>首次设置进度</value></data>
   <data name="OnboardingError.Title" xml:space="preserve"><value>需要处理</value></data>
   <data name="OnboardingStatus.Title" xml:space="preserve"><value>设置状态</value></data>
-  <data name="WelcomeTitle.Text" xml:space="preserve"><value>欢迎使用 LocaleSmith | 译匠</value></data>
+  <data name="WelcomeTitle.Text" xml:space="preserve"><value>欢迎使用译匠</value></data>
   <data name="WelcomeBody.Text" xml:space="preserve"><value>批量提取、增量翻译并重建 Minecraft 模组与资源包；每个任务选择一种翻译风格，并生成一个对应产物。</value></data>
   <data name="WelcomePrivacy.Text" xml:space="preserve"><value>本地 Ollama 可完全在本机工作；云端模型仅在你配置后使用。API Key 不写入配置或日志。</value></data>
   <data name="ModelPathChoiceTitle.Text" xml:space="preserve"><value>选择首次模型连接方式</value></data>
@@ -161,8 +162,8 @@
   <data name="ForceAppAnimationsToggle.Header" xml:space="preserve"><value>强制启用应用动画</value></data>
   <data name="ForceAppAnimationsToggle.OffContent" xml:space="preserve"><value>遵循系统设置</value></data>
   <data name="ForceAppAnimationsToggle.OnContent" xml:space="preserve"><value>已强制启用</value></data>
-  <data name="ForceAppAnimationsToggle.AutomationProperties.Name" xml:space="preserve"><value>强制启用 LocaleSmith | 译匠应用动画</value></data>
-  <data name="ForceAppAnimationsHelp.Text" xml:space="preserve"><value>默认遵循 Windows“动画效果”设置。开启后，即使系统关闭动画，LocaleSmith | 译匠自己的页面与状态过渡仍会运行；不会修改 Windows 或其他应用的设置。</value></data>
+  <data name="ForceAppAnimationsToggle.AutomationProperties.Name" xml:space="preserve"><value>强制启用译匠应用动画</value></data>
+  <data name="ForceAppAnimationsHelp.Text" xml:space="preserve"><value>默认遵循 Windows“动画效果”设置。开启后，即使系统关闭动画，译匠自己的页面与状态过渡仍会运行；不会修改 Windows 或其他应用的设置。</value></data>
   <data name="WorkspaceSectionTitle.Text" xml:space="preserve"><value>输出工作区</value></data>
   <data name="SettingsWorkspacePath.Header" xml:space="preserve"><value>翻译工作区根目录</value></data>
   <data name="SettingsWorkspacePath.AutomationProperties.Name" xml:space="preserve"><value>翻译工作区根目录路径</value></data>

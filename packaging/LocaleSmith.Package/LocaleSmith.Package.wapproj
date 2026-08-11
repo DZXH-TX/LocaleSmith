@@ -23,6 +23,7 @@
 
   <PropertyGroup>
     <ProjectGuid>{F1340923-02C7-45C0-8B35-CCB92AE72786}</ProjectGuid>
+    <ProjectName>LocaleSmith</ProjectName>
     <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <DefaultLanguage>zh-CN</DefaultLanguage>

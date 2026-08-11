@@ -5,7 +5,7 @@
     <RootNamespace>LocaleSmith.McpHost</RootNamespace>
     <AssemblyName>LocaleSmith.McpHost</AssemblyName>
     <AssemblyTitle>LocaleSmith MCP Host</AssemblyTitle>
-    <Product>LocaleSmith | 译匠</Product>
+    <Product>LocaleSmith</Product>
     <Description>LocaleSmith 本地安全 MCP 工具宿主</Description>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>

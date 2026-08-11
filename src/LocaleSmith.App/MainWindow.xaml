@@ -1,9 +1,10 @@
 <Window
     x:Class="LocaleSmith.App.MainWindow"
+    x:Uid="MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:LocaleSmith.App"
-    Title="LocaleSmith | 译匠">
+    Title="LocaleSmith">
     <Grid
         x:Name="RootSurface"
         Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
