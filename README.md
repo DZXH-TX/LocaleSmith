@@ -9,7 +9,9 @@
 
   <h1>LocaleSmith | 译匠</h1>
 
-  <p><strong>为 Minecraft Java 内容打造的 Windows 原生 AI 本地化工作台</strong></p>
+  <p><strong>简体中文</strong> · <a href="./README.en.md">English</a></p>
+
+  <p><strong>为 Minecraft: Java Edition 内容打造的 Windows 原生 AI 本地化工作台</strong></p>
   <p>安全扫描模组与资源包，连接本地或云端模型，以可验证、可回滚的流水线生成本地化产物。</p>
 
   <p>
@@ -18,15 +20,25 @@
     <a href="./rust-toolchain.toml"><img alt="Rust 1.97.1" src="https://img.shields.io/badge/Rust-1.97.1-000000?style=flat-square&logo=rust&logoColor=white" /></a>
     <img alt="Windows 10 1809+" src="https://img.shields.io/badge/Windows-10%201809%2B-0078D4?style=flat-square" />
     <img alt="WinUI 3" src="https://img.shields.io/badge/UI-WinUI%203-0078D4?style=flat-square" />
+    <img alt="开发预览版" src="https://img.shields.io/badge/Status-Development%20Preview-F59E0B?style=flat-square" />
+  </p>
+
+  <p>
+    <img alt="Fabric" src="https://img.shields.io/badge/Loader-Fabric-8B7355?style=flat-square" />
+    <img alt="NeoForge" src="https://img.shields.io/badge/Loader-NeoForge-D9634C?style=flat-square" />
+    <img alt="Quilt" src="https://img.shields.io/badge/Loader-Quilt-6B57A5?style=flat-square" />
+    <img alt="Forge" src="https://img.shields.io/badge/Loader-Forge-F16436?style=flat-square" />
+    <img alt="Legacy Forge" src="https://img.shields.io/badge/Loader-Legacy%20Forge-6B7280?style=flat-square" />
   </p>
 
   <p>
     <a href="#项目概览">项目概览</a> ·
     <a href="#核心能力">核心能力</a> ·
+    <a href="#支持范围">支持范围</a> ·
+    <a href="#处理流程">处理流程</a> ·
     <a href="#快速开始">快速开始</a> ·
-    <a href="#翻译日志与持久化设置">翻译日志</a> ·
     <a href="#安全边界">安全边界</a> ·
-    <a href="#开源许可">开源许可</a>
+    <a href="#参与贡献">参与贡献</a>
   </p>
 </div>
 
@@ -48,9 +60,9 @@
 | **专业提示与术语** | 自动区分模组、资源包与光影包，使用独立领域提示；简体中文任务附带各自的专业术语对照表。 |
 | **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
 | **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
-| **提供方预设** | DeepSeek、Qwen、MiMo、MiniMax、OpenAI、豆包、智谱与 Kimi 等预设会同步填充服务地址、模型名和推荐 Token 字段；也可明确选择不发送 Token 上限字段。 |
-| **持久化诊断日志** | 日志目录可写时，每次翻译在后台有界写入独立的 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
-| **原生桌面体验** | 提供首次引导、翻译队列、双语助手、模型源管理、日志、设置和 CLI 风险确认。 |
+| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；也可明确选择不发送该参数。 |
+| **持久化诊断日志** | 日志目录可写时，每次翻译都会尝试通过有界后台写入器持久化一对 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
+| **原生桌面体验** | 提供首次引导、处理队列、模型助手、模型源管理、日志、设置和 CLI 风险确认。 |
 | **凭据与配置保护** | API Key 存入 Windows Credential Manager，其他配置使用 AES-256-GCM 加密。 |
 | **受控 MCP / CLI** | 模型只能读取安全上下文并提出命令；执行必须经过策略复核和用户明确确认。 |
 
@@ -79,7 +91,7 @@ flowchart LR
     E --> F["输出<br/>LocaleSmith.Output"]
 ```
 
-每个作业会冻结用户选择的目标语言、模型源和一种翻译风格。语言资源优先使用非目标语言的 `en_us`、`en_gb` 或其他现有 locale 作为源文；例如目标为英语但包内只有日语时，会从日语生成 `en_us`。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
+每个作业会在入队时冻结用户选择的目标语言、模型源和一种翻译风格。语言资源优先使用非目标语言的 `en_us`、`en_gb` 或其他现有 locale 作为源文；例如目标为英语但包内只有日语时，会从日语生成 `en_us`。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
 
 ## 翻译日志与持久化设置
 
@@ -205,10 +217,10 @@ MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.exe
 
 本项目依据 [Apache License 2.0](./LICENSE) 开源。
 
-## 人工智能使用申明
+## 人工智能使用声明
 
 本项目允许在需求分析、代码与文档草拟、重构建议、测试设计和本地化等环节使用生成式人工智能工具。所有 AI 辅助产出必须经过人工审阅、必要测试以及安全与许可核验后方可提交；维护者和贡献者仍对其提交内容的正确性、安全性、合规性和可维护性承担完整责任，AI 输出不构成事实、法律或专业保证。
 
-使用 AI 工具时，不得向未经授权的外部服务上传密钥、凭据、个人信息、未公开源码或受限制的第三方内容，并应遵守相应服务条款与第三方许可证。对项目有实质影响的 AI 辅助内容，贡献者应在 Pull Request 中如实说明；本申明不改变 Apache License 2.0 下的许可、版权与贡献归属。
+使用 AI 工具时，不得向未经授权的外部服务上传密钥、凭据、个人信息、未公开源码或受限制的第三方内容，并应遵守相应服务条款与第三方许可证。对项目有实质影响的 AI 辅助内容，贡献者应在 Pull Request 中如实说明；本声明不改变 Apache License 2.0 下的许可、版权与贡献归属。
 
 Copyright © 2026 **DZXH-TX（道泽星河-天仙）**（版权所有者与许可人）。
