@@ -1,5 +1,6 @@
 using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
+using LocaleSmith.Core.Services;
 
 namespace LocaleSmith.Presentation.Models;
 
@@ -7,7 +8,8 @@ public sealed record TranslationQueueRequest(
     string SourcePath,
     string OutputPath,
     string ModelSourceId,
-    TranslationStyle Style = TranslationStyle.Formal);
+    TranslationStyle Style = TranslationStyle.Formal,
+    string TargetLanguage = TranslationLanguageCatalog.DefaultLocale);
 
 public sealed record TranslationQueueResult(
     Guid JobId,
@@ -17,7 +19,8 @@ public sealed record TranslationQueueResult(
     IReadOnlyList<string> ArtifactPaths,
     IReadOnlyList<HardcodedStringCandidate> HardcodedCandidates,
     int ExternalizedCount,
-    TranslationStyle Style = TranslationStyle.Formal);
+    TranslationStyle Style = TranslationStyle.Formal,
+    string TargetLanguage = TranslationLanguageCatalog.DefaultLocale);
 
 public sealed class TranslationQueueHandle(
     Guid jobId,

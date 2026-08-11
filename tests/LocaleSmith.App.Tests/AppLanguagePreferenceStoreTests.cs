@@ -15,16 +15,21 @@ public sealed class AppLanguagePreferenceStoreTests
             AppLanguagePreferenceStore.LoadOrDefault(root));
     }
 
-    [Fact]
-    public void SaveRoundTripsCanonicalLanguage()
+    [Theory]
+    [InlineData("ZH-cn", "zh-CN")]
+    [InlineData("EN-us", "en-US")]
+    [InlineData("JA-jp", "ja-JP")]
+    [InlineData("FR-fr", "fr-FR")]
+    [InlineData("RU-ru", "ru-RU")]
+    public void SaveRoundTripsCanonicalLanguage(string input, string expected)
     {
         var root = CreateTestRoot();
         try
         {
-            AppLanguagePreferenceStore.Save(root, "EN-us");
+            AppLanguagePreferenceStore.Save(root, input);
 
             Assert.Equal(
-                AppDisplayLanguages.EnglishUnitedStates,
+                expected,
                 AppLanguagePreferenceStore.LoadOrDefault(root));
         }
         finally
@@ -40,7 +45,7 @@ public sealed class AppLanguagePreferenceStoreTests
         try
         {
             Assert.Throws<ArgumentException>(() =>
-                AppLanguagePreferenceStore.Save(root, "fr-FR"));
+                AppLanguagePreferenceStore.Save(root, "de-DE"));
         }
         finally
         {

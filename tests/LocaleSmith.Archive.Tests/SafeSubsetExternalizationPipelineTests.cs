@@ -99,6 +99,43 @@ public sealed class SafeSubsetExternalizationPipelineTests
     }
 
     [Fact]
+    public async Task EnglishTargetUsesItsTranslatedResourceAsTheRuntimeFallback()
+    {
+        using var fixture = new ArchiveFixture("safe-subset-english-target.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"english_safe_demo\"}");
+        fixture.AddBytes("example/Test.class", ClassFileFixtureBuilder.CreateSafeLiteralClass("設定を開く"));
+        fixture.AddText("assets/english_safe_demo/lang/en_us.json", "{\"unrelated\":\"Keep me\"}");
+        fixture.Complete();
+        var request = CreateExternalizationRequest(
+            fixture,
+            new HashSet<TranslationStyle> { TranslationStyle.Formal },
+            targetLanguage: "en_US");
+        var pipeline = new TranslationPipeline(
+            new ArchiveWorkspaceBackend(new TestArchiveScanner()),
+            new PrefixTranslationEngine(),
+            new MemoryStore());
+
+        PipelineResult result = await pipeline.ExecuteAsync(
+            request,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        HardcodedStringCandidate candidate = Assert.Single(
+            result.HardcodedCandidates,
+            static item => item.IsRecognizedSafePattern);
+        Assert.Equal(1, result.Externalization.ExternalizedCount);
+        using JsonDocument english = ReadJson(
+            request.OutputPath,
+            "assets/english_safe_demo/lang/en_us.json");
+        Assert.Equal(
+            "正式:設定を開く",
+            english.RootElement.GetProperty(candidate.SuggestedKey).GetString());
+        Assert.Equal("Keep me", english.RootElement.GetProperty("unrelated").GetString());
+        MojangComponentLiteralClassFileRewriter.VerifyApplied(
+            ReadBytes(request.OutputPath, "example/Test.class"),
+            [CreateSelection(candidate)]);
+    }
+
+    [Fact]
     public async Task TranslationFailureAfterRewriteRollsBackWithoutProducingArtifacts()
     {
         using var fixture = new ArchiveFixture("safe-subset-rollback.jar");
@@ -224,10 +261,12 @@ public sealed class SafeSubsetExternalizationPipelineTests
 
     private static PipelineRequest CreateExternalizationRequest(
         ArchiveFixture fixture,
-        IReadOnlySet<TranslationStyle>? styles = null) =>
+        IReadOnlySet<TranslationStyle>? styles = null,
+        string targetLanguage = "zh_CN") =>
         new(
             fixture.ArchivePath,
             Path.Combine(fixture.DirectoryPath, "translated.jar"),
+            targetLanguage: targetLanguage,
             styles: styles,
             hardcodedStringMode: HardcodedStringMode.ExternalizeRecognizedSafePatterns);
 
@@ -321,4 +360,5 @@ public sealed class SafeSubsetExternalizationPipelineTests
             return manifest;
         }
     }
+
 }

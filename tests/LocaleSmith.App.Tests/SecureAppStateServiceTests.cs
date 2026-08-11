@@ -215,6 +215,31 @@ public sealed class SecureAppStateServiceTests
     }
 
     [Fact]
+    public async Task DisplayLanguageServicePersistsCanonicalLanguageToConfigurationAndBootstrap()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        var languageWriter = new RecordingLanguagePreferenceWriter();
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager(),
+            languageWriter);
+
+        await service.SaveDisplayLanguageAsync("JA-jp", cancellationToken);
+
+        Assert.Equal(AppDisplayLanguages.JapaneseJapan, configurationStore.Persisted.Language);
+        Assert.Equal(AppDisplayLanguages.JapaneseJapan, (await service.LoadAsync(cancellationToken)).Language);
+        Assert.Equal(AppDisplayLanguages.JapaneseJapan, languageWriter.PersistedLanguage);
+    }
+
+    [Fact]
     public async Task InitializationPreservesCurrentSchemaEditablePresetValues()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -1116,6 +1141,13 @@ public sealed class SecureAppStateServiceTests
 
             PersistedLanguage = language;
         }
+    }
+
+    private sealed class RecordingLanguagePreferenceWriter : IAppLanguagePreferenceWriter
+    {
+        public string? PersistedLanguage { get; private set; }
+
+        public void Save(string language) => PersistedLanguage = language;
     }
 
     private sealed class RejectingHttpHandler : HttpMessageHandler

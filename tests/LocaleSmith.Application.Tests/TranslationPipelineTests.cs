@@ -35,6 +35,23 @@ public sealed class TranslationPipelineTests
     }
 
     [Fact]
+    public void PipelineRequestNormalizesSupportedLocaleAndRejectsUnknownLocale()
+    {
+        var prefix = Path.Combine(Path.GetTempPath(), "localesmith-tests");
+
+        var request = new PipelineRequest(
+            Path.Combine(prefix, "input.jar"),
+            Path.Combine(prefix, "output.jar"),
+            targetLanguage: " fr-fr ");
+
+        Assert.Equal("fr_FR", request.TargetLanguage);
+        Assert.Throws<ArgumentException>(() => new PipelineRequest(
+            Path.Combine(prefix, "input.jar"),
+            Path.Combine(prefix, "output.jar"),
+            targetLanguage: "de_DE"));
+    }
+
+    [Fact]
     public async Task ExecuteAsyncCommitsVerifiedPackage()
     {
         var workspace = new StubWorkspace();
@@ -65,6 +82,7 @@ public sealed class TranslationPipelineTests
         Assert.Equal(1, engine.CallCount);
         Assert.NotNull(engine.LastRequest);
         Assert.Equal(TranslationStyle.Formal, Assert.Single(engine.LastRequest.Styles));
+        Assert.Equal(MinecraftContentKind.Unknown, engine.LastRequest.ContentKind);
         Assert.Equal(TranslationStyle.Formal, Assert.Single(result.Artifacts).Style);
         Assert.Equal(
             TranslationStyle.Formal,
@@ -220,6 +238,45 @@ public sealed class TranslationPipelineTests
         Assert.Equal(1, versionOne.CallCount);
         Assert.Equal(1, versionTwo.CallCount);
         Assert.Equal("prompt-schema/v2", memory.Saved?.Key.TranslationContractVersion);
+    }
+
+    [Fact]
+    public async Task ExecuteAsyncSeparatesCacheAndRequestsByMinecraftContentKind()
+    {
+        var memory = new StubMemoryStore();
+        var engine = new StubTranslationEngine();
+        var resourcePackPipeline = new TranslationPipeline(
+            new StubWorkspaceBackend(new StubWorkspace
+            {
+                Inspection = CreateInspection(MinecraftContentKind.ResourcePack)
+            }),
+            engine,
+            memory);
+        var shaderPackPipeline = new TranslationPipeline(
+            new StubWorkspaceBackend(new StubWorkspace
+            {
+                Inspection = CreateInspection(MinecraftContentKind.ShaderPack)
+            }),
+            engine,
+            memory);
+
+        var resourcePack = await resourcePackPipeline.ExecuteAsync(
+            CreateRequest("cloud-source"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var shaderPack = await shaderPackPipeline.ExecuteAsync(
+            CreateRequest("cloud-source"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var repeatedShaderPack = await shaderPackPipeline.ExecuteAsync(
+            CreateRequest("cloud-source"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, resourcePack.TranslatedEntryCount);
+        Assert.Equal(1, shaderPack.TranslatedEntryCount);
+        Assert.Equal(0, repeatedShaderPack.TranslatedEntryCount);
+        Assert.Equal(1, repeatedShaderPack.ReusedEntryCount);
+        Assert.Equal(2, engine.CallCount);
+        Assert.Equal(MinecraftContentKind.ShaderPack, engine.LastRequest?.ContentKind);
+        Assert.Equal(MinecraftContentKind.ShaderPack, memory.Saved?.Key.ContentKind);
     }
 
     [Fact]
@@ -462,6 +519,16 @@ public sealed class TranslationPipelineTests
             modelSourceId: modelSourceId,
             requestedJobId: requestedJobId);
     }
+
+    private static ArchiveInspection CreateInspection(MinecraftContentKind contentKind) => new(
+        "example-package",
+        "example",
+        "unknown",
+        true,
+        ArchiveSignatureState.None,
+        false,
+        Array.Empty<string>(),
+        contentKind);
 
     private sealed class StubWorkspaceBackend(StubWorkspace workspace) : IArchiveWorkspaceBackend
     {

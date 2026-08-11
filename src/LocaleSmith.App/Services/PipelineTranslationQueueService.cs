@@ -36,7 +36,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
         var pipelineRequest = new PipelineRequest(
             request.SourcePath,
             request.OutputPath,
-            targetLanguage: "zh_CN",
+            targetLanguage: request.TargetLanguage,
             styles: new HashSet<TranslationStyle> { request.Style },
             // Signed archives remain blocked until a dedicated, explicit signature-choice dialog exists.
             signedArchiveHandling: SignedArchiveHandling.Block,
@@ -99,6 +99,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             ConvertAndLogResultAsync(
                 pipelineHandle.Completion,
                 request.Style,
+                pipelineRequest.TargetLanguage,
                 pipelineHandle.JobId),
             () =>
             {
@@ -135,11 +136,16 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
     private async Task<TranslationQueueResult> ConvertAndLogResultAsync(
         Task<PipelineResult> completion,
         TranslationStyle requestedStyle,
+        string targetLanguage,
         Guid jobId)
     {
         try
         {
-            var result = await ConvertResultAsync(completion, requestedStyle).ConfigureAwait(false);
+            var result = await ConvertResultAsync(
+                    completion,
+                    requestedStyle,
+                    targetLanguage)
+                .ConfigureAwait(false);
             _translationLogs?.CompleteSession(
                 jobId,
                 TranslationLogLevel.Information,
@@ -192,7 +198,8 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
 
     private static async Task<TranslationQueueResult> ConvertResultAsync(
         Task<PipelineResult> completion,
-        TranslationStyle requestedStyle)
+        TranslationStyle requestedStyle,
+        string targetLanguage)
     {
         var result = await completion.ConfigureAwait(false);
         if (result.Artifacts.Count != 1 || result.Artifacts[0].Style != requestedStyle)
@@ -209,7 +216,8 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             result.Artifacts.Select(static artifact => artifact.Path).ToArray(),
             result.HardcodedCandidates.ToArray(),
             result.Externalization.ExternalizedCount,
-            requestedStyle);
+            requestedStyle,
+            targetLanguage);
     }
 
     private void OnPipelineProgressChanged(object? sender, PipelineProgress progress)

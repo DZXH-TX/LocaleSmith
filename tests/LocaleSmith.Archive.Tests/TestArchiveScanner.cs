@@ -181,28 +181,45 @@ internal sealed partial class TestArchiveScanner : IArchiveScanner
         }
 
         string[] parts = path.Split('/');
-        if (parts.Length != 4 || parts[0] != "assets" || parts[2] != "lang")
+        bool isAssetLanguage = parts.Length == 4 && parts[0] == "assets" && parts[2] == "lang";
+        bool isShaderLanguage = parts.Length == 3 && parts[0] == "shaders" && parts[1] == "lang";
+        if (!isAssetLanguage && !isShaderLanguage)
         {
             return false;
         }
 
-        resourceNamespace = parts[1];
-        if (parts[3].EndsWith(".json", StringComparison.Ordinal))
+        if (isAssetLanguage && !IsValidResourceNamespace(parts[1]))
+        {
+            return false;
+        }
+
+        resourceNamespace = isShaderLanguage ? "@shaderpack" : parts[1];
+        string fileName = isShaderLanguage ? parts[2] : parts[3];
+        if (!isShaderLanguage && fileName.EndsWith(".json", StringComparison.Ordinal))
         {
             kind = "language_json";
-            locale = parts[3][..^5];
-            return true;
+            locale = fileName[..^5];
         }
-
-        if (parts[3].EndsWith(".lang", StringComparison.Ordinal))
+        else if (fileName.EndsWith(".lang", StringComparison.Ordinal))
         {
             kind = "language_lang";
-            locale = parts[3][..^5];
-            return true;
+            locale = fileName[..^5];
+        }
+        else
+        {
+            return false;
         }
 
-        return false;
+        return IsValidLocaleToken(locale);
     }
+
+    private static bool IsValidResourceNamespace(string value) =>
+        value.Length > 0 && value.All(static character =>
+            character is >= 'a' and <= 'z' or >= '0' and <= '9' or '_' or '-' or '.');
+
+    private static bool IsValidLocaleToken(string value) =>
+        value.Length > 0 && value.All(static character =>
+            character is >= 'a' and <= 'z' or >= '0' and <= '9' or '_');
 
     private static bool IsDirectMetaInfFile(string path, string extension)
     {

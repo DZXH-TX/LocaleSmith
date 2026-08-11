@@ -19,7 +19,9 @@ public sealed class ModelTranslationEngineTests
         var engine = new ModelTranslationEngine(registry);
         var entry = new TranslationEntry("assets/example/lang/en_us.json", "screen.hello", "Hello %s");
 
-        Assert.Equal("minecraft-java-localization-json/v2-single-style", engine.TranslationContractVersion);
+        Assert.Equal(
+            "minecraft-java-localization-json/v4-content-profiles-glossaries",
+            engine.TranslationContractVersion);
 
         var result = await engine.TranslateAsync(
             new TranslationBatchRequest(new[] { entry }),
@@ -32,6 +34,57 @@ public sealed class ModelTranslationEngineTests
         Assert.NotNull(service.LastRequest);
         Assert.Equal(ModelMessageRole.System, service.LastRequest.Messages[0].Role);
         Assert.Contains("untrusted data", service.LastRequest.Messages[0].Content, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(
+        MinecraftContentKind.Mod,
+        "minecraft-java-mod",
+        "mod loader => 模组加载器",
+        "texture atlas => 纹理图集",
+        "tone mapping => 色调映射")]
+    [InlineData(
+        MinecraftContentKind.ResourcePack,
+        "minecraft-java-resource-pack",
+        "resource pack => 资源包",
+        "mod loader => 模组加载器",
+        "tone mapping => 色调映射")]
+    [InlineData(
+        MinecraftContentKind.ShaderPack,
+        "minecraft-java-shader-pack",
+        "tone mapping => 色调映射",
+        "mod loader => 模组加载器",
+        "texture atlas => 纹理图集")]
+    public async Task ContentKindSelectsAnIndependentSpecialistPromptAndGlossary(
+        MinecraftContentKind contentKind,
+        string profileId,
+        string expectedTerm,
+        string firstForeignTerm,
+        string secondForeignTerm)
+    {
+        var service = new StubModelService(
+            """
+            {"translations":[{"id":"e000001","formal":"译文"}]}
+            """);
+        using var registry = CreateRegistry(service);
+        var engine = new ModelTranslationEngine(registry);
+
+        await engine.TranslateAsync(
+            new TranslationBatchRequest(
+                [new TranslationEntry("pack.txt", null, "Source")],
+                contentKind: contentKind),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(service.LastRequest);
+        string systemPrompt = service.LastRequest.Messages[0].Content;
+        Assert.Contains(profileId, systemPrompt, StringComparison.Ordinal);
+        Assert.Contains(expectedTerm, systemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(firstForeignTerm, systemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(secondForeignTerm, systemPrompt, StringComparison.Ordinal);
+        using var userEnvelope = JsonDocument.Parse(service.LastRequest.Messages[1].Content);
+        Assert.Equal(
+            contentKind.ToString(),
+            userEnvelope.RootElement.GetProperty("contentKind").GetString());
     }
 
     [Theory]
@@ -65,14 +118,76 @@ public sealed class ModelTranslationEngineTests
         Assert.Contains($"\"{responseProperty}\":\"...\"", systemPrompt, StringComparison.Ordinal);
         if (style == TranslationStyle.Formal)
         {
-            Assert.Contains("Produce only formal Chinese", systemPrompt, StringComparison.Ordinal);
-            Assert.DoesNotContain("Produce only informal Chinese", systemPrompt, StringComparison.Ordinal);
+            Assert.Contains("Produce only formal Simplified Chinese", systemPrompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("Produce only informal Simplified Chinese", systemPrompt, StringComparison.Ordinal);
         }
         else
         {
-            Assert.Contains("Produce only informal Chinese", systemPrompt, StringComparison.Ordinal);
-            Assert.DoesNotContain("Produce only formal Chinese", systemPrompt, StringComparison.Ordinal);
+            Assert.Contains("Produce only informal Simplified Chinese", systemPrompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("Produce only formal Simplified Chinese", systemPrompt, StringComparison.Ordinal);
         }
+    }
+
+    [Theory]
+    [InlineData("zh_CN", "Simplified Chinese", TranslationStyle.Formal, "formal")]
+    [InlineData("zh_CN", "Simplified Chinese", TranslationStyle.Informal, "informal")]
+    [InlineData("en_US", "English (United States)", TranslationStyle.Formal, "formal")]
+    [InlineData("en_US", "English (United States)", TranslationStyle.Informal, "informal")]
+    [InlineData("ja_JP", "Japanese", TranslationStyle.Formal, "formal")]
+    [InlineData("ja_JP", "Japanese", TranslationStyle.Informal, "informal")]
+    [InlineData("fr_FR", "French", TranslationStyle.Formal, "formal")]
+    [InlineData("fr_FR", "French", TranslationStyle.Informal, "informal")]
+    [InlineData("ru_RU", "Russian", TranslationStyle.Formal, "formal")]
+    [InlineData("ru_RU", "Russian", TranslationStyle.Informal, "informal")]
+    public async Task SystemPromptUsesTargetLanguageAndRequestedStyle(
+        string locale,
+        string promptLanguageName,
+        TranslationStyle style,
+        string responseProperty)
+    {
+        var service = new StubModelService(
+            $"{{\"translations\":[{{\"id\":\"e000001\",\"{responseProperty}\":\"translated\"}}]}}");
+        using var registry = CreateRegistry(service);
+        var engine = new ModelTranslationEngine(registry);
+
+        await engine.TranslateAsync(
+            new TranslationBatchRequest(
+                [new TranslationEntry("pack.txt", null, "source")],
+                locale,
+                new HashSet<TranslationStyle> { style },
+                contentKind: MinecraftContentKind.ResourcePack),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(service.LastRequest);
+        var systemPrompt = service.LastRequest.Messages[0].Content;
+        Assert.Contains(
+            $"required target language is {promptLanguageName} (locale {locale})",
+            systemPrompt,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"Produce only {responseProperty} {promptLanguageName}",
+            systemPrompt,
+            StringComparison.Ordinal);
+        var language = TranslationLanguageCatalog.GetRequired(locale);
+        Assert.Contains(
+            style == TranslationStyle.Formal
+                ? language.FormalPromptGuidance
+                : language.InformalPromptGuidance,
+            systemPrompt,
+            StringComparison.Ordinal);
+        Assert.Contains($"\"{responseProperty}\":\"...\"", systemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            $"\"{(style == TranslationStyle.Formal ? "informal" : "formal")}\":\"...\"",
+            systemPrompt,
+            StringComparison.Ordinal);
+        if (locale != "zh_CN")
+        {
+            Assert.DoesNotContain("Chinese", systemPrompt, StringComparison.Ordinal);
+            Assert.DoesNotContain("resource pack => 资源包", systemPrompt, StringComparison.Ordinal);
+        }
+
+        using var userEnvelope = JsonDocument.Parse(service.LastRequest.Messages[1].Content);
+        Assert.Equal(locale, userEnvelope.RootElement.GetProperty("targetLanguage").GetString());
     }
 
     [Fact]

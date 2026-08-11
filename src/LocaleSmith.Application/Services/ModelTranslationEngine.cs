@@ -38,6 +38,7 @@ public sealed class ModelTranslationEngine : ITranslationEngine
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var targetLanguage = TranslationLanguageCatalog.GetRequired(request.TargetLanguage);
         var service = ResolveService(request.ModelSourceId);
         var results = new List<TranslatedEntry>(request.Entries.Count);
 
@@ -53,13 +54,16 @@ public sealed class ModelTranslationEngine : ITranslationEngine
                 .ToArray();
             var envelope = new PromptTranslationEnvelope(
                 request.TargetLanguage,
+                request.ContentKind.ToString(),
                 request.Styles.Select(static style => style.ToString()).ToArray(),
                 promptItems);
             var userJson = JsonSerializer.Serialize(envelope, TranslationJsonContext.Default.PromptTranslationEnvelope);
             var modelRequest = new ModelRequest(
                 new[]
                 {
-                    new ModelMessage(ModelMessageRole.System, CreateSystemPrompt(request.Styles)),
+                    new ModelMessage(
+                        ModelMessageRole.System,
+                        CreateSystemPrompt(request.Styles, targetLanguage, request.ContentKind)),
                     new ModelMessage(ModelMessageRole.User, userJson)
                 },
                 temperature: 0.2,
@@ -72,23 +76,32 @@ public sealed class ModelTranslationEngine : ITranslationEngine
         return new TranslationBatchResult(request.TargetLanguage, results);
     }
 
-    private static string CreateSystemPrompt(IReadOnlySet<TranslationStyle> styles)
+    private static string CreateSystemPrompt(
+        IReadOnlySet<TranslationStyle> styles,
+        TranslationLanguage targetLanguage,
+        MinecraftContentKind contentKind)
     {
         var responseContract = styles.Single() switch
         {
             TranslationStyle.Formal =>
-                "Produce only formal Chinese using official Minecraft Simplified Chinese terminology and " +
-                "consistent written style. " +
+                $"Produce only formal {targetLanguage.PromptLanguageName}. " +
+                $"{targetLanguage.FormalPromptGuidance} " +
                 "Required response schema: {\"translations\":[{\"id\":\"e000001\",\"formal\":\"...\"}]}. " +
                 "Do not include an informal property.",
             TranslationStyle.Informal =>
-                "Produce only informal Chinese using established player-community wording and natural colloquial " +
-                "phrasing while remaining accurate and non-offensive. " +
+                $"Produce only informal {targetLanguage.PromptLanguageName}. " +
+                $"{targetLanguage.InformalPromptGuidance} " +
                 "Required response schema: {\"translations\":[{\"id\":\"e000001\",\"informal\":\"...\"}]}. " +
                 "Do not include a formal property.",
             _ => throw new TranslationContractException("The requested translation style is not supported.")
         };
-        return $"{SystemPrompt}{Environment.NewLine}{responseContract}";
+        var targetContract =
+            $"The required target language is {targetLanguage.PromptLanguageName} " +
+            $"(locale {targetLanguage.CanonicalLocale}). Translate all visible source prose into this target " +
+            "language, regardless of the source language or whether another localization already exists.";
+        var specialistProfile = MinecraftTranslationPromptProfiles.Create(contentKind, targetLanguage);
+        return $"{SystemPrompt}{Environment.NewLine}{specialistProfile}{Environment.NewLine}" +
+            $"{targetContract}{Environment.NewLine}{responseContract}";
     }
 
     private IModelService ResolveService(string? sourceId)

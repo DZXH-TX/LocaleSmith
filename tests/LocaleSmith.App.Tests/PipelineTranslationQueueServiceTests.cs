@@ -61,11 +61,48 @@ public sealed class PipelineTranslationQueueServiceTests
         Assert.NotNull(scheduler.Request);
         Assert.Equal(style, Assert.Single(scheduler.Request.Styles));
         Assert.Equal("saved-source", scheduler.Request.ModelSourceId);
+        Assert.Equal("zh_CN", scheduler.Request.TargetLanguage);
         Assert.Equal(style, result.Style);
+        Assert.Equal("zh_CN", result.TargetLanguage);
         Assert.Equal(outputPath, Assert.Single(result.ArtifactPaths));
         var latest = Assert.IsType<TranslationQueueProgress>(handle.LatestProgress);
         Assert.Equal(PipelineStage.Completed, latest.Stage);
         Assert.Equal(9, Assert.IsAssignableFrom<IReadOnlyList<PipelineStageProgress>>(latest.Stages).Count);
+    }
+
+    [Theory]
+    [InlineData("zh_CN", "zh_CN")]
+    [InlineData("en_US", "en_US")]
+    [InlineData("ja-jp", "ja_JP")]
+    [InlineData("fr_FR", "fr_FR")]
+    [InlineData("ru_RU", "ru_RU")]
+    public async Task QueuePassesTheCapturedTargetLanguage(
+        string targetLanguage,
+        string expectedCanonicalLocale)
+    {
+        var outputPath = Path.Combine(
+            Path.GetTempPath(),
+            "LocaleSmith",
+            "queue-language-tests",
+            Guid.NewGuid().ToString("N"),
+            "translated.jar");
+        await using var scheduler = new RecordingScheduler();
+        var service = new PipelineTranslationQueueService(scheduler);
+
+        var handle = await service.EnqueueAsync(
+            new TranslationQueueRequest(
+                "input.jar",
+                outputPath,
+                "saved-source",
+                TranslationStyle.Formal,
+                targetLanguage),
+            TestContext.Current.CancellationToken);
+        TranslationQueueResult result = await handle.Completion.WaitAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(scheduler.Request);
+        Assert.Equal(expectedCanonicalLocale, scheduler.Request.TargetLanguage);
+        Assert.Equal(expectedCanonicalLocale, result.TargetLanguage);
     }
 
     private sealed class RecordingScheduler : IPipelineJobScheduler

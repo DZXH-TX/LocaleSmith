@@ -48,6 +48,9 @@
     </PackageReference>
     <PRIResource Include="Strings\zh-CN\Resources.resw" />
     <PRIResource Include="Strings\en-US\Resources.resw" />
+    <PRIResource Include="Strings\ja-JP\Resources.resw" />
+    <PRIResource Include="Strings\fr-FR\Resources.resw" />
+    <PRIResource Include="Strings\ru-RU\Resources.resw" />
     <Content Include="Assets\Square44x44Logo.png" />
     <Content Include="Assets\Square150x150Logo.png" />
     <Content Include="Assets\StoreLogo.png" />

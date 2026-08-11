@@ -18,6 +18,10 @@
   <data name="WelcomeTitle.Text" xml:space="preserve"><value>欢迎使用译匠</value></data>
   <data name="WelcomeBody.Text" xml:space="preserve"><value>批量提取、增量翻译并重建 Minecraft 模组与资源包；每个任务选择一种翻译风格，并生成一个对应产物。</value></data>
   <data name="WelcomePrivacy.Text" xml:space="preserve"><value>本地 Ollama 可完全在本机工作；云端模型仅在你配置后使用。API Key 不写入配置或日志。</value></data>
+  <data name="OnboardingLanguageSelector.Header" xml:space="preserve"><value>界面语言</value></data>
+  <data name="OnboardingLanguageHelp.Text" xml:space="preserve"><value>切换界面语言需要重新启动。选择后请保存并重启；重新打开后会回到此向导。</value></data>
+  <data name="OnboardingLanguageRestartButton.Content" xml:space="preserve"><value>保存语言并重启</value></data>
+  <data name="OnboardingLanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>保存界面语言并重启译匠</value></data>
   <data name="ModelPathChoiceTitle.Text" xml:space="preserve"><value>选择首次模型连接方式</value></data>
   <data name="LocalModelChoice.AutomationProperties.Name" xml:space="preserve"><value>选择 Ollama 本地模型</value></data>
   <data name="LocalModelChoiceTitle.Text" xml:space="preserve"><value>Ollama 本地</value></data>
@@ -58,6 +62,7 @@
   <data name="SkipModelSetupButton.Content" xml:space="preserve"><value>稍后设置模型</value></data>
   <data name="SummaryTitle.Text" xml:space="preserve"><value>准备完成安全设置</value></data>
   <data name="SummaryBody.Text" xml:space="preserve"><value>确认以下位置。完成后会创建凭据主密钥并加密保存配置。</value></data>
+  <data name="SummaryLanguageTitle.Text" xml:space="preserve"><value>界面语言</value></data>
   <data name="SummarySecurity.Text" xml:space="preserve"><value>配置使用 AES-256-GCM；主密钥仅存放在 Windows 凭据管理器。</value></data>
   <data name="SummaryLocalModelTitle.Text" xml:space="preserve"><value>本地模型：Ollama</value></data>
   <data name="SummaryNetworkModelTitle.Text" xml:space="preserve"><value>网络模型（API Key 将安全保存）</value></data>
@@ -70,6 +75,10 @@
   <data name="DashboardSubtitle.Text" xml:space="preserve"><value>添加 JAR、ZIP 或资源包文件夹；任务失败或取消时会自动回滚。</value></data>
   <data name="DashboardModelSelector.Header" xml:space="preserve"><value>新请求使用的模型</value></data>
   <data name="DashboardModelSelector.PlaceholderText" xml:space="preserve"><value>没有已配置的模型</value></data>
+  <data name="DashboardTargetLanguageSelector.Header" xml:space="preserve"><value>新请求的目标语言</value></data>
+  <data name="DashboardTargetLanguageSelector.AutomationProperties.Name" xml:space="preserve"><value>新翻译请求的目标语言</value></data>
+  <data name="DashboardTargetLanguageSelector.AutomationProperties.HelpText" xml:space="preserve"><value>源语言会从包内资源自动选择；目标为英语且没有英文资源时，将使用其他可用语种作为源文。</value></data>
+  <data name="DashboardTargetLanguageHelp.Text" xml:space="preserve"><value>源语言会从包内资源自动选择；目标为英语且没有英文资源时，将使用其他可用语种作为源文。</value></data>
   <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>新请求的翻译风格</value></data>
   <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>已配置</value></data>
   <data name="AddPackageButtonText.Text" xml:space="preserve"><value>添加包</value></data>
@@ -159,6 +168,9 @@
   <data name="LanguageSelector.Header" xml:space="preserve"><value>显示语言</value></data>
   <data name="LanguageOptionZhCn" xml:space="preserve"><value>简体中文（中国）</value></data>
   <data name="LanguageOptionEnUs" xml:space="preserve"><value>English (United States)</value></data>
+  <data name="LanguageOptionJaJp" xml:space="preserve"><value>日本語（日本）</value></data>
+  <data name="LanguageOptionFrFr" xml:space="preserve"><value>Français (France)</value></data>
+  <data name="LanguageOptionRuRu" xml:space="preserve"><value>Русский (Россия)</value></data>
   <data name="LanguageRestartHelp.Text" xml:space="preserve"><value>选择新语言后，请点击“保存并重启”，LocaleSmith 将重新加载全部界面资源。</value></data>
   <data name="LanguageRestartButton.Content" xml:space="preserve"><value>保存并重启</value></data>
   <data name="LanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>保存显示语言并重启译匠</value></data>
@@ -207,6 +219,11 @@
   <data name="CliExpandOutputButton.Content" xml:space="preserve"><value>展开或收起完整输出</value></data>
   <data name="OnboardingEncrypting" xml:space="preserve"><value>正在创建主密钥并加密保存设置…</value></data>
   <data name="OnboardingComplete" xml:space="preserve"><value>首次设置已完成。</value></data>
+  <data name="OnboardingLanguageSaving" xml:space="preserve"><value>正在保存界面语言，随后将重新启动…</value></data>
+  <data name="OnboardingLanguageSaved" xml:space="preserve"><value>界面语言已保存，正在重新启动译匠…</value></data>
+  <data name="OnboardingLanguageSaveFailed" xml:space="preserve"><value>无法保存界面语言：{0}</value></data>
+  <data name="OnboardingLanguageRestartFailed" xml:space="preserve"><value>无法重新启动译匠以应用界面语言：{0}</value></data>
+  <data name="OnboardingLanguageRestartRequired" xml:space="preserve"><value>继续前，请保存所选界面语言并重新启动。</value></data>
   <data name="OnboardingSaveFailed" xml:space="preserve"><value>无法安全保存设置：{0}</value></data>
   <data name="OnboardingPathsRequired" xml:space="preserve"><value>工作区、沙箱和日志目录路径均为必填项。</value></data>
   <data name="OnboardingPathsInvalid" xml:space="preserve"><value>工作区、沙箱或日志目录路径无效。</value></data>
@@ -247,6 +264,12 @@
   <data name="QueueStyleFormalDescription" xml:space="preserve"><value>采用官方术语和一致的书面表达。</value></data>
   <data name="QueueStyleInformal" xml:space="preserve"><value>语气翻译</value></data>
   <data name="QueueStyleInformalDescription" xml:space="preserve"><value>采用自然的玩家社区用语和非正式语气。</value></data>
+  <data name="TargetLanguage_zh_CN" xml:space="preserve"><value>简体中文（中国）</value></data>
+  <data name="TargetLanguage_en_US" xml:space="preserve"><value>英语（美国）</value></data>
+  <data name="TargetLanguage_ja_JP" xml:space="preserve"><value>日语（日本）</value></data>
+  <data name="TargetLanguage_fr_FR" xml:space="preserve"><value>法语（法国）</value></data>
+  <data name="TargetLanguage_ru_RU" xml:space="preserve"><value>俄语（俄罗斯）</value></data>
+  <data name="QueueTranslationProfile" xml:space="preserve"><value>{0} · {1}</value></data>
   <data name="QueueHardcodedSummary" xml:space="preserve"><value>硬编码候选：{0}；已外部化：{1}。</value></data>
   <data name="QueueModelSelectFailed" xml:space="preserve"><value>无法选择模型源：{0}</value></data>
   <data name="QueueProgressDetailsPending" xml:space="preserve"><value>处理开始后，将在此显示详细阶段信息。</value></data>

@@ -22,16 +22,8 @@ public sealed class SettingsOptionDisplayConverter : IValueConverter
     {
         var option = value switch
         {
-            string languageTag when string.Equals(
-                languageTag,
-                AppDisplayLanguages.DefaultLanguage,
-                StringComparison.OrdinalIgnoreCase) =>
-                new LocalizedOption("LanguageOptionZhCn", "简体中文（中国）"),
-            string languageTag when string.Equals(
-                languageTag,
-                AppDisplayLanguages.EnglishUnitedStates,
-                StringComparison.OrdinalIgnoreCase) =>
-                new LocalizedOption("LanguageOptionEnUs", "English (United States)"),
+            string languageTag when AppDisplayLanguages.TryGet(languageTag, out var displayLanguage) =>
+                new LocalizedOption(displayLanguage.ResourceKey, displayLanguage.FallbackDisplayName),
             AppThemePreference.System => new LocalizedOption("ThemeOptionSystem", "System"),
             AppThemePreference.Light => new LocalizedOption("ThemeOptionLight", "Light"),
             AppThemePreference.Dark => new LocalizedOption("ThemeOptionDark", "Dark"),

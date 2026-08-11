@@ -166,6 +166,29 @@ public sealed class OnboardingAndShellTests
         Assert.Equal(["secret", "completed"], eventOrder);
     }
 
+    [Fact]
+    public async Task OnboardingRequiresSelectedDisplayLanguageToBeSavedBeforeContinuing()
+    {
+        var displayLanguage = new RecordingDisplayLanguageService();
+        var viewModel = new OnboardingViewModel(
+            new RecordingOnboardingService(),
+            displayLanguageService: displayLanguage);
+        var targetLanguage = viewModel.LanguageOptions.First(
+            language => !string.Equals(language, viewModel.SelectedLanguage, StringComparison.Ordinal));
+
+        viewModel.SelectedLanguage = targetLanguage;
+        viewModel.NextCommand.Execute(null);
+
+        Assert.True(viewModel.IsWelcomeStep);
+        Assert.True(viewModel.IsLanguageRestartRequired);
+        Assert.Contains("restart", viewModel.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(await viewModel.SaveDisplayLanguageForRestartAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(targetLanguage, displayLanguage.SavedLanguage);
+        Assert.True(viewModel.TryGetPersistedDisplayLanguageForRestart(out var persistedLanguage));
+        Assert.Equal(targetLanguage, persistedLanguage);
+    }
+
     [Theory]
     [InlineData(true, ShellSection.Dashboard)]
     [InlineData(false, ShellSection.Onboarding)]
@@ -200,6 +223,20 @@ public sealed class OnboardingAndShellTests
             CapturedNetworkApiKey = submission.NetworkApiKey.IsEmpty
                 ? null
                 : new string(submission.NetworkApiKey.Span);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingDisplayLanguageService : IAppDisplayLanguageService
+    {
+        public string? SavedLanguage { get; private set; }
+
+        public Task SaveDisplayLanguageAsync(
+            string language,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            SavedLanguage = language;
             return Task.CompletedTask;
         }
     }

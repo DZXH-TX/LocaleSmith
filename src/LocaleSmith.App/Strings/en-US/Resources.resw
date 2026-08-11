@@ -18,6 +18,10 @@
   <data name="WelcomeTitle.Text" xml:space="preserve"><value>Welcome to LocaleSmith</value></data>
   <data name="WelcomeBody.Text" xml:space="preserve"><value>Extract, incrementally translate, and rebuild Minecraft mods and resource packs. Each job uses one selected translation style and produces one matching artifact.</value></data>
   <data name="WelcomePrivacy.Text" xml:space="preserve"><value>Local Ollama can stay entirely on this PC. Cloud models are used only after you configure them. API keys are never written to settings or logs.</value></data>
+  <data name="OnboardingLanguageSelector.Header" xml:space="preserve"><value>Interface language</value></data>
+  <data name="OnboardingLanguageHelp.Text" xml:space="preserve"><value>Changing the interface language requires a restart. Save and restart after choosing; LocaleSmith will return to this setup guide.</value></data>
+  <data name="OnboardingLanguageRestartButton.Content" xml:space="preserve"><value>Save language and restart</value></data>
+  <data name="OnboardingLanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>Save the interface language and restart LocaleSmith</value></data>
   <data name="ModelPathChoiceTitle.Text" xml:space="preserve"><value>Choose the first model connection</value></data>
   <data name="LocalModelChoice.AutomationProperties.Name" xml:space="preserve"><value>Select local Ollama</value></data>
   <data name="LocalModelChoiceTitle.Text" xml:space="preserve"><value>Ollama local</value></data>
@@ -58,6 +62,7 @@
   <data name="SkipModelSetupButton.Content" xml:space="preserve"><value>Set up models later</value></data>
   <data name="SummaryTitle.Text" xml:space="preserve"><value>Ready to complete secure setup</value></data>
   <data name="SummaryBody.Text" xml:space="preserve"><value>Review these locations. Finishing creates the credential master key and encrypts settings.</value></data>
+  <data name="SummaryLanguageTitle.Text" xml:space="preserve"><value>Interface language</value></data>
   <data name="SummarySecurity.Text" xml:space="preserve"><value>Settings use AES-256-GCM. The master key lives only in Windows Credential Manager.</value></data>
   <data name="SummaryLocalModelTitle.Text" xml:space="preserve"><value>Local model: Ollama</value></data>
   <data name="SummaryNetworkModelTitle.Text" xml:space="preserve"><value>Network model (API key will be stored securely)</value></data>
@@ -70,6 +75,10 @@
   <data name="DashboardSubtitle.Text" xml:space="preserve"><value>Add JARs, ZIPs, or resource-pack folders. Failed and cancelled jobs roll back automatically.</value></data>
   <data name="DashboardModelSelector.Header" xml:space="preserve"><value>Model for new requests</value></data>
   <data name="DashboardModelSelector.PlaceholderText" xml:space="preserve"><value>No configured models</value></data>
+  <data name="DashboardTargetLanguageSelector.Header" xml:space="preserve"><value>Target language for new requests</value></data>
+  <data name="DashboardTargetLanguageSelector.AutomationProperties.Name" xml:space="preserve"><value>Target language for new translation requests</value></data>
+  <data name="DashboardTargetLanguageSelector.AutomationProperties.HelpText" xml:space="preserve"><value>The source language is selected automatically from the package. If English is the target and no English resource exists, another available locale is used as the source.</value></data>
+  <data name="DashboardTargetLanguageHelp.Text" xml:space="preserve"><value>The source language is selected automatically from the package. If English is the target and no English resource exists, another available locale is used as the source.</value></data>
   <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>Translation style for new requests</value></data>
   <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>Configured</value></data>
   <data name="AddPackageButtonText.Text" xml:space="preserve"><value>Add package</value></data>
@@ -159,6 +168,9 @@
   <data name="LanguageSelector.Header" xml:space="preserve"><value>Display language</value></data>
   <data name="LanguageOptionZhCn" xml:space="preserve"><value>简体中文（中国）</value></data>
   <data name="LanguageOptionEnUs" xml:space="preserve"><value>English (United States)</value></data>
+  <data name="LanguageOptionJaJp" xml:space="preserve"><value>日本語（日本）</value></data>
+  <data name="LanguageOptionFrFr" xml:space="preserve"><value>Français (France)</value></data>
+  <data name="LanguageOptionRuRu" xml:space="preserve"><value>Русский (Россия)</value></data>
   <data name="LanguageRestartHelp.Text" xml:space="preserve"><value>After choosing a language, select Save and restart so LocaleSmith can reload every UI resource.</value></data>
   <data name="LanguageRestartButton.Content" xml:space="preserve"><value>Save and restart</value></data>
   <data name="LanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>Save the display language and restart LocaleSmith</value></data>
@@ -207,6 +219,11 @@
   <data name="CliExpandOutputButton.Content" xml:space="preserve"><value>Expand or collapse full output</value></data>
   <data name="OnboardingEncrypting" xml:space="preserve"><value>Creating the master key and encrypting settings…</value></data>
   <data name="OnboardingComplete" xml:space="preserve"><value>First-run setup is complete.</value></data>
+  <data name="OnboardingLanguageSaving" xml:space="preserve"><value>Saving the interface language before restart…</value></data>
+  <data name="OnboardingLanguageSaved" xml:space="preserve"><value>Interface language saved. Restarting LocaleSmith…</value></data>
+  <data name="OnboardingLanguageSaveFailed" xml:space="preserve"><value>The interface language could not be saved: {0}</value></data>
+  <data name="OnboardingLanguageRestartFailed" xml:space="preserve"><value>LocaleSmith could not restart to apply the interface language: {0}</value></data>
+  <data name="OnboardingLanguageRestartRequired" xml:space="preserve"><value>Save and restart to apply the selected interface language before continuing.</value></data>
   <data name="OnboardingSaveFailed" xml:space="preserve"><value>Settings could not be saved securely: {0}</value></data>
   <data name="OnboardingPathsRequired" xml:space="preserve"><value>Workspace, sandbox, and log directory paths are required.</value></data>
   <data name="OnboardingPathsInvalid" xml:space="preserve"><value>Workspace, sandbox, or log directory path is invalid.</value></data>
@@ -247,6 +264,12 @@
   <data name="QueueStyleFormalDescription" xml:space="preserve"><value>Official terminology and consistent written language.</value></data>
   <data name="QueueStyleInformal" xml:space="preserve"><value>Tone translation</value></data>
   <data name="QueueStyleInformalDescription" xml:space="preserve"><value>Natural player-community wording with an informal tone.</value></data>
+  <data name="TargetLanguage_zh_CN" xml:space="preserve"><value>Simplified Chinese (China)</value></data>
+  <data name="TargetLanguage_en_US" xml:space="preserve"><value>English (United States)</value></data>
+  <data name="TargetLanguage_ja_JP" xml:space="preserve"><value>Japanese (Japan)</value></data>
+  <data name="TargetLanguage_fr_FR" xml:space="preserve"><value>French (France)</value></data>
+  <data name="TargetLanguage_ru_RU" xml:space="preserve"><value>Russian (Russia)</value></data>
+  <data name="QueueTranslationProfile" xml:space="preserve"><value>{0} · {1}</value></data>
   <data name="QueueHardcodedSummary" xml:space="preserve"><value>Hard-coded candidates: {0}; externalized: {1}.</value></data>
   <data name="QueueModelSelectFailed" xml:space="preserve"><value>Model source could not be selected: {0}</value></data>
   <data name="QueueProgressDetailsPending" xml:space="preserve"><value>Detailed stage information will appear when processing begins.</value></data>

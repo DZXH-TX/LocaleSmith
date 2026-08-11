@@ -10,6 +10,7 @@ internal sealed record PromptTranslationItem(
 
 internal sealed record PromptTranslationEnvelope(
     string TargetLanguage,
+    string ContentKind,
     IReadOnlyList<string> Styles,
     IReadOnlyList<PromptTranslationItem> Entries);
 

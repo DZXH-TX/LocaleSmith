@@ -1,3 +1,5 @@
+using LocaleSmith.Core.Services;
+
 namespace LocaleSmith.Core.Models;
 
 public enum TranslationStyle
@@ -30,9 +32,10 @@ public sealed record TranslationBatchRequest
 {
     public TranslationBatchRequest(
         IReadOnlyList<TranslationEntry> entries,
-        string targetLanguage = "zh_CN",
+        string targetLanguage = TranslationLanguageCatalog.DefaultLocale,
         IReadOnlySet<TranslationStyle>? styles = null,
-        string? modelSourceId = null)
+        string? modelSourceId = null,
+        MinecraftContentKind contentKind = MinecraftContentKind.Unknown)
     {
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguage);
@@ -42,8 +45,14 @@ public sealed record TranslationBatchRequest
         }
 
         Entries = entries.ToArray();
-        TargetLanguage = targetLanguage.Trim();
+        TargetLanguage = TranslationLanguageCatalog.NormalizeLocale(targetLanguage);
         ModelSourceId = string.IsNullOrWhiteSpace(modelSourceId) ? null : modelSourceId.Trim();
+        if (!Enum.IsDefined(contentKind))
+        {
+            throw new ArgumentException("The Minecraft content kind is not valid.", nameof(contentKind));
+        }
+
+        ContentKind = contentKind;
         Styles = styles is null
             ? new HashSet<TranslationStyle> { TranslationStyle.Formal }
             : new HashSet<TranslationStyle>(styles);
@@ -65,6 +74,12 @@ public sealed record TranslationBatchRequest
     /// alter an already accepted translation request.
     /// </summary>
     public string? ModelSourceId { get; }
+
+    /// <summary>
+    /// Captures the detected content family so the translation engine selects the matching
+    /// specialist prompt and terminology profile for the entire batch.
+    /// </summary>
+    public MinecraftContentKind ContentKind { get; }
 }
 
 public sealed record TranslationVariant(TranslationStyle Style, string Text);

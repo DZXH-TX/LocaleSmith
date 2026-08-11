@@ -755,6 +755,181 @@ public sealed class ArchiveWorkspaceBackendTests
     }
 
     [Fact]
+    public async Task EnglishTargetUsesAnAvailableNonEnglishResourceAsItsSource()
+    {
+        using var fixture = new ArchiveFixture("english-from-japanese.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"english_demo\"}");
+        fixture.AddText("assets/english_demo/lang/ja_jp.json", "{\"demo.settings\":\"設定\"}");
+        fixture.Complete();
+        var request = CreateRequest(fixture, targetLanguage: "en_US");
+        var backend = new ArchiveWorkspaceBackend(new TestArchiveScanner());
+
+        await using var workspace = await backend.BeginAsync(
+            Guid.NewGuid(),
+            request,
+            TestContext.Current.CancellationToken);
+        ArchiveInspection inspection = await workspace.InspectAsync(TestContext.Current.CancellationToken);
+        await workspace.ExtractAsync(TestContext.Current.CancellationToken);
+        IReadOnlyList<TranslationEntry> entries = await workspace.ReadTranslatableEntriesAsync(
+            TestContext.Current.CancellationToken);
+
+        TranslationEntry source = Assert.Single(entries);
+        Assert.Equal("assets/english_demo/lang/ja_jp.json", source.RelativePath);
+        Assert.Contains(
+            inspection.Warnings,
+            warning => warning.Contains("Target locale 'en_us' was excluded", StringComparison.Ordinal) &&
+                warning.Contains("ja_jp", StringComparison.Ordinal));
+        await workspace.ApplyTranslationsAsync(
+            new TranslationBatchResult(
+                request.TargetLanguage,
+                [
+                    new TranslatedEntry(
+                        source.RelativePath,
+                        source.Key,
+                        "test-hash",
+                        [new TranslationVariant(TranslationStyle.Formal, "Settings")])
+                ]),
+            TestContext.Current.CancellationToken);
+        PackageVerification verification = await workspace.StagePackageAsync(
+            request.OutputPath,
+            TestContext.Current.CancellationToken);
+        Assert.Empty(verification.Errors);
+        await workspace.CommitAsync(TestContext.Current.CancellationToken);
+
+        using ZipArchive output = ZipFile.OpenRead(request.OutputPath);
+        using JsonDocument english = ReadJson(output, "assets/english_demo/lang/en_us.json");
+        Assert.Equal("Settings", english.RootElement.GetProperty("demo.settings").GetString());
+    }
+
+    [Fact]
+    public async Task ExistingTargetLocaleIsNotRetranslatedWhenAnotherSourceExists()
+    {
+        using var fixture = new ArchiveFixture("avoid-target-as-source.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"source_choice\"}");
+        fixture.AddText("assets/source_choice/lang/en_us.json", "{\"demo.key\":\"Existing English\"}");
+        fixture.AddText("assets/source_choice/lang/ja_jp.json", "{\"demo.key\":\"日本語\"}");
+        fixture.Complete();
+        var backend = new ArchiveWorkspaceBackend(new TestArchiveScanner());
+
+        await using var workspace = await backend.BeginAsync(
+            Guid.NewGuid(),
+            CreateRequest(fixture, targetLanguage: "en_US"),
+            TestContext.Current.CancellationToken);
+        await workspace.InspectAsync(TestContext.Current.CancellationToken);
+        await workspace.ExtractAsync(TestContext.Current.CancellationToken);
+        TranslationEntry source = Assert.Single(await workspace.ReadTranslatableEntriesAsync(
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal("assets/source_choice/lang/ja_jp.json", source.RelativePath);
+        Assert.Equal("日本語", source.SourceText);
+    }
+
+    [Fact]
+    public async Task APackageWithOnlyTheTargetLocalePreservesThatResourceWithoutRetranslatingIt()
+    {
+        using var fixture = new ArchiveFixture("target-only.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"target_only\"}");
+        fixture.AddText("assets/target_only/lang/en_us.json", "{\"demo.key\":\"Keep me\"}");
+        fixture.Complete();
+        var request = CreateRequest(fixture, targetLanguage: "en_US");
+
+        IReadOnlyList<PackageArtifact> artifacts = await RunWorkspaceAsync(
+            new ArchiveWorkspaceBackend(new TestArchiveScanner()),
+            request,
+            static entry => ($"unexpected:{entry.SourceText}", string.Empty));
+
+        using ZipArchive output = ZipFile.OpenRead(Assert.Single(artifacts).Path);
+        using JsonDocument english = ReadJson(output, "assets/target_only/lang/en_us.json");
+        Assert.Equal("Keep me", english.RootElement.GetProperty("demo.key").GetString());
+    }
+
+    [Fact]
+    public async Task ShaderLanguageFilesUseTheSelectedTargetLocale()
+    {
+        using var fixture = new ArchiveFixture("shader-language.zip");
+        fixture.AddText("shaders/lang/en_us.lang", "option.BLOOM=Bloom\noption.BLOOM.comment=Soft glow\n");
+        fixture.Complete();
+        var request = CreateRequest(fixture, targetLanguage: "fr_FR");
+
+        Assert.Equal(
+            MinecraftContentKind.ShaderPack,
+            await InspectContentKindAsync(fixture));
+
+        IReadOnlyList<PackageArtifact> artifacts = await RunWorkspaceAsync(
+            new ArchiveWorkspaceBackend(new TestArchiveScanner()),
+            request,
+            static entry => ($"FR:{entry.SourceText}", string.Empty));
+
+        using ZipArchive output = ZipFile.OpenRead(Assert.Single(artifacts).Path);
+        string french = ReadText(output, "shaders/lang/fr_fr.lang");
+        Assert.Contains("option.BLOOM=FR:Bloom", french, StringComparison.Ordinal);
+        Assert.Contains("option.BLOOM.comment=FR:Soft glow", french, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ShaderPackStructureTakesPriorityOverAJarExtension()
+    {
+        using var fixture = new ArchiveFixture("renamed-shader-pack.jar");
+        fixture.AddText("shaders/lang/en_us.lang", "option.BLOOM=Bloom");
+        fixture.Complete();
+
+        Assert.Equal(
+            MinecraftContentKind.ShaderPack,
+            await InspectContentKindAsync(fixture));
+    }
+
+    [Fact]
+    public async Task ResourcePackStructureTakesPriorityOverAJarExtension()
+    {
+        using var fixture = new ArchiveFixture("renamed-resource-pack.jar");
+        fixture.AddText("pack.mcmeta", "{\"pack\":{\"pack_format\":34,\"description\":\"Pack\"}}");
+        fixture.Complete();
+
+        Assert.Equal(
+            MinecraftContentKind.ResourcePack,
+            await InspectContentKindAsync(fixture));
+    }
+
+    [Fact]
+    public async Task ContentInspectionPrefersModEvidenceOverBundledShaderPaths()
+    {
+        using var fixture = new ArchiveFixture("mod-with-shaders.jar");
+        fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"visual_mod\"}");
+        fixture.AddText("shaders/lang/en_us.lang", "option.BLOOM=Bloom");
+        fixture.Complete();
+
+        Assert.Equal(
+            MinecraftContentKind.Mod,
+            await InspectContentKindAsync(fixture));
+    }
+
+    [Fact]
+    public async Task ContentInspectionDoesNotMistakeVanillaResourceShadersForAShaderPack()
+    {
+        using var fixture = new ArchiveFixture("resource-pack.zip");
+        fixture.AddText("pack.mcmeta", "{\"pack\":{\"pack_format\":34,\"description\":\"Pack\"}}");
+        fixture.AddText("assets/minecraft/shaders/core/example.fsh", "void main() {}");
+        fixture.Complete();
+
+        Assert.Equal(
+            MinecraftContentKind.ResourcePack,
+            await InspectContentKindAsync(fixture));
+    }
+
+    [Fact]
+    public async Task ContentInspectionLeavesAnUnstructuredZipUnknown()
+    {
+        using var fixture = new ArchiveFixture("unstructured.zip");
+        fixture.AddText("docs/readme.txt", "No Minecraft package structure");
+        fixture.AddText("shaders/readme.txt", "A folder name alone is not shader-pack evidence");
+        fixture.Complete();
+
+        Assert.Equal(
+            MinecraftContentKind.Unknown,
+            await InspectContentKindAsync(fixture));
+    }
+
+    [Fact]
     public async Task DoesNotTranslateOperationalStringsInUnknownMcmetaSchemas()
     {
         using var fixture = new ArchiveFixture("mcmeta-safety.jar");
@@ -1290,10 +1465,12 @@ public sealed class ArchiveWorkspaceBackendTests
     private static PipelineRequest CreateRequest(
         ArchiveFixture fixture,
         IReadOnlySet<TranslationStyle>? styles = null,
-        SignedArchiveHandling signedHandling = SignedArchiveHandling.Block) =>
+        SignedArchiveHandling signedHandling = SignedArchiveHandling.Block,
+        string targetLanguage = "zh_CN") =>
         new(
             fixture.ArchivePath,
             Path.Combine(fixture.DirectoryPath, "translated.jar"),
+            targetLanguage: targetLanguage,
             styles: styles ?? FormalOnly,
             signedArchiveHandling: signedHandling);
 
@@ -1311,7 +1488,7 @@ public sealed class ArchiveWorkspaceBackendTests
         IReadOnlyList<TranslationEntry> entries = await workspace.ReadTranslatableEntriesAsync(
             TestContext.Current.CancellationToken);
         await workspace.ApplyTranslationsAsync(
-            CreateTranslations(entries, request.Styles, translate),
+            CreateTranslations(entries, request.Styles, translate, request.TargetLanguage),
             TestContext.Current.CancellationToken);
         PackageVerification verification = await workspace.StagePackageAsync(
             request.OutputPath,
@@ -1323,10 +1500,21 @@ public sealed class ArchiveWorkspaceBackendTests
         return Assert.IsAssignableFrom<IReadOnlyList<PackageArtifact>>(verification.Artifacts);
     }
 
+    private static async Task<MinecraftContentKind> InspectContentKindAsync(ArchiveFixture fixture)
+    {
+        await using var workspace = await new ArchiveWorkspaceBackend(new TestArchiveScanner()).BeginAsync(
+            Guid.NewGuid(),
+            CreateRequest(fixture),
+            TestContext.Current.CancellationToken);
+        ArchiveInspection inspection = await workspace.InspectAsync(TestContext.Current.CancellationToken);
+        return inspection.ContentKind;
+    }
+
     private static TranslationBatchResult CreateTranslations(
         IReadOnlyList<TranslationEntry> entries,
         IReadOnlySet<TranslationStyle> styles,
-        Func<TranslationEntry, (string Formal, string Informal)> translate)
+        Func<TranslationEntry, (string Formal, string Informal)> translate,
+        string targetLanguage = "zh_CN")
     {
         TranslatedEntry[] translated = entries.Select(entry =>
         {
@@ -1344,7 +1532,7 @@ public sealed class ArchiveWorkspaceBackendTests
 
             return new TranslatedEntry(entry.RelativePath, entry.Key, "test-hash", variants);
         }).ToArray();
-        return new TranslationBatchResult("zh_CN", translated);
+        return new TranslationBatchResult(targetLanguage, translated);
     }
 
     private static JsonDocument ReadJson(ZipArchive archive, string path) =>

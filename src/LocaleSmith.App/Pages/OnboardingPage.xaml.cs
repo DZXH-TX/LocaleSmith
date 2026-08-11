@@ -94,6 +94,37 @@ public sealed partial class OnboardingPage : Page
         }
     }
 
+    private async void OnLanguageRestartClicked(object sender, RoutedEventArgs args)
+    {
+        if (!_loaded || !ViewModel.IsLanguageRestartRequired || ViewModel.IsBusy)
+        {
+            return;
+        }
+
+        OnboardingLanguageSelector.IsEnabled = false;
+        OnboardingLanguageRestartButton.IsEnabled = false;
+        try
+        {
+            if (!await ViewModel.SaveDisplayLanguageForRestartAsync().ConfigureAwait(true) ||
+                !ViewModel.TryGetPersistedDisplayLanguageForRestart(out var persistedLanguage))
+            {
+                return;
+            }
+
+            var failureReason = App.RestartWithDisplayLanguage(persistedLanguage);
+            ViewModel.ReportLanguageRestartFailure(failureReason);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            ViewModel.ReportLanguageRestartFailure(exception.Message);
+        }
+        finally
+        {
+            OnboardingLanguageSelector.IsEnabled = true;
+            OnboardingLanguageRestartButton.IsEnabled = true;
+        }
+    }
+
     private void OnSecretInputConsumed(object? sender, EventArgs args)
     {
         OnboardingNetworkApiKeyInput.Password = string.Empty;

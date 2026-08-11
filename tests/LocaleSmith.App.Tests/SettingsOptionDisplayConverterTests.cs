@@ -8,6 +8,9 @@ public sealed class SettingsOptionDisplayConverterTests
     [Theory]
     [InlineData("zh-CN", "LanguageOptionZhCn")]
     [InlineData("en-US", "LanguageOptionEnUs")]
+    [InlineData("ja-JP", "LanguageOptionJaJp")]
+    [InlineData("fr-FR", "LanguageOptionFrFr")]
+    [InlineData("ru-RU", "LanguageOptionRuRu")]
     public void UsesLocalizedLanguageLabels(string value, string resourceKey)
     {
         var expected = $"localized:{resourceKey}";

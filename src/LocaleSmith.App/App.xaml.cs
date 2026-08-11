@@ -191,6 +191,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<SecureAppStateService>();
         builder.Services.AddSingleton<IAppConfigurationService>(static services =>
             services.GetRequiredService<SecureAppStateService>());
+        builder.Services.AddSingleton<IAppDisplayLanguageService>(static services =>
+            services.GetRequiredService<SecureAppStateService>());
         builder.Services.AddSingleton<IOnboardingService>(static services =>
             services.GetRequiredService<SecureAppStateService>());
         builder.Services.AddSingleton<IModelSourceCatalog>(static services =>

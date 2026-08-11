@@ -7,6 +7,7 @@ using LocaleSmith.Application.Abstractions;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Archive.ClassFile;
 using LocaleSmith.Core.Models;
+using LocaleSmith.Core.Services;
 using LocaleSmith.NativeInterop;
 
 namespace LocaleSmith.Archive;
@@ -38,6 +39,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
     private readonly Dictionary<string, byte[]> _externalizationOverrides =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly List<ExternalizedSourceDescriptor> _externalizedSources = new();
+    private readonly Dictionary<TranslationStyle, Dictionary<string, string>> _expectedExternalizedTargetValues = new();
     private readonly Dictionary<string, IReadOnlyList<ClassFileRewriteSelection>> _appliedClassRewrites =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly List<StagedArtifact> _stagedArtifacts = new();
@@ -99,6 +101,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         try
         {
             _manifest = _scanner.ScanArchive(_sourcePath);
+            MinecraftContentKind contentKind = ClassifyContentKind(_manifest);
             NativeSignatureEvidence signatures = _manifest.Archive.Signatures;
             ArchiveSignatureState signatureState = signatures.Status switch
             {
@@ -126,11 +129,13 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 _manifest.ModMetadata.UsedFilenameFallback,
                 signatureState,
                 CanResign: false,
-                _warningsView);
+                _warningsView,
+                contentKind);
             _journal.Write(
                 "inspect",
                 "ok",
-                $"loader={_inspection.Loader}; modId={_inspection.ModId}; signature={signatureState}");
+                $"content={contentKind}; loader={_inspection.Loader}; modId={_inspection.ModId}; " +
+                $"signature={signatureState}");
             return Task.FromResult(_inspection);
         }
         catch (Exception exception)
@@ -524,11 +529,11 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 StringComparer.OrdinalIgnoreCase);
             var externalizedSources = new List<ExternalizedSourceDescriptor>(candidates.Count);
             string targetPath = CreateExternalizedTargetPath();
-            if (string.Equals(targetPath, CreateExternalizedFallbackPath(), StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    "Safe-subset externalization requires a target locale other than en_us so the original fallback can be preserved.");
-            }
+            string fallbackPath = CreateExternalizedFallbackPath();
+            bool targetIsFallback = string.Equals(
+                targetPath,
+                fallbackPath,
+                StringComparison.OrdinalIgnoreCase);
 
             foreach (IGrouping<string, HardcodedStringCandidate> classGroup in candidates.GroupBy(
                          static candidate => candidate.ArchivePath,
@@ -580,7 +585,6 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 }
             }
 
-            string fallbackPath = CreateExternalizedFallbackPath();
             string fallbackBase = FindEntry(fallbackPath) is null
                 ? "{}"
                 : await ReadTextResourceAsync(
@@ -600,14 +604,21 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 }
             }
 
-            byte[] fallbackOverride = JsonResourceEditor.UpdateLanguage(fallbackBase, fallbackValues);
-
             foreach ((string path, byte[] bytes) in classOverrides)
             {
                 _externalizationOverrides.Add(path, bytes);
             }
 
-            _externalizationOverrides.Add(fallbackPath, fallbackOverride);
+            // For an English target, en_us is the translated target itself. The verified
+            // translation becomes Minecraft's runtime fallback, so there is no second file in
+            // which the original literal can be preserved. Conflict checks above still run to
+            // prevent overwriting an unrelated existing key. Other targets keep the original
+            // literal in en_us exactly as before.
+            if (!targetIsFallback)
+            {
+                byte[] fallbackOverride = JsonResourceEditor.UpdateLanguage(fallbackBase, fallbackValues);
+                _externalizationOverrides.Add(fallbackPath, fallbackOverride);
+            }
             foreach ((string path, IReadOnlyList<ClassFileRewriteSelection> selections) in rewriteSelections)
             {
                 _appliedClassRewrites.Add(path, selections);
@@ -657,11 +668,15 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         try
         {
             _overrides.Clear();
+            _expectedExternalizedTargetValues.Clear();
             foreach (TranslationStyle style in _request.Styles)
             {
                 _overrides.Add(
                     style,
                     new Dictionary<string, byte[]>(_externalizationOverrides, StringComparer.OrdinalIgnoreCase));
+                _expectedExternalizedTargetValues.Add(
+                    style,
+                    new Dictionary<string, string>(StringComparer.Ordinal));
             }
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -702,6 +717,17 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                     }
 
                     patches.Add((descriptor, variant.Text));
+                    if (descriptor.Kind == TranslatableResourceKind.ExternalizedLanguageJson)
+                    {
+                        string key = descriptor.Key
+                            ?? throw new InvalidDataException(
+                                $"Externalized translation '{stableId}' has no translation key.");
+                        if (!_expectedExternalizedTargetValues[style].TryAdd(key, variant.Text))
+                        {
+                            throw new InvalidDataException(
+                                $"Externalized translation key '{key}' is duplicated for {style}.");
+                        }
+                    }
                 }
             }
 
@@ -1139,21 +1165,48 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
     private IEnumerable<NativeResourceEntry> SelectLanguageResources()
     {
+        string targetLocale = TranslationLanguageCatalog
+            .GetRequired(_request.TargetLanguage)
+            .MinecraftLocale;
         IEnumerable<NativeResourceEntry> resources = _manifest!.Resources.Where(static resource =>
             resource.Kind is "language_json" or "language_lang" && resource.Namespace is not null && resource.Locale is not null);
         foreach (IGrouping<(string Namespace, string Kind), NativeResourceEntry> group in resources.GroupBy(
                      static resource => (resource.Namespace!, resource.Kind)))
         {
-            NativeResourceEntry selected = group
-                .OrderBy(resource => LocaleRank(resource.Locale!, NormalizeLocale(_request.TargetLanguage)))
+            NativeResourceEntry[] sourceCandidates = group
+                .Where(resource => !string.Equals(
+                    NormalizeLocale(resource.Locale!),
+                    targetLocale,
+                    StringComparison.Ordinal))
+                .ToArray();
+            if (sourceCandidates.Length == 0)
+            {
+                AddWarning(
+                    $"Only target locale '{targetLocale}' exists for namespace '{group.Key.Namespace}' " +
+                    $"and resource kind '{group.Key.Kind}'; the existing target resource was preserved.");
+                continue;
+            }
+
+            NativeResourceEntry selected = sourceCandidates
+                .OrderBy(resource => LocaleRank(resource.Locale!))
                 .ThenBy(static resource => resource.Locale, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(static resource => resource.Path, StringComparer.Ordinal)
                 .First();
-            if (!string.Equals(NormalizeLocale(selected.Locale!), "en_us", StringComparison.Ordinal))
+            string selectedLocale = NormalizeLocale(selected.Locale!);
+            if (!string.Equals(selectedLocale, "en_us", StringComparison.Ordinal))
             {
-                AddWarning(
-                    $"No en_us {selected.Kind} resource exists for namespace '{selected.Namespace}'; " +
-                    $"deterministic fallback '{selected.Path}' was selected.");
+                if (string.Equals(targetLocale, "en_us", StringComparison.Ordinal))
+                {
+                    AddWarning(
+                        $"Target locale 'en_us' was excluded as a source for namespace '{selected.Namespace}'; " +
+                        $"deterministic source '{selected.Path}' ({selectedLocale}) was selected.");
+                }
+                else
+                {
+                    AddWarning(
+                        $"No en_us {selected.Kind} resource exists for namespace '{selected.Namespace}'; " +
+                        $"deterministic fallback '{selected.Path}' was selected.");
+                }
             }
 
             yield return selected;
@@ -1165,7 +1218,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             .Where(static resource => resource.Kind is "pack_text" or "mcmeta")
             .OrderBy(static resource => resource.ArchiveIndex);
 
-    private static int LocaleRank(string locale, string targetLocale)
+    private static int LocaleRank(string locale)
     {
         string normalized = NormalizeLocale(locale);
         if (normalized == "en_us")
@@ -1183,7 +1236,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             return 2;
         }
 
-        return normalized == targetLocale ? 4 : 3;
+        return 3;
     }
 
     private string CreateTargetArchivePath(NativeResourceEntry resource)
@@ -1195,11 +1248,15 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
         int slash = resource.Path.LastIndexOf('/');
         string extension = resource.Kind == "language_json" ? ".json" : ".lang";
-        return $"{resource.Path[..(slash + 1)]}{NormalizeLocale(_request.TargetLanguage)}{extension}";
+        string targetLocale = TranslationLanguageCatalog
+            .GetRequired(_request.TargetLanguage)
+            .MinecraftLocale;
+        return $"{resource.Path[..(slash + 1)]}{targetLocale}{extension}";
     }
 
     private string CreateExternalizedTargetPath() =>
-        CreateExternalizedLanguagePath(NormalizeLocale(_request.TargetLanguage));
+        CreateExternalizedLanguagePath(
+            TranslationLanguageCatalog.GetRequired(_request.TargetLanguage).MinecraftLocale);
 
     private string CreateExternalizedFallbackPath() =>
         CreateExternalizedLanguagePath("en_us");
@@ -1716,6 +1773,14 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                      static source => source.TargetArchivePath,
                      StringComparer.OrdinalIgnoreCase))
         {
+            if (!_expectedExternalizedTargetValues.TryGetValue(
+                    artifact.Style,
+                    out Dictionary<string, string>? expectedTargetValues))
+            {
+                throw new InvalidDataException(
+                    $"No expected externalized target values were recorded for {artifact.Style}.");
+            }
+
             byte[] targetBytes = await ReadStagedEntryBytesAsync(
                     artifact,
                     artifactGuard,
@@ -1728,16 +1793,26 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 .ToDictionary(static item => item.Key, static item => item.Value, StringComparer.Ordinal);
             foreach (ExternalizedSourceDescriptor source in group)
             {
-                if (!targetEntries.ContainsKey(source.TranslationKey))
+                if (!expectedTargetValues.TryGetValue(source.TranslationKey, out string? expectedTarget) ||
+                    !targetEntries.TryGetValue(source.TranslationKey, out string? actualTarget) ||
+                    !string.Equals(actualTarget, expectedTarget, StringComparison.Ordinal))
                 {
                     throw new InvalidDataException(
-                        $"Target language resource '{group.Key}' is missing externalized key '{source.TranslationKey}'.");
+                        $"Target language resource '{group.Key}' does not contain the expected translation for " +
+                        $"externalized key '{source.TranslationKey}'.");
                 }
             }
         }
 
+        string fallbackPath = CreateExternalizedFallbackPath();
+        string targetPath = CreateExternalizedTargetPath();
+        if (string.Equals(fallbackPath, targetPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
         foreach (IGrouping<string, ExternalizedSourceDescriptor> group in _externalizedSources.GroupBy(
-                     _ => CreateExternalizedFallbackPath(),
+                     _ => fallbackPath,
                      StringComparer.OrdinalIgnoreCase))
         {
             byte[] fallbackBytes = await ReadStagedEntryBytesAsync(
@@ -1999,10 +2074,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
     private static string NormalizeLocale(string locale)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(locale);
-        string normalized = locale.Trim().Replace('-', '_').ToLowerInvariant();
-        if (normalized.Length == 0 || normalized.Any(static character =>
-                !(character is >= 'a' and <= 'z' or >= '0' and <= '9' or '_')))
+        if (!TranslationLanguageCatalog.TryNormalizeMinecraftLocaleToken(locale, out string? normalized))
         {
             throw new InvalidDataException($"Unsafe or unsupported locale identifier '{locale}'.");
         }
@@ -2020,6 +2092,58 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
 
     private static string CreatePackageIdentity(NativeModMetadata metadata) =>
         $"{metadata.PrimaryLoader ?? "unknown"}:{metadata.PrimaryModId}";
+
+    private static MinecraftContentKind ClassifyContentKind(ArchiveScanManifest manifest)
+    {
+        bool hasLoaderMetadata = !string.IsNullOrWhiteSpace(manifest.ModMetadata.PrimaryLoader) ||
+            manifest.ModMetadata.Sources.Count > 0;
+        bool hasJavaClasses = manifest.Archive.Entries.Any(static entry =>
+            string.Equals(entry.EntryType, "file", StringComparison.OrdinalIgnoreCase) &&
+            entry.Path.EndsWith(".class", StringComparison.OrdinalIgnoreCase));
+        bool usesJarExtension = manifest.Source.FileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase);
+        if (hasLoaderMetadata || hasJavaClasses)
+        {
+            return MinecraftContentKind.Mod;
+        }
+
+        bool hasShaderPackRoot = manifest.Archive.Entries.Any(static entry =>
+        {
+            string path = entry.Path.Replace('\\', '/').TrimStart('/');
+            if (!path.StartsWith("shaders/", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return string.Equals(path, "shaders/shaders.properties", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("shaders/lang/", StringComparison.OrdinalIgnoreCase) &&
+                path.EndsWith(".lang", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".vsh", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".fsh", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".gsh", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".csh", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".glsl", StringComparison.OrdinalIgnoreCase);
+        });
+        if (hasShaderPackRoot)
+        {
+            return MinecraftContentKind.ShaderPack;
+        }
+
+        bool hasResourcePackStructure = manifest.Archive.Entries.Any(static entry =>
+        {
+            string path = entry.Path.Replace('\\', '/').TrimStart('/');
+            return string.Equals(path, "pack.mcmeta", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "pack.txt", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("assets/", StringComparison.OrdinalIgnoreCase);
+        });
+        if (hasResourcePackStructure)
+        {
+            return MinecraftContentKind.ResourcePack;
+        }
+
+        return usesJarExtension
+            ? MinecraftContentKind.Mod
+            : MinecraftContentKind.Unknown;
+    }
 
     private bool ShouldRemoveSignature(string archivePath) =>
         _request.SignedArchiveHandling == SignedArchiveHandling.CreateUnsignedCopy &&

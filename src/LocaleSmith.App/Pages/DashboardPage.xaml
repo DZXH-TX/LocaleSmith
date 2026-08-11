@@ -75,10 +75,8 @@
                             Text="{Binding NextAction}"
                             TextWrapping="WrapWholeWords"
                             Visibility="{Binding HasNextAction, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{Binding TranslationStyleName}" />
-                            <TextBlock Text="{Binding ArtifactStatus}" />
-                        </StackPanel>
+                        <TextBlock Text="{Binding TranslationProfile}" TextWrapping="WrapWholeWords" />
+                        <TextBlock Text="{Binding ArtifactStatus}" TextWrapping="WrapWholeWords" />
                     </StackPanel>
                     <TextBlock
                         Grid.Row="4"
@@ -166,6 +164,27 @@
                     Text="{Binding EmptyModelSourcesMessage}"
                     TextWrapping="WrapWholeWords"
                     Visibility="{Binding HasModelSources, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}" />
+                <ComboBox
+                    x:Uid="DashboardTargetLanguageSelector"
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding TargetLanguages}"
+                    SelectedItem="{Binding SelectedTargetLanguage, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel AutomationProperties.Name="{Binding AccessibleLabel}">
+                                <TextBlock Text="{Binding DisplayName}" />
+                                <TextBlock
+                                    Style="{ThemeResource CaptionTextBlockStyle}"
+                                    Text="{Binding DetailText}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock
+                    x:Uid="DashboardTargetLanguageHelp"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextWrapping="WrapWholeWords" />
                 <ComboBox
                     x:Uid="DashboardStyleSelector"
                     HorizontalAlignment="Stretch"

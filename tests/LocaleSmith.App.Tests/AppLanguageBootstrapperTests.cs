@@ -22,7 +22,7 @@ public sealed class AppLanguageBootstrapperTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("fr-FR")]
+    [InlineData("de-DE")]
     public void FallsBackBeforeInitializingResourcesWhenPersistedLanguageIsUnsupported(
         string? persistedLanguage)
     {

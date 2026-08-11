@@ -1,3 +1,4 @@
+using LocaleSmith.Core.Services;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
 using LocaleSmith.Presentation.Services;
@@ -48,6 +49,7 @@ public sealed class OutputPathAndSettingsTests
 
             var firstOutput = await strategy.CreateOutputPathAsync(
                 sourcePath,
+                TranslationLanguageCatalog.DefaultLocale,
                 TestContext.Current.CancellationToken);
             configuration.Configuration = configuration.Configuration with
             {
@@ -55,6 +57,7 @@ public sealed class OutputPathAndSettingsTests
             };
             var secondOutput = await strategy.CreateOutputPathAsync(
                 sourcePath,
+                TranslationLanguageCatalog.DefaultLocale,
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(
@@ -63,6 +66,40 @@ public sealed class OutputPathAndSettingsTests
             Assert.Equal(
                 Path.Combine(secondWorkspace, "LocaleSmith.Output", "example.zh_CN.jar"),
                 secondOutput);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("zh_CN", "zh_CN")]
+    [InlineData("en_US", "en_US")]
+    [InlineData("ja-jp", "ja_JP")]
+    [InlineData("fr_FR", "fr_FR")]
+    [InlineData("ru_RU", "ru_RU")]
+    public async Task OutputStrategyUsesTheCanonicalTargetLocaleInTheArtifactName(
+        string targetLanguage,
+        string expectedLocale)
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var sourcePath = Path.Combine(testRoot, "example.jar");
+            await File.WriteAllTextAsync(sourcePath, "archive", TestContext.Current.CancellationToken);
+            var workspace = Path.Combine(testRoot, "workspace");
+            var strategy = new DefaultOutputPathStrategy(
+                new MutableConfigurationService(CreateConfiguration(workspace)));
+
+            string output = await strategy.CreateOutputPathAsync(
+                sourcePath,
+                targetLanguage,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(
+                Path.Combine(workspace, "LocaleSmith.Output", $"example.{expectedLocale}.jar"),
+                output);
         }
         finally
         {
@@ -85,6 +122,7 @@ public sealed class OutputPathAndSettingsTests
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 strategy.CreateOutputPathAsync(
                     sourceDirectory,
+                    TranslationLanguageCatalog.DefaultLocale,
                     TestContext.Current.CancellationToken));
             Assert.False(Directory.Exists(nestedWorkspace));
         }
@@ -125,6 +163,7 @@ public sealed class OutputPathAndSettingsTests
             await Assert.ThrowsAsync<IOException>(() =>
                 strategy.CreateOutputPathAsync(
                     sourcePath,
+                    TranslationLanguageCatalog.DefaultLocale,
                     TestContext.Current.CancellationToken));
         }
         finally
@@ -174,6 +213,7 @@ public sealed class OutputPathAndSettingsTests
             await Assert.ThrowsAsync<IOException>(() =>
                 strategy.CreateOutputPathAsync(
                     sourcePath,
+                    TranslationLanguageCatalog.DefaultLocale,
                     TestContext.Current.CancellationToken));
             Assert.Equal(
                 "do-not-touch",

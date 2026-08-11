@@ -2,6 +2,7 @@ using System.Net;
 using LocaleSmith.Application;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
+using LocaleSmith.Core.Services;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
 using LocaleSmith.Presentation.ViewModels;
@@ -22,6 +23,8 @@ public sealed class DashboardViewModelTests
         viewModel.SelectedModelSource = viewModel.ModelSources.Single(source => source.Id == "two");
         viewModel.SelectedTranslationStyle = viewModel.TranslationStyles.Single(
             option => option.Style == TranslationStyle.Informal);
+        viewModel.SelectedTargetLanguage = viewModel.TargetLanguages.Single(
+            option => option.CanonicalLocale == "ja_JP");
 
         await selection.SelectionObserved.Task.WaitAsync(TestContext.Current.CancellationToken);
         Assert.Equal("two", selection.SelectedSource?.Id);
@@ -31,8 +34,12 @@ public sealed class DashboardViewModelTests
         {
             await viewModel.EnqueuePackagesAsync([input], TestContext.Current.CancellationToken);
             var pending = Assert.Single(queue.Pending);
+            viewModel.SelectedTargetLanguage = viewModel.TargetLanguages.Single(
+                option => option.CanonicalLocale == "fr_FR");
             Assert.Equal("two", pending.Request.ModelSourceId);
             Assert.Equal(TranslationStyle.Informal, pending.Request.Style);
+            Assert.Equal("ja_JP", pending.Request.TargetLanguage);
+            Assert.Equal("ja_JP", output.LastTargetLanguage);
             queue.Report(pending.JobId, PipelineStage.Translating, 0.5);
             pending.Completion.SetResult(new TranslationQueueResult(
                 pending.JobId,
@@ -42,7 +49,8 @@ public sealed class DashboardViewModelTests
                 ["informal.jar"],
                 [],
                 0,
-                TranslationStyle.Informal));
+                TranslationStyle.Informal,
+                "ja_JP"));
 
             await WaitUntilAsync(
                 () => Assert.Single(viewModel.QueueItems).Stage == PipelineStage.Completed,
@@ -51,6 +59,8 @@ public sealed class DashboardViewModelTests
             Assert.Equal("examplemod", item.ModId);
             Assert.Equal(100, item.ProgressPercent);
             Assert.Equal(TranslationStyle.Informal, item.Style);
+            Assert.Equal("ja_JP", item.TargetLanguage);
+            Assert.Contains("Japanese", item.TranslationProfile, StringComparison.Ordinal);
             Assert.True(item.ArtifactReady);
         }
         finally
@@ -72,6 +82,12 @@ public sealed class DashboardViewModelTests
         Assert.False(viewModel.HasModelSources);
         Assert.False(viewModel.CanEnqueuePackages);
         Assert.Equal(TranslationStyle.Formal, viewModel.SelectedTranslationStyle.Style);
+        Assert.Equal(
+            ["zh_CN", "en_US", "ja_JP", "fr_FR", "ru_RU"],
+            viewModel.TargetLanguages.Select(static language => language.CanonicalLocale));
+        Assert.Equal(
+            TranslationLanguageCatalog.DefaultLocale,
+            viewModel.SelectedTargetLanguage.CanonicalLocale);
 
         var sourceOne = CreateSource("one", "Local translations", "llama3");
         var sourceTwo = CreateSource("two", "Team glossary", "qwen2.5:7b");
@@ -615,11 +631,15 @@ public sealed class DashboardViewModelTests
     {
         public string OutputPath { get; } = Path.Combine(Path.GetTempPath(), "translated.jar");
 
+        public string? LastTargetLanguage { get; private set; }
+
         public Task<string> CreateOutputPathAsync(
             string sourcePath,
+            string targetLanguage,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            LastTargetLanguage = targetLanguage;
             return Task.FromResult(OutputPath);
         }
     }

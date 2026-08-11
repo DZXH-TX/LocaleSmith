@@ -1,3 +1,4 @@
+using LocaleSmith.Core.Services;
 using LocaleSmith.Presentation.Abstractions;
 
 namespace LocaleSmith.Presentation.Services;
@@ -15,9 +16,13 @@ public sealed class DefaultOutputPathStrategy : IOutputPathStrategy
 
     public async Task<string> CreateOutputPathAsync(
         string sourcePath,
+        string targetLanguage,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        string canonicalTargetLanguage = TranslationLanguageCatalog
+            .GetRequired(targetLanguage)
+            .CanonicalLocale;
         var sourceFullPath = Path.GetFullPath(sourcePath);
         var sourceIsDirectory = Directory.Exists(sourceFullPath);
         if (!sourceIsDirectory && !File.Exists(sourceFullPath))
@@ -74,7 +79,7 @@ public sealed class DefaultOutputPathStrategy : IOutputPathStrategy
         }
 
         var outputPath = Path.GetFullPath(
-            Path.Combine(outputRoot, $"{sourceName}.zh_CN{extension}"));
+            Path.Combine(outputRoot, $"{sourceName}.{canonicalTargetLanguage}{extension}"));
         if (!IsSameOrDescendant(outputPath, outputRoot) ||
             string.Equals(outputPath, sourceFullPath, StringComparison.OrdinalIgnoreCase))
         {

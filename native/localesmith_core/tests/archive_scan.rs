@@ -150,6 +150,31 @@ fn scans_fabric_resources_zip_metadata_and_signature_evidence() {
 }
 
 #[test]
+fn scans_shader_pack_language_resources() {
+    let archive = TestArchive::new("shader-pack.zip");
+    archive.write_entries(
+        &[
+            ("shaders/shaders.properties", b"screen=BLOOM"),
+            (
+                "shaders/lang/en_us.lang",
+                b"option.BLOOM=Bloom\noption.BLOOM.comment=Soft glow",
+            ),
+        ],
+        None,
+    );
+
+    let manifest = scan_archive(&archive.path).unwrap();
+    let language = manifest
+        .resources
+        .iter()
+        .find(|resource| resource.path == "shaders/lang/en_us.lang")
+        .unwrap();
+    assert_eq!(language.kind, ResourceKind::LanguageLang);
+    assert_eq!(language.namespace.as_deref(), Some("@shaderpack"));
+    assert_eq!(language.locale.as_deref(), Some("en_us"));
+}
+
+#[test]
 fn detects_neoforge_forge_quilt_and_legacy_forge_metadata() {
     let cases: &[(&str, &str, &[u8], ModLoader, &str)] = &[
         (
