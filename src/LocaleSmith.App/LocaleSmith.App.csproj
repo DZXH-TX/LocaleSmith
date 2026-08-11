@@ -9,6 +9,7 @@
     <Product>LocaleSmith</Product>
     <Description>LocaleSmith — Minecraft mod and resource-pack localization workspace</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Icons\favicon_512.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -36,6 +37,10 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="LocaleSmith.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Icons\favicon_512.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup Condition="Exists('$(NativeCoreDll)')">

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Abstractions;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Application.Services;
@@ -68,9 +69,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             _translationLogs?.CompleteSession(
                 jobId,
                 TranslationLogLevel.Error,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Translation queue rejected the job | type={exception.GetType().Name} | hresult=0x{exception.HResult:X8}"));
+                CreateFailureLogMessage("Translation queue rejected the job", exception));
             throw;
         }
 
@@ -162,15 +161,33 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             _translationLogs?.CompleteSession(
                 jobId,
                 TranslationLogLevel.Error,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Translation failed | type={exception.GetType().Name} | hresult=0x{exception.HResult:X8}"));
+                CreateFailureLogMessage("Translation failed", exception));
             throw;
         }
         finally
         {
             _lastLoggedStages.TryRemove(jobId, out _);
         }
+    }
+
+    internal static string CreateFailureLogMessage(string operation, Exception exception)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(operation);
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var pipelineException = exception as PipelineException;
+        var cause = pipelineException?.InnerException ?? exception;
+        var stage = pipelineException?.FailedStage.ToString() ?? "none";
+        var modelFailure = cause as ModelServiceException;
+        var httpStatus = modelFailure?.StatusCode is { } statusCode
+            ? ((int)statusCode).ToString(CultureInfo.InvariantCulture)
+            : "none";
+        var requestId = modelFailure?.RequestId ?? "none";
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{operation} | stage={stage} | type={exception.GetType().Name} | cause={cause.GetType().Name} | " +
+            $"http={httpStatus} | request={requestId} | hresult=0x{exception.HResult:X8} | detail={cause.Message}");
     }
 
     private static async Task<TranslationQueueResult> ConvertResultAsync(

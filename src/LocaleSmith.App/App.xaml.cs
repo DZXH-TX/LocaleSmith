@@ -1,3 +1,4 @@
+using System.Globalization;
 using LocaleSmith.App.Services;
 using LocaleSmith.Application.Abstractions;
 using LocaleSmith.Application.Services;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
 using Microsoft.Windows.Globalization;
 
 namespace LocaleSmith.App;
@@ -24,10 +26,17 @@ namespace LocaleSmith.App;
 public partial class App : Microsoft.UI.Xaml.Application
 {
     private IHost? _host;
+    private readonly string _bootstrapLanguage;
 
     public App()
     {
-        InitializeComponent();
+        // The unpackaged app cannot rely on PrimaryLanguageOverride persisting between processes.
+        // Read the non-sensitive bootstrap preference synchronously so MRT Core sees it before
+        // App.xaml loads any XAML or ResourceLoader-backed content.
+        _bootstrapLanguage = AppLanguageBootstrapper.Initialize(
+            LoadBootstrapLanguageOrDefault(),
+            ApplyDisplayLanguage,
+            InitializeComponent);
     }
 
     public static IServiceProvider Services =>
@@ -40,14 +49,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     {
         try
         {
-            var currentLocalAppData = System.Environment.GetFolderPath(
-                System.Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrWhiteSpace(currentLocalAppData))
-            {
-                throw new InvalidOperationException("The per-user application-data directory is unavailable.");
-            }
-
-            var currentAppDataRoot = Path.Combine(Path.GetFullPath(currentLocalAppData), "LocaleSmith");
+            var currentAppDataRoot = GetCurrentAppDataRoot();
             var currentCredentialStore = new WindowsCredentialSecretStore("LocaleSmith");
             var legacyCredentialStore = new WindowsCredentialSecretStore("JaxI18n");
             var legacyAppDataRoots = await LegacyAppDataMigrationCoordinator
@@ -69,9 +71,9 @@ public partial class App : Microsoft.UI.Xaml.Application
             var state = _host.Services.GetRequiredService<SecureAppStateService>();
             await state.InitializeAsync().ConfigureAwait(true);
             var configuration = await state.LoadAsync().ConfigureAwait(true);
-            // This unpackaged app must set its process-wide MRT Core language before DI resolves
-            // WinUiTextProvider or MainWindow and their localized resources are constructed.
-            ApplicationLanguages.PrimaryLanguageOverride = configuration.Language;
+            var configuredLanguage = AppDisplayLanguages.ResolveOrDefault(configuration.Language);
+            ApplyDisplayLanguage(configuredLanguage);
+            SynchronizeBootstrapLanguageBestEffort(currentAppDataRoot, configuredLanguage);
             _host.Services.GetRequiredService<AppMotionService>()
                 .SetForceAppAnimations(configuration.ForceAppAnimations);
             MainWindow = _host.Services.GetRequiredService<MainWindow>();
@@ -85,6 +87,67 @@ public partial class App : Microsoft.UI.Xaml.Application
             MainWindow.Closed += OnMainWindowClosed;
             MainWindow.Activate();
         }
+    }
+
+    public static string RestartWithDisplayLanguage(string language)
+    {
+        AppLanguagePreferenceStore.Save(GetCurrentAppDataRoot(), language);
+        return AppInstance.Restart(string.Empty).ToString();
+    }
+
+    private static void ApplyDisplayLanguage(string language)
+    {
+        ApplicationLanguages.PrimaryLanguageOverride = language;
+        var uiCulture = CultureInfo.GetCultureInfo(language);
+        CultureInfo.CurrentUICulture = uiCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = uiCulture;
+    }
+
+    private static string LoadBootstrapLanguageOrDefault()
+    {
+        try
+        {
+            return AppLanguagePreferenceStore.LoadOrDefault(GetCurrentAppDataRoot());
+        }
+        catch (InvalidOperationException)
+        {
+            return AppDisplayLanguages.DefaultLanguage;
+        }
+    }
+
+    private void SynchronizeBootstrapLanguageBestEffort(string appDataRoot, string language)
+    {
+        if (string.Equals(_bootstrapLanguage, language, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        try
+        {
+            AppLanguagePreferenceStore.Save(appDataRoot, language);
+        }
+        catch (Exception exception) when (exception is
+            IOException or
+            UnauthorizedAccessException or
+            ArgumentException or
+            NotSupportedException or
+            PathTooLongException)
+        {
+            // The encrypted configuration remains authoritative. A later explicit restart action
+            // will surface bootstrap preference write failures to the user.
+        }
+    }
+
+    private static string GetCurrentAppDataRoot()
+    {
+        var currentLocalAppData = System.Environment.GetFolderPath(
+            System.Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(currentLocalAppData))
+        {
+            throw new InvalidOperationException("The per-user application-data directory is unavailable.");
+        }
+
+        return Path.Combine(Path.GetFullPath(currentLocalAppData), "LocaleSmith");
     }
 
     private static IHost BuildHost(

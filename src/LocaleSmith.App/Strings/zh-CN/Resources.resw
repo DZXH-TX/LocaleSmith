@@ -5,6 +5,7 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
   <data name="MainWindow.Title" xml:space="preserve"><value>译匠</value></data>
+  <data name="MainWindowTitle" xml:space="preserve"><value>译匠</value></data>
   <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>译匠</value></data>
   <data name="DashboardNavigationItem.Content" xml:space="preserve"><value>处理队列</value></data>
   <data name="ModelSourcesNavigationItem.Content" xml:space="preserve"><value>模型源</value></data>
@@ -157,8 +158,15 @@
   <data name="SettingsStatus.Title" xml:space="preserve"><value>设置已保存</value></data>
   <data name="AppearanceSectionTitle.Text" xml:space="preserve"><value>外观与语言</value></data>
   <data name="LanguageSelector.Header" xml:space="preserve"><value>显示语言</value></data>
-  <data name="LanguageRestartHelp.Text" xml:space="preserve"><value>语言更改会安全保存；完全重启应用后所有资源生效。</value></data>
+  <data name="LanguageOptionZhCn" xml:space="preserve"><value>简体中文（中国）</value></data>
+  <data name="LanguageOptionEnUs" xml:space="preserve"><value>English (United States)</value></data>
+  <data name="LanguageRestartHelp.Text" xml:space="preserve"><value>选择新语言后，请点击“保存并重启”，LocaleSmith 将重新加载全部界面资源。</value></data>
+  <data name="LanguageRestartButton.Content" xml:space="preserve"><value>保存并重启</value></data>
+  <data name="LanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>保存显示语言并重启译匠</value></data>
   <data name="ThemeSelector.Header" xml:space="preserve"><value>主题</value></data>
+  <data name="ThemeOptionSystem" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="ThemeOptionLight" xml:space="preserve"><value>浅色</value></data>
+  <data name="ThemeOptionDark" xml:space="preserve"><value>深色</value></data>
   <data name="ForceAppAnimationsToggle.Header" xml:space="preserve"><value>强制启用应用动画</value></data>
   <data name="ForceAppAnimationsToggle.OffContent" xml:space="preserve"><value>遵循系统设置</value></data>
   <data name="ForceAppAnimationsToggle.OnContent" xml:space="preserve"><value>已强制启用</value></data>
@@ -251,6 +259,9 @@
   <data name="QueueFailureSummaryRolledBack" xml:space="preserve"><value>任务失败，所有暂存更改均已安全回滚。</value></data>
   <data name="QueueFailureSummaryRollbackFailed" xml:space="preserve"><value>任务失败且回滚未完成；重试前请检查工作区。</value></data>
   <data name="QueueFailureSummaryNoRollback" xml:space="preserve"><value>任务在提交输出前失败，无需回滚。</value></data>
+  <data name="QueueFailureModelCredentials" xml:space="preserve"><value>模型服务拒绝了已保存的凭据。请在“模型来源”中更新 API Key、测试连接，然后重试。</value></data>
+  <data name="QueueFailureModelService" xml:space="preserve"><value>模型服务请求失败。重试前请检查已保存的端点、模型、凭据，并测试连接。</value></data>
+  <data name="QueueFailureModelResponse" xml:space="preserve"><value>模型返回的内容无法安全应用。请查看技术详情后重试。</value></data>
   <data name="QueueStageQueued" xml:space="preserve"><value>已排队</value></data>
   <data name="QueueStageInspecting" xml:space="preserve"><value>检查包</value></data>
   <data name="QueueStageExtracting" xml:space="preserve"><value>创建安全工作区</value></data>
@@ -336,6 +347,8 @@
   <data name="SettingsWorkspaceSandboxAndLogRequired" xml:space="preserve"><value>必须同时提供工作区、沙箱和日志目录路径。</value></data>
   <data name="SettingsSaved" xml:space="preserve"><value>设置已安全保存。</value></data>
   <data name="SettingsSaveFailed" xml:space="preserve"><value>无法保存设置：{0}</value></data>
+  <data name="SettingsRestartFailed" xml:space="preserve"><value>应用无法重启以应用显示语言：{0}</value></data>
+  <data name="SettingsNavigationLabel" xml:space="preserve"><value>设置</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>无法打开命令审阅：{0}</value></data>
   <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>模型助手</value></data>
   <data name="AssistantTitle.Text" xml:space="preserve"><value>模型与终端助手</value></data>

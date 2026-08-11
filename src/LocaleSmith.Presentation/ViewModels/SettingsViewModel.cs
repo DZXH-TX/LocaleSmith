@@ -11,7 +11,8 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly object _stateGate = new();
     private AppConfiguration? _loadedConfiguration;
-    private string _language = "zh-CN";
+    private string _language = AppDisplayLanguages.DefaultLanguage;
+    private string _appliedLanguage = AppDisplayLanguages.DefaultLanguage;
     private AppThemePreference _theme;
     private bool _forceAppAnimations;
     private string _workspacePath = string.Empty;
@@ -31,7 +32,7 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
         SaveCommand = new AsyncRelayCommand(SaveAsync, () => !IsBusy);
     }
 
-    public IReadOnlyList<string> LanguageOptions { get; } = ["zh-CN", "en-US"];
+    public IReadOnlyList<string> LanguageOptions { get; } = AppDisplayLanguages.Supported;
 
     public IReadOnlyList<AppThemePreference> ThemeOptions { get; } =
         Enum.GetValues<AppThemePreference>();
@@ -46,9 +47,14 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
             if (SetProperty(ref _language, value))
             {
                 MarkChanged();
+                OnPropertyChanged(nameof(IsLanguageRestartRequired));
             }
         }
     }
+
+    public bool IsLanguageRestartRequired =>
+        _loadedConfiguration is not null &&
+        !string.Equals(_language, _appliedLanguage, StringComparison.Ordinal);
 
     public AppThemePreference Theme
     {
@@ -139,7 +145,8 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
             try
             {
                 var loaded = await _configurationService.LoadAsync(cancellationToken).ConfigureAwait(true);
-                Language = loaded.Language;
+                var loadedLanguage = AppDisplayLanguages.ResolveOrDefault(loaded.Language);
+                Language = loadedLanguage;
                 Theme = loaded.Theme;
                 ForceAppAnimations = loaded.ForceAppAnimations;
                 WorkspacePath = loaded.WorkspacePath;
@@ -150,9 +157,11 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
                 lock (_stateGate)
                 {
                     _loadedConfiguration = loaded;
+                    _appliedLanguage = loadedLanguage;
                     _changeVersion = 0;
                     _persistedVersion = 0;
                 }
+                OnPropertyChanged(nameof(IsLanguageRestartRequired));
 
                 ErrorMessage = null;
             }
@@ -252,6 +261,15 @@ public sealed class SettingsViewModel : ViewModelBase, IDisposable
         {
             _operationGate.Dispose();
         }
+    }
+
+    public void ReportLanguageRestartFailure(string detail)
+    {
+        ErrorMessage = Text(
+            "SettingsRestartFailed",
+            "The app could not restart to apply the display language: {0}",
+            detail);
+        StatusMessage = null;
     }
 
     private void MarkChanged()

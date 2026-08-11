@@ -5,6 +5,7 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
   <data name="MainWindow.Title" xml:space="preserve"><value>LocaleSmith</value></data>
+  <data name="MainWindowTitle" xml:space="preserve"><value>LocaleSmith</value></data>
   <data name="RootNavigation.PaneTitle" xml:space="preserve"><value>LocaleSmith</value></data>
   <data name="DashboardNavigationItem.Content" xml:space="preserve"><value>Processing queue</value></data>
   <data name="ModelSourcesNavigationItem.Content" xml:space="preserve"><value>Model sources</value></data>
@@ -157,8 +158,15 @@
   <data name="SettingsStatus.Title" xml:space="preserve"><value>Settings saved</value></data>
   <data name="AppearanceSectionTitle.Text" xml:space="preserve"><value>Appearance and language</value></data>
   <data name="LanguageSelector.Header" xml:space="preserve"><value>Display language</value></data>
-  <data name="LanguageRestartHelp.Text" xml:space="preserve"><value>The language choice is saved securely. Restart the app to apply every resource.</value></data>
+  <data name="LanguageOptionZhCn" xml:space="preserve"><value>简体中文（中国）</value></data>
+  <data name="LanguageOptionEnUs" xml:space="preserve"><value>English (United States)</value></data>
+  <data name="LanguageRestartHelp.Text" xml:space="preserve"><value>After choosing a language, select Save and restart so LocaleSmith can reload every UI resource.</value></data>
+  <data name="LanguageRestartButton.Content" xml:space="preserve"><value>Save and restart</value></data>
+  <data name="LanguageRestartButton.AutomationProperties.Name" xml:space="preserve"><value>Save the display language and restart LocaleSmith</value></data>
   <data name="ThemeSelector.Header" xml:space="preserve"><value>Theme</value></data>
+  <data name="ThemeOptionSystem" xml:space="preserve"><value>System</value></data>
+  <data name="ThemeOptionLight" xml:space="preserve"><value>Light</value></data>
+  <data name="ThemeOptionDark" xml:space="preserve"><value>Dark</value></data>
   <data name="ForceAppAnimationsToggle.Header" xml:space="preserve"><value>Force app animations</value></data>
   <data name="ForceAppAnimationsToggle.OffContent" xml:space="preserve"><value>Follow system setting</value></data>
   <data name="ForceAppAnimationsToggle.OnContent" xml:space="preserve"><value>Forced on</value></data>
@@ -251,6 +259,9 @@
   <data name="QueueFailureSummaryRolledBack" xml:space="preserve"><value>The job failed, and all staged changes were rolled back safely.</value></data>
   <data name="QueueFailureSummaryRollbackFailed" xml:space="preserve"><value>The job failed and rollback did not finish. Review the workspace before retrying.</value></data>
   <data name="QueueFailureSummaryNoRollback" xml:space="preserve"><value>The job failed before output was committed; no rollback was needed.</value></data>
+  <data name="QueueFailureModelCredentials" xml:space="preserve"><value>The model service rejected the saved credential. Update the API key in Model sources, test the connection, and retry.</value></data>
+  <data name="QueueFailureModelService" xml:space="preserve"><value>The model service request failed. Review the saved endpoint, model, credential, and connection test before retrying.</value></data>
+  <data name="QueueFailureModelResponse" xml:space="preserve"><value>The model returned a response that could not be applied safely. Review the technical details and retry.</value></data>
   <data name="QueueStageQueued" xml:space="preserve"><value>Queued</value></data>
   <data name="QueueStageInspecting" xml:space="preserve"><value>Inspect package</value></data>
   <data name="QueueStageExtracting" xml:space="preserve"><value>Create safe workspace</value></data>
@@ -336,6 +347,8 @@
   <data name="SettingsWorkspaceSandboxAndLogRequired" xml:space="preserve"><value>Workspace, sandbox, and log directory paths are required.</value></data>
   <data name="SettingsSaved" xml:space="preserve"><value>Settings saved securely.</value></data>
   <data name="SettingsSaveFailed" xml:space="preserve"><value>Settings could not be saved: {0}</value></data>
+  <data name="SettingsRestartFailed" xml:space="preserve"><value>The app could not restart to apply the display language: {0}</value></data>
+  <data name="SettingsNavigationLabel" xml:space="preserve"><value>Settings</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>The command review could not be opened: {0}</value></data>
   <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>Model assistant</value></data>
   <data name="AssistantTitle.Text" xml:space="preserve"><value>Model and terminal assistant</value></data>

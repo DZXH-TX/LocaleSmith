@@ -1,3 +1,5 @@
+using System.Net;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
 using LocaleSmith.Presentation.Abstractions;
@@ -203,6 +205,102 @@ public sealed class DashboardViewModelTests
         item.Fail("backend technical detail");
         Assert.Equal("任务安全失败，源文件未改变。", item.ErrorDetails);
         Assert.Equal("backend technical detail", item.TechnicalErrorDetails);
+    }
+
+    [Fact]
+    public void UnauthorizedModelFailureShowsActionableLocalizedGuidance()
+    {
+        var text = new DictionaryTextProvider(new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["QueueFailureSummaryNoRollback"] = "任务安全失败。",
+            ["QueueFailureModelCredentials"] = "请更新 API Key 并测试连接。"
+        });
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"),
+            text);
+        var modelFailure = new ModelServiceException(
+            "OpenAI-compatible endpoint returned HTTP 401 (Unauthorized).",
+            HttpStatusCode.Unauthorized,
+            responseBody: "provider body must not be displayed",
+            requestId: "request-401");
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Translating,
+            "generic outer message",
+            modelFailure);
+
+        item.Fail(pipelineFailure);
+
+        Assert.Equal("任务安全失败。 请更新 API Key 并测试连接。", item.ErrorDetails);
+        Assert.Contains("stage=Translating", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=ModelServiceException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("http=401", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("request=request-401", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("provider body", item.TechnicalErrorDetails, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UnknownFailureDoesNotExposeItsArbitraryMessage()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"));
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Analyzing,
+            "generic outer message",
+            new InvalidOperationException("authorization=Bearer must-not-be-displayed"));
+
+        item.Fail(pipelineFailure);
+
+        Assert.Contains("stage=Analyzing", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=InvalidOperationException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-be-displayed", item.TechnicalErrorDetails, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ModelContractFailureDoesNotExposeModelControlledDetails()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"));
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Translating,
+            "generic outer message",
+            new TranslationContractException(
+                "model-id\r\nauthorization=Bearer must-not-be-displayed"));
+
+        item.Fail(pipelineFailure);
+
+        Assert.Contains("stage=Translating", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=TranslationContractException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("model-id", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-be-displayed", item.TechnicalErrorDetails, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DirectPipelineFailureDoesNotExposeArchiveControlledDetails()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "source.jar"),
+            Path.Combine(Path.GetTempPath(), "output.jar"));
+        var pipelineFailure = new PipelineException(
+            item.JobId,
+            PipelineStage.Verifying,
+            "archive-error\r\nauthorization=Bearer must-not-be-displayed");
+
+        item.Fail(pipelineFailure);
+
+        Assert.Contains("stage=Verifying", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.Contains("cause=PipelineException", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("archive-error", item.TechnicalErrorDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain("must-not-be-displayed", item.TechnicalErrorDetails, StringComparison.Ordinal);
     }
 
     [Fact]

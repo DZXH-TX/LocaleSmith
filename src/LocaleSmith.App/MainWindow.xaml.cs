@@ -6,10 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 namespace LocaleSmith.App;
 
@@ -17,12 +19,17 @@ public sealed partial class MainWindow : Window
 {
     private readonly ShellViewModel? _viewModel;
     private readonly AppMotionService? _motion;
+    private readonly SolidColorBrush _navigationPaneBackground = new();
     private bool _chromeSynchronizationQueued;
     private bool _isClosed;
 
     public MainWindow()
     {
         InitializeComponent();
+        LocalizeWindowTitle();
+        ApplyWindowIcon();
+        InitializeNavigationPaneBackground();
+        LocalizeSettingsItem();
         _viewModel = App.Services.GetRequiredService<ShellViewModel>();
         _motion = App.Services.GetRequiredService<AppMotionService>();
         _viewModel.NavigationRequested += OnNavigationRequested;
@@ -38,6 +45,10 @@ public sealed partial class MainWindow : Window
     public MainWindow(string startupError)
     {
         InitializeComponent();
+        LocalizeWindowTitle();
+        ApplyWindowIcon();
+        InitializeNavigationPaneBackground();
+        LocalizeSettingsItem();
         RootSurface.ActualThemeChanged += OnActualThemeChanged;
         Closed += OnClosedForChromeSynchronization;
         RootNavigation.Visibility = Visibility.Collapsed;
@@ -106,6 +117,55 @@ public sealed partial class MainWindow : Window
     private void OnRootSurfaceLoaded(object sender, RoutedEventArgs args) =>
         QueueWindowChromeSynchronization();
 
+    private void InitializeNavigationPaneBackground()
+    {
+        // Install one stable brush before NavigationView applies its template. Theme changes can
+        // then update the existing pane visual instead of relying on a resource lookup refresh.
+        RootNavigation.Resources["NavigationViewExpandedPaneBackground"] = _navigationPaneBackground;
+        RootNavigation.Resources["NavigationViewDefaultPaneBackground"] = _navigationPaneBackground;
+        RootNavigation.Resources["NavigationViewTopPaneBackground"] = _navigationPaneBackground;
+    }
+
+    private void LocalizeSettingsItem()
+    {
+        if (RootNavigation.SettingsItem is not NavigationViewItem settingsItem)
+        {
+            return;
+        }
+
+        var label = new ResourceLoader().GetString("SettingsNavigationLabel");
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return;
+        }
+
+        settingsItem.Content = label;
+        AutomationProperties.SetName(settingsItem, label);
+    }
+
+    private void LocalizeWindowTitle()
+    {
+        var title = new ResourceLoader().GetString("MainWindowTitle");
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            Title = title;
+        }
+    }
+
+    private void ApplyWindowIcon()
+    {
+        var iconPath = Path.Combine(
+            AppContext.BaseDirectory,
+            "Assets",
+            "Icons",
+            "favicon_512.ico");
+
+        if (File.Exists(iconPath))
+        {
+            AppWindow.SetIcon(iconPath);
+        }
+    }
+
     private void QueueWindowChromeSynchronization()
     {
         if (_isClosed || _chromeSynchronizationQueued)
@@ -147,14 +207,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // NavigationView renders each pane mode with a separate theme resource. Keep those
-        // transparent/acrylic layers on the same semantic surface as the window content.
-        RootNavigation.Resources["NavigationViewExpandedPaneBackground"] =
-            new SolidColorBrush(background.Color);
-        RootNavigation.Resources["NavigationViewDefaultPaneBackground"] =
-            new SolidColorBrush(background.Color);
-        RootNavigation.Resources["NavigationViewTopPaneBackground"] =
-            new SolidColorBrush(background.Color);
+        _navigationPaneBackground.Color = background.Color;
 
         if (!AppWindowTitleBar.IsCustomizationSupported())
         {

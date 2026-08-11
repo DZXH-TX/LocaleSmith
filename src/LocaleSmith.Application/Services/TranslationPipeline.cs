@@ -215,7 +215,11 @@ public sealed class TranslationPipeline
                 progressTracker.Finish(PipelineStage.Failed, "处理失败");
             }
 
-            throw new PipelineException(jobId, stage, "The translation pipeline failed and was rolled back.", exception);
+            throw new PipelineException(
+                jobId,
+                stage,
+                CreateFailureMessage(stage, exception),
+                exception);
         }
         catch
         {
@@ -243,6 +247,9 @@ public sealed class TranslationPipeline
             }
         }
     }
+
+    private static string CreateFailureMessage(PipelineStage stage, Exception exception)
+        => $"The translation pipeline failed during {stage}. {exception.GetType().Name}.";
 
     private static async Task<ExternalizationReport> HandleExternalizationAsync(
         IArchiveWorkspace workspace,

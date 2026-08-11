@@ -9,6 +9,30 @@ public enum AppThemePreference
     Dark
 }
 
+public static class AppDisplayLanguages
+{
+    public const string DefaultLanguage = "zh-CN";
+    public const string EnglishUnitedStates = "en-US";
+
+    private static readonly IReadOnlyList<string> SupportedValues =
+        Array.AsReadOnly(new[] { DefaultLanguage, EnglishUnitedStates });
+
+    public static IReadOnlyList<string> Supported => SupportedValues;
+
+    public static string ResolveOrDefault(string? language)
+    {
+        foreach (var supportedLanguage in SupportedValues)
+        {
+            if (string.Equals(language, supportedLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                return supportedLanguage;
+            }
+        }
+
+        return DefaultLanguage;
+    }
+}
+
 public sealed record ModelSourceProfile
 {
     public string Id { get; init; } = string.Empty;
@@ -107,7 +131,7 @@ public sealed record AppConfiguration
     /// </summary>
     public string LogDirectoryPath { get; init; } = GetDefaultLogDirectoryPath();
 
-    public string Language { get; init; } = "zh-CN";
+    public string Language { get; init; } = AppDisplayLanguages.DefaultLanguage;
 
     public AppThemePreference Theme { get; init; } = AppThemePreference.System;
 

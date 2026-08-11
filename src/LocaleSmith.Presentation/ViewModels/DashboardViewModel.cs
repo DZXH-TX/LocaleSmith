@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
 using LocaleSmith.Presentation.Abstractions;
@@ -401,11 +403,23 @@ public sealed class QueueItemViewModel : ObservableObject
 
     public void Fail(string message)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        FailCore(message, guidance: null);
+    }
+
+    public void Fail(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        FailCore(CreateTechnicalErrorDetails(exception), CreateFailureGuidance(exception));
+    }
+
+    private void FailCore(string technicalDetails, string? guidance)
+    {
         Stage = PipelineStage.Failed;
         IsCancellationRequested = false;
         NextAction = string.Empty;
         Status = _text.GetText("QueueStatusFailed", "Failed — review details and retry.");
-        ErrorDetails = RollbackStatus switch
+        var rollbackSummary = RollbackStatus switch
         {
             PipelineStageStatus.Completed => _text.GetText(
                 "QueueFailureSummaryRolledBack",
@@ -419,8 +433,62 @@ public sealed class QueueItemViewModel : ObservableObject
                     "QueueFailureSummary",
                     "The job failed before output was committed; no rollback was needed."))
         };
-        TechnicalErrorDetails = message;
+        ErrorDetails = string.IsNullOrWhiteSpace(guidance)
+            ? rollbackSummary
+            : $"{rollbackSummary} {guidance}";
+        TechnicalErrorDetails = technicalDetails;
     }
+
+    private string? CreateFailureGuidance(Exception exception)
+    {
+        var cause = GetFailureCause(exception);
+        return cause switch
+        {
+            ModelServiceException
+            {
+                StatusCode: HttpStatusCode.Unauthorized
+            } => _text.GetText(
+                "QueueFailureModelCredentials",
+                "The model service rejected the saved credential. Update the API key in Model sources, test the connection, and retry."),
+            ModelServiceException => _text.GetText(
+                "QueueFailureModelService",
+                "The model service request failed. Review the saved endpoint, model, credential, and connection test before retrying."),
+            TranslationContractException => _text.GetText(
+                "QueueFailureModelResponse",
+                "The model returned a response that could not be applied safely. Review the technical details and retry."),
+            _ => null
+        };
+    }
+
+    private static string CreateTechnicalErrorDetails(Exception exception)
+    {
+        var pipelineFailure = exception as PipelineException;
+        var cause = GetFailureCause(exception);
+        var stage = pipelineFailure?.FailedStage.ToString() ?? "none";
+        var prefix = $"stage={stage} | cause={cause.GetType().Name}";
+
+        return cause switch
+        {
+            ModelServiceException modelFailure => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{prefix} | http={FormatHttpStatus(modelFailure.StatusCode)} | " +
+                $"request={modelFailure.RequestId ?? "none"}"),
+            TranslationContractException => prefix,
+            _ => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{prefix} | hresult=0x{exception.HResult:X8}")
+        };
+    }
+
+    private static Exception GetFailureCause(Exception exception) =>
+        exception is PipelineException { InnerException: { } innerException }
+            ? innerException
+            : exception;
+
+    private static string FormatHttpStatus(HttpStatusCode? statusCode) =>
+        statusCode is { } status
+            ? ((int)status).ToString(CultureInfo.InvariantCulture)
+            : "none";
 
     public void Cancelled()
     {
@@ -927,7 +995,7 @@ public sealed class DashboardViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            _dispatcher.Post(() => item.Fail(exception.Message));
+            _dispatcher.Post(() => item.Fail(exception));
         }
         finally
         {

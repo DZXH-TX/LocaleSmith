@@ -1,4 +1,6 @@
+using System.Net;
 using LocaleSmith.App.Services;
+using LocaleSmith.Application;
 using LocaleSmith.Application.Abstractions;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Application.Services;
@@ -9,6 +11,30 @@ namespace LocaleSmith.App.Tests;
 
 public sealed class PipelineTranslationQueueServiceTests
 {
+    [Fact]
+    public void FailureLogMessageIncludesPipelineStageAndSafeProviderDiagnostics()
+    {
+        var modelFailure = new ModelServiceException(
+            "OpenAI-compatible endpoint returned HTTP 401 (Unauthorized).",
+            HttpStatusCode.Unauthorized,
+            requestId: "request-401");
+        var pipelineFailure = new PipelineException(
+            Guid.NewGuid(),
+            PipelineStage.Translating,
+            "The pipeline failed.",
+            modelFailure);
+
+        var message = PipelineTranslationQueueService.CreateFailureLogMessage(
+            "Translation failed",
+            pipelineFailure);
+
+        Assert.Contains("stage=Translating", message, StringComparison.Ordinal);
+        Assert.Contains("cause=ModelServiceException", message, StringComparison.Ordinal);
+        Assert.Contains("http=401", message, StringComparison.Ordinal);
+        Assert.Contains("request=request-401", message, StringComparison.Ordinal);
+        Assert.Contains("detail=OpenAI-compatible endpoint returned HTTP 401", message, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(TranslationStyle.Formal)]
     [InlineData(TranslationStyle.Informal)]

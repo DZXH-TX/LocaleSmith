@@ -245,6 +245,34 @@ public sealed class OutputPathAndSettingsTests
     }
 
     [Fact]
+    public async Task ChangingDisplayLanguageRequiresRestartUntilReverted()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var configuration = new MutableConfigurationService(
+                CreateConfiguration(Path.Combine(testRoot, "workspace")) with
+                {
+                    Language = AppDisplayLanguages.DefaultLanguage
+                });
+            using var viewModel = new SettingsViewModel(configuration);
+
+            await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+            Assert.False(viewModel.IsLanguageRestartRequired);
+
+            viewModel.Language = AppDisplayLanguages.EnglishUnitedStates;
+            Assert.True(viewModel.IsLanguageRestartRequired);
+
+            viewModel.Language = AppDisplayLanguages.DefaultLanguage;
+            Assert.False(viewModel.IsLanguageRestartRequired);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task SettingsLoadAndSaveRoundTripsNormalizedLogDirectoryPath()
     {
         var testRoot = CreateTestRoot();

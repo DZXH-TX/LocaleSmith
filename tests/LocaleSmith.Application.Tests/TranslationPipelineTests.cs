@@ -327,6 +327,36 @@ public sealed class TranslationPipelineTests
     }
 
     [Fact]
+    public async Task ExecuteAsyncPreservesTranslationFailureDetailsAndRollsBack()
+    {
+        var workspace = new StubWorkspace();
+        var modelFailure = new ModelServiceException(
+            "OpenAI-compatible endpoint returned HTTP 401 (Unauthorized).",
+            System.Net.HttpStatusCode.Unauthorized,
+            requestId: "request-401");
+        var pipeline = new TranslationPipeline(
+            new StubWorkspaceBackend(workspace),
+            new StubTranslationEngine { Failure = modelFailure },
+            new StubMemoryStore());
+        var progressUpdates = new List<PipelineProgress>();
+
+        var exception = await Assert.ThrowsAsync<PipelineException>(() => pipeline.ExecuteAsync(
+            CreateRequest(),
+            new InlineProgress(progressUpdates.Add),
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal(PipelineStage.Translating, exception.FailedStage);
+        Assert.Same(modelFailure, exception.InnerException);
+        Assert.Contains("Translating", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("HTTP 401", exception.Message, StringComparison.Ordinal);
+        Assert.True(workspace.RolledBack);
+        Assert.False(workspace.Committed);
+        Assert.Null(workspace.AppliedTranslations);
+        Assert.Equal(PipelineStage.Failed, progressUpdates[^1].Stage);
+        Assert.Equal(PipelineStageStatus.Completed, progressUpdates[^1].RollbackStatus);
+    }
+
+    [Fact]
     public async Task ExecuteAsyncRollsBackWhenVerificationFails()
     {
         var workspace = new StubWorkspace
@@ -574,6 +604,8 @@ public sealed class TranslationPipelineTests
     {
         public string TranslationContractVersion { get; init; } = TranslationPromptContract.CurrentVersion;
 
+        public Exception? Failure { get; init; }
+
         public int CallCount { get; private set; }
 
         public TranslationBatchRequest? LastRequest { get; private set; }
@@ -584,6 +616,11 @@ public sealed class TranslationPipelineTests
         {
             CallCount++;
             LastRequest = request;
+            if (Failure is not null)
+            {
+                return Task.FromException<TranslationBatchResult>(Failure);
+            }
+
             var entries = request.Entries.Select(entry => new TranslatedEntry(
                 entry.RelativePath,
                 entry.Key,
