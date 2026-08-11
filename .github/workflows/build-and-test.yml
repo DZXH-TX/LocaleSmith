@@ -65,6 +65,36 @@ jobs:
       - name: Restore .NET dependencies
         run: dotnet restore LocaleSmith.slnx
 
+      - name: Install Windows App SDK runtime
+        run: |
+          $installerPath = Join-Path $env:RUNNER_TEMP "WindowsAppRuntimeInstall-2.3.1-x64.exe"
+          $installerUri = "https://aka.ms/windowsappsdk/2.3/2.3.1/windowsappruntimeinstall-x64.exe"
+          $expectedHash = "4011748ddf472b7e856d909fdfb4e9b19c3d23fcd8121039ac91f99d5ffa65db"
+
+          Invoke-WebRequest -Uri $installerUri -OutFile $installerPath
+
+          $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash
+          if (-not $actualHash.Equals($expectedHash, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Windows App SDK runtime installer checksum mismatch."
+          }
+
+          $signature = Get-AuthenticodeSignature -LiteralPath $installerPath
+          if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
+              $signature.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
+            throw "Windows App SDK runtime installer does not have a valid Microsoft signature."
+          }
+
+          & $installerPath --quiet
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows App SDK runtime installer exited with code $LASTEXITCODE."
+          }
+
+          $runtime = Get-AppxPackage -Name "Microsoft.WindowsAppRuntime.2"
+          if (-not $runtime) {
+            throw "Windows App SDK 2.x runtime was not registered for the runner account."
+          }
+          $runtime | Select-Object Name, Version, Architecture
+
       - name: Check .NET formatting
         run: dotnet format LocaleSmith.slnx --verify-no-changes --no-restore
 
@@ -72,13 +102,46 @@ jobs:
         run: dotnet build LocaleSmith.slnx --configuration Release --no-restore
 
       - name: Run .NET tests
-        run: >-
-          dotnet test LocaleSmith.slnx
-          --configuration Release
-          --no-build
-          --no-restore
-          --logger trx
-          --results-directory artifacts/test-results
+        run: |
+          # GitHub-hosted runners use a non-interactive service session. These four integration
+          # tests require an interactive window station and private desktop, so they remain part
+          # of local Windows validation instead of being weakened with continue-on-error here.
+          $excludedHostedRunnerTests = @(
+            "LocaleSmith.Infrastructure.Tests.SafeCliTests.RunnerRequiresApprovalAndWritesRedactedAudit",
+            "LocaleSmith.Infrastructure.Tests.SafeCliTests.RealRestrictedChildRunsLowIntegrityInsideJobOnPrivateDesktop",
+            "LocaleSmith.Infrastructure.Tests.SafeCliTests.RealRestrictedLauncherPreservesWindowsArgumentBoundaries",
+            "LocaleSmith.Infrastructure.Tests.SafeCliTests.TimeoutTerminatesRestrictedProcessTree"
+          )
+          $testFilter = ($excludedHostedRunnerTests | ForEach-Object { "FullyQualifiedName!=$_" }) -join "&"
+
+          Write-Output "Excluding $($excludedHostedRunnerTests.Count) private-desktop tests on the hosted runner."
+          dotnet test LocaleSmith.slnx `
+            --configuration Release `
+            --no-build `
+            --no-restore `
+            --filter $testFilter `
+            --logger trx `
+            --results-directory artifacts/test-results
+
+      - name: Verify .NET test discovery
+        if: ${{ !cancelled() }}
+        run: |
+          $resultFiles = @(Get-ChildItem -LiteralPath "artifacts/test-results" -Filter "*.trx")
+          if ($resultFiles.Count -ne 8) {
+            throw "Expected results from 8 .NET test projects, found $($resultFiles.Count)."
+          }
+
+          $totalTests = 0
+          foreach ($resultFile in $resultFiles) {
+            [xml]$result = Get-Content -Raw -LiteralPath $resultFile.FullName
+            $discoveredTests = [int]$result.TestRun.ResultSummary.Counters.total
+            if ($discoveredTests -lt 1) {
+              throw "No tests were discovered in $($resultFile.Name)."
+            }
+            $totalTests += $discoveredTests
+          }
+
+          Write-Output "Validated $($resultFiles.Count) test projects and $totalTests discovered tests."
 
       - name: Upload .NET test results
         if: ${{ !cancelled() }}
