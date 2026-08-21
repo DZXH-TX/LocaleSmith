@@ -20,7 +20,7 @@
     <a href="./rust-toolchain.toml"><img alt="Rust 1.97.1" src="https://img.shields.io/badge/Rust-1.97.1-000000?style=flat-square&logo=rust&logoColor=white" /></a>
     <img alt="Windows 10 1809+" src="https://img.shields.io/badge/Windows-10%201809%2B-0078D4?style=flat-square" />
     <img alt="WinUI 3" src="https://img.shields.io/badge/UI-WinUI%203-0078D4?style=flat-square" />
-    <img alt="Development Preview" src="https://img.shields.io/badge/Status-Development%20Preview-F59E0B?style=flat-square" />
+    <a href="https://apps.microsoft.com/detail/9NP8V6WQNGT0"><img alt="Microsoft Store v1.0.0" src="https://img.shields.io/badge/Microsoft%20Store-v1.0.0-0078D4?style=flat-square&logo=microsoft&logoColor=white" /></a>
   </p>
 
   <p>
@@ -29,6 +29,12 @@
     <img alt="Quilt" src="https://img.shields.io/badge/Loader-Quilt-6B57A5?style=flat-square" />
     <img alt="Forge" src="https://img.shields.io/badge/Loader-Forge-F16436?style=flat-square" />
     <img alt="Legacy Forge" src="https://img.shields.io/badge/Loader-Legacy%20Forge-6B7280?style=flat-square" />
+  </p>
+
+  <p>
+    <a href="https://apps.microsoft.com/detail/9NP8V6WQNGT0"><strong>Get it free from Microsoft Store</strong></a>
+    ·
+    <a href="https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.0.0">GitHub Release v1.0.0</a>
   </p>
 
   <p>
@@ -43,7 +49,7 @@
 </div>
 
 > [!IMPORTANT]
-> LocaleSmith is currently a **source-buildable development preview**. The existing MSIX uses a self-signed development certificate and has not yet completed production signing, trusted timestamping, or a clean-machine installation test matrix. Do not treat it as a production release.
+> **LocaleSmith v1.0.0 is officially available from [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0).** Installing from the Store is recommended so that dependencies and future updates are handled automatically; the [GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.0.0) also provides the production MSIX signed by Microsoft Marketplace, with no development test certificate required.
 
 ## Project Overview
 
@@ -102,7 +108,16 @@ The default directory is `%LOCALAPPDATA%\LocaleSmith\logs\translations`. During 
 
 ## Quick Start
 
-### Prerequisites
+### Install the release
+
+| Channel | Description |
+| --- | --- |
+| [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) | Recommended; get it free with installation, framework dependencies, and future updates handled by the Store. Product ID: `9NP8V6WQNGT0`. |
+| [GitHub Release v1.0.0](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.0.0) | Provides the Microsoft Marketplace-signed `CRTech.LocaleSmith_1.0.0.0_x64.Msix` for users who need a direct installer download. |
+
+The GitHub MSIX SHA-256 is `2C66F5645C2BF957719467F9AB415450CF1B6A620C10CF13381EC307FD8B10EE`. The production release supports Windows x64 and requires Windows 10 1809 (build 17763) or later.
+
+### Development prerequisites
 
 | Dependency | Version or Notes |
 | --- | --- |
@@ -113,7 +128,7 @@ The default directory is `%LOCALAPPDATA%\LocaleSmith\logs\translations`. During 
 | UI dependencies | Windows App SDK `2.3.1` and CommunityToolkit.Mvvm `8.4.2`, restored through NuGet |
 | MSIX build | Requires Visual Studio Developer PowerShell with Desktop Bridge / WAP targets |
 
-### Build
+### Build from source
 
 Build the Rust release DLL first, then restore and build the .NET solution:
 
@@ -194,7 +209,7 @@ The MCP stdio Host exposes only `system.context` and `cli.propose`, not `cli.exe
 <details>
 <summary><strong>MSIX package status</strong></summary>
 
-The Store manifest now uses the official identity assigned in Partner Center and package version `1.0.0.0`; the application itself remains at the independently versioned `0.1.0` preview stage. Historical development packages previously completed payload, PRI, MCP Host, SignPath Authenticode signing, and local launch verification, but that evidence does not cover the current source. Before submission to Microsoft Store, regenerate the MSIX and explain and request approval for the restricted `runFullTrust` capability in Partner Center's submission options.
+The current public release is `v1.0.0`; its Store package version is `1.0.0.0`, its product ID is `9NP8V6WQNGT0`, and it uses the Partner Center identity `CRTech.LocaleSmith`. Microsoft Store provides the production distribution and automatic updates. The x64 MSIX attached to the GitHub Release has been verified for its Microsoft Marketplace signature chain, trusted timestamp, package identity, architecture, and SHA-256, and it does not require the self-signed test certificate used by historical development packages. The public package declares the `runFullTrust` desktop capability; commands proposed by a model still require policy revalidation and explicit user confirmation.
 
 The official `CRTech.LocaleSmith` identity cannot update the earlier `LocaleSmith.Desktop` / `JaxI18n.Desktop` development packages in place, so Windows temporarily installs them side by side. Close the older application during the transition. The new application continues to use the per-user `%LOCALAPPDATA%\LocaleSmith` root and performs read-only discovery of redirected data belonging to any still-registered legacy package. Uninstall the development package only after confirming that the official-identity build works correctly.
 
