@@ -407,4 +407,160 @@
   <data name="AssistantCleared" xml:space="preserve"><value>会話をクリアしました。</value></data>
   <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>モデルソースが変更されました。プロバイダー間で情報が漏れないよう、以前の会話をクリアしました。</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>コマンド案の確認画面を開けませんでした。何も実行されていません。</value></data>
+  <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod コミュニティ</value></data>
+  <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod コミュニティ</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>サインインすると、LocaleSmith 内で Mod のディスカッションを閲覧し、アプリケーション トークンで安全に投稿できます。</value></data>
+  <data name="CommunitySignInGateTitle.Text" xml:space="preserve"><value>Mod コミュニティにサインイン</value></data>
+  <data name="CommunitySignInGateBody.Text" xml:space="preserve"><value>先に Web サイトでアカウントを登録してアプリケーション トークンを作成し、ここにユーザー名、パスワード、トークンを入力してください。確認に成功した後でのみコミュニティの内容が表示されます。</value></data>
+  <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>コミュニティのコンテンツを読み込み中</value></data>
+  <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>更新</value></data>
+  <data name="CommunitySearchInput.Header" xml:space="preserve"><value>Mod を検索</value></data>
+  <data name="CommunitySearchInput.PlaceholderText" xml:space="preserve"><value>名前、概要、タグで検索</value></data>
+  <data name="CommunitySearchButton.Content" xml:space="preserve"><value>検索</value></data>
+  <data name="CommunitySearchButton.AccessKey" xml:space="preserve"><value>S</value></data>
+  <data name="CommunityError.Title" xml:space="preserve"><value>コミュニティ操作に失敗しました</value></data>
+  <data name="CommunityRetryButton.Content" xml:space="preserve"><value>再試行</value></data>
+  <data name="CommunityStatus.Title" xml:space="preserve"><value>操作が完了しました</value></data>
+  <data name="CommunityModsHeading.Text" xml:space="preserve"><value>Mod</value></data>
+  <data name="CommunityModsHelp.Text" xml:space="preserve"><value>Mod を選択して関連するトピックを表示します。</value></data>
+  <data name="CommunityModsList.AutomationProperties.Name" xml:space="preserve"><value>Mod の検索結果</value></data>
+  <data name="CommunityModsEmptyTitle.Text" xml:space="preserve"><value>Mod が見つかりません</value></data>
+  <data name="CommunityModsEmptyBody.Text" xml:space="preserve"><value>検索語を変更して再試行するか、更新して最新の内容を取得してください。</value></data>
+  <data name="CommunityThreadsHeading.Text" xml:space="preserve"><value>ディスカッション</value></data>
+  <data name="CommunityThreadsList.AutomationProperties.Name" xml:space="preserve"><value>ディスカッションのトピック</value></data>
+  <data name="CommunityThreadsEmptyTitle.Text" xml:space="preserve"><value>まだディスカッションがありません</value></data>
+  <data name="CommunityThreadsEmptyBody.Text" xml:space="preserve"><value>forum:write 権限の PAT を保存すると、最初のトピックを作成できます。</value></data>
+  <data name="CommunitySelectModPrompt.Text" xml:space="preserve"><value>最初に Mod を選択してディスカッションを読み込んでください。</value></data>
+  <data name="CommunityRepliesLabel.Text" xml:space="preserve"><value>返信</value></data>
+  <data name="CommunityUpdatedLabel.Text" xml:space="preserve"><value>更新</value></data>
+  <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
+  <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>トピック</value></data>
+  <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>コミュニティ アカウント</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>サインインが必要です</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Web サイトのユーザー名、パスワード、アプリケーション トークンを入力してください。LocaleSmith は今回の確認にのみパスワードを使用し、保存しません。</value></data>
+  <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>ユーザー名</value></data>
+  <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Web サイトのユーザー名</value></data>
+  <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>パスワード</value></data>
+  <data name="CommunityPasswordInput.PlaceholderText" xml:space="preserve"><value>Web サイトのパスワード</value></data>
+  <data name="CommunityApplicationTokenInput.Header" xml:space="preserve"><value>アプリケーション トークン (PAT)</value></data>
+  <data name="CommunityApplicationTokenInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityApplicationLoginHelp.Text" xml:space="preserve"><value>アカウント登録とアプリケーション トークンの作成は Web サイトで行います。Windows 資格情報マネージャーに保存されるのはトークンだけです。パスワードは初回の確認に一度だけ使用し、保存しません。利用できる操作はトークンに付与されたスコープで決まります。</value></data>
+  <data name="CommunityApplicationLoginButton.Content" xml:space="preserve"><value>安全にサインイン</value></data>
+  <data name="CommunityRegisterAccountLink.Content" xml:space="preserve"><value>Web サイトでアカウントを作成</value></data>
+  <data name="CommunitySignedInInfo.Message" xml:space="preserve"><value>このデバイスでサインインしています。LocaleSmith は保存されたトークンを、そのスコープで許可された操作にのみ使用します。</value></data>
+  <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>付与されたトークン権限</value></data>
+  <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Web サイトでアプリケーション トークンを作成または管理</value></data>
+  <data name="CommunityPatExpander.Header" xml:space="preserve"><value>コミュニティ ID と個人アクセストークン</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>サインインが必要です</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>コミュニティに入るには、確認済みアカウントとアプリケーション トークンが必要です。投稿には forum:write、報告には reports:write または互換性のある forum:write 権限が必要です。</value></data>
+  <data name="CommunityPatInput.Header" xml:space="preserve"><value>個人アクセストークン（PAT）</value></data>
+  <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityPatHelp.Text" xml:space="preserve"><value>トークンは Windows 資格情報マネージャーのみに保存され、設定、ログ、ページには書き込まれません。ローカルのコピーを削除してもサーバー上のトークンは失効しません。</value></data>
+  <data name="CommunitySavePatButton.Content" xml:space="preserve"><value>安全に保存</value></data>
+  <data name="CommunityDeletePatButton.Content" xml:space="preserve"><value>このデバイスからサインアウト</value></data>
+  <data name="CommunityCreatePatLink.Content" xml:space="preserve"><value>Web サイトで PAT を作成</value></data>
+  <data name="CommunityPostsHeading.Text" xml:space="preserve"><value>投稿</value></data>
+  <data name="CommunityPostsList.AutomationProperties.Name" xml:space="preserve"><value>トピックの投稿</value></data>
+  <data name="CommunitySelectThreadPrompt.Text" xml:space="preserve"><value>トピックを選択して投稿を読んでください。</value></data>
+  <data name="CommunityPostsEmptyTitle.Text" xml:space="preserve"><value>表示できる投稿がありません</value></data>
+  <data name="CommunityPostsEmptyBody.Text" xml:space="preserve"><value>更新して再試行してください。コンテンツは審査中または非表示の可能性があります。</value></data>
+  <data name="CommunityLoadMorePostsButton.Content" xml:space="preserve"><value>さらに投稿を読み込む</value></data>
+  <data name="CommunityThreadLockedInfo.Title" xml:space="preserve"><value>返信できません</value></data>
+  <data name="CommunityThreadLockedInfo.Message" xml:space="preserve"><value>このトピックは終了またはロックされています。既存の投稿は引き続き閲覧できます。</value></data>
+  <data name="CommunityNewThreadExpander.Header" xml:space="preserve"><value>新しいトピックを作成</value></data>
+  <data name="CommunityNewThreadTitleInput.Header" xml:space="preserve"><value>タイトル</value></data>
+  <data name="CommunityNewThreadTitleInput.PlaceholderText" xml:space="preserve"><value>4～160 文字</value></data>
+  <data name="CommunityNewThreadContentInput.Header" xml:space="preserve"><value>本文</value></data>
+  <data name="CommunityNewThreadContentInput.PlaceholderText" xml:space="preserve"><value>質問、提案、使用経験を記入</value></data>
+  <data name="CommunityMarkdownPlainTextHelp.Text" xml:space="preserve"><value>Markdown を入力できます。このバージョンでは常にプレーンテキストとして表示し、HTML は実行しません。</value></data>
+  <data name="CommunityCreateThreadButton.Content" xml:space="preserve"><value>トピックを公開</value></data>
+  <data name="CommunityReplyExpander.Header" xml:space="preserve"><value>トピックに返信</value></data>
+  <data name="CommunityReplyInput.Header" xml:space="preserve"><value>返信</value></data>
+  <data name="CommunityReplyInput.PlaceholderText" xml:space="preserve"><value>役に立つ丁寧な返信を入力</value></data>
+  <data name="CommunityMarkdownPlainTextHelpReply.Text" xml:space="preserve"><value>Markdown を入力できます。このバージョンでは常にプレーンテキストとして表示し、HTML は実行しません。</value></data>
+  <data name="CommunityCreateReplyButton.Content" xml:space="preserve"><value>返信を公開</value></data>
+  <data name="CommunityDeletePatDialog.Title" xml:space="preserve"><value>このデバイスからサインアウトしますか？</value></data>
+  <data name="CommunityDeletePatDialog.Content" xml:space="preserve"><value>LocaleSmith は、このデバイスの Windows 資格情報マネージャーに保存されたトークンを削除します。Web サイト上のトークンは、そこで失効させるまで有効なままです。</value></data>
+  <data name="CommunityDeletePatDialog.PrimaryButtonText" xml:space="preserve"><value>サインアウト</value></data>
+  <data name="CommunityDeletePatDialog.CloseButtonText" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="CommunityPostsLoadedText" xml:space="preserve"><value>{1} 件中 {0} 件を読み込み済み</value></data>
+  <data name="CommunityPatSavedStatus" xml:space="preserve"><value>個人アクセストークンを Windows 資格情報マネージャーに安全に保存しました。</value></data>
+  <data name="CommunityThreadCreatedStatus" xml:space="preserve"><value>ディスカッションを作成しました。</value></data>
+  <data name="CommunityReplyCreatedStatus" xml:space="preserve"><value>返信を投稿しました。</value></data>
+  <data name="CommunityPatDeletedStatus" xml:space="preserve"><value>このデバイスからサインアウトし、ローカルトークンを削除しました。Web サイト上のトークンは失効していません。</value></data>
+  <data name="CommunityOperationCancelledStatus" xml:space="preserve"><value>操作をキャンセルしました。</value></data>
+  <data name="CommunityNetworkError" xml:space="preserve"><value>コミュニティサービスに接続できません。ネットワークを確認して再試行してください。</value></data>
+  <data name="CommunityOperationFailed" xml:space="preserve"><value>コミュニティ操作に失敗しました。しばらくしてから再試行してください。</value></data>
+  <data name="CommunitySignedInDisplayText" xml:space="preserve"><value>{0} としてサインイン中</value></data>
+  <data name="CommunityGrantedScopesNone" xml:space="preserve"><value>サービスから付与済みの権限が報告されませんでした。</value></data>
+  <data name="CommunityApplicationLoginFieldsRequiredError" xml:space="preserve"><value>ユーザー名、パスワード、アプリケーション トークンを入力してください。</value></data>
+  <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>サインインしました。アプリケーション トークンは Windows 資格情報マネージャーに安全に保存され、パスワードは保存されていません。</value></data>
+  <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>このサービスはアカウントとパスワードによる確認に対応していません。従来の方法でアプリケーション トークンを確認して安全に保存しました。パスワードは送信も保存もされていません。</value></data>
+  <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>保存されたアプリケーション トークンは無効か、有効期限が切れています。有効なトークンでサインインし直してください。</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>保存済みのアカウントを現在確認できません。ローカルの資格情報は保持されています。更新して再試行するか、現在の資格情報でサインインしてください。</value></data>
+  <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>ユーザー名、パスワード、アプリケーション トークンのいずれかが無効、期限切れ、または同じアカウントに属していません。</value></data>
+  <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>このアプリケーション トークンはアプリへのサインインに使用できません。Web サイトで通常のトークンを作成するか選択してください。</value></data>
+  <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>サインイン試行回数が多すぎます。しばらく待ってから再試行してください。</value></data>
+  <data name="CommunityApplicationLoginTimeoutError" xml:space="preserve"><value>サインイン要求がタイムアウトしました。ネットワークを確認して再試行してください。</value></data>
+  <data name="CommunityApplicationLoginNetworkError" xml:space="preserve"><value>アカウントサービスに接続できません。ネットワークを確認して再試行してください。</value></data>
+  <data name="CommunityApplicationLoginInvalidResponseError" xml:space="preserve"><value>アカウントサービスから予期しない応答が返されました。後でもう一度お試しください。</value></data>
+  <data name="CommunityApplicationLoginFailedError" xml:space="preserve"><value>サインインに失敗しました。入力内容を確認し、後でもう一度お試しください。</value></data>
+  <data name="CommunityLoadMoreModsButton.Content" xml:space="preserve"><value>さらに Mod を読み込む</value></data>
+  <data name="CommunityLoadMoreThreadsButton.Content" xml:space="preserve"><value>さらにトピックを読み込む</value></data>
+  <data name="CommunityReportPostButton.Content" xml:space="preserve"><value>投稿を報告</value></data>
+  <data name="CommunityReportSubmittedStatus" xml:space="preserve"><value>報告をモデレーターに送信しました。</value></data>
+  <data name="CommunityTimeoutError" xml:space="preserve"><value>コミュニティへのリクエストがタイムアウトしました。ネットワークを確認して再試行してください。</value></data>
+  <data name="CommunityTermsLink.Content" xml:space="preserve"><value>利用規約</value></data>
+  <data name="CommunityGuidelinesLink.Content" xml:space="preserve"><value>コミュニティガイドライン</value></data>
+  <data name="CommunityLatestVersionLabel.Text" xml:space="preserve"><value>最新バージョン:</value></data>
+  <data name="CommunityReportModButton.Content" xml:space="preserve"><value>Mod を報告</value></data>
+  <data name="CommunityReportVersionButton.Content" xml:space="preserve"><value>バージョンを報告</value></data>
+  <data name="CommunityReportUserButton.Content" xml:space="preserve"><value>作者を報告</value></data>
+  <data name="CommunityReportThreadButton.Content" xml:space="preserve"><value>ディスカッションを報告</value></data>
+  <data name="CommunityReportDialog.Title" xml:space="preserve"><value>コミュニティコンテンツを報告</value></data>
+  <data name="CommunityReportDialog.PrimaryButtonText" xml:space="preserve"><value>報告を送信</value></data>
+  <data name="CommunityReportDialog.CloseButtonText" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="CommunityReportTargetLabel.Text" xml:space="preserve"><value>報告するコンテンツ</value></data>
+  <data name="CommunityReportCategoryInput.Header" xml:space="preserve"><value>カテゴリー</value></data>
+  <data name="CommunityReportCategoryInput.PlaceholderText" xml:space="preserve"><value>最も近いカテゴリーを選択</value></data>
+  <data name="CommunityReportDetailsInput.Header" xml:space="preserve"><value>詳細</value></data>
+  <data name="CommunityReportDetailsInput.PlaceholderText" xml:space="preserve"><value>モデレーターが確認すべき内容を説明してください</value></data>
+  <data name="CommunityReportDetailsHelp.Text" xml:space="preserve"><value>4～1,900 文字で入力してください。パスワード、トークン、その他の秘密情報は含めないでください。</value></data>
+  <data name="CommunityReportProgress.AutomationProperties.Name" xml:space="preserve"><value>報告を送信中</value></data>
+  <data name="CommunityReportSubmittingText.Text" xml:space="preserve"><value>報告を送信しています…</value></data>
+  <data name="CommunityReportError.Title" xml:space="preserve"><value>報告は送信されませんでした</value></data>
+  <data name="CommunityReportAccessDialog.Title" xml:space="preserve"><value>報告アクセスを設定</value></data>
+  <data name="CommunityReportAccessDialog.CloseButtonText" xml:space="preserve"><value>閉じる</value></data>
+  <data name="CommunityReportAccessMessage.Text" xml:space="preserve"><value>閲覧は引き続き可能です。報告するには、reports:write または互換性のある forum:write 権限の PAT を作成して保存してください。送信前に以下のルールを確認してください。</value></data>
+  <data name="CommunityReportUnavailableDialog.Title" xml:space="preserve"><value>報告を利用できません</value></data>
+  <data name="CommunityReportUnavailableDialog.CloseButtonText" xml:space="preserve"><value>閉じる</value></data>
+  <data name="CommunityReportUnavailableMessage.Text" xml:space="preserve"><value>現在、このコンテンツを LocaleSmith から報告できません。サービス更新後に再読み込みし、以下の利用規約とコミュニティガイドラインを確認してください。</value></data>
+  <data name="CommunityReportCategorySpam" xml:space="preserve"><value>スパムまたは誤解を招く内容</value></data>
+  <data name="CommunityReportCategoryHarassment" xml:space="preserve"><value>嫌がらせまたはいじめ</value></data>
+  <data name="CommunityReportCategoryHateSpeech" xml:space="preserve"><value>ヘイトスピーチ</value></data>
+  <data name="CommunityReportCategorySexualContent" xml:space="preserve"><value>性的コンテンツ</value></data>
+  <data name="CommunityReportCategoryViolence" xml:space="preserve"><value>暴力または脅迫</value></data>
+  <data name="CommunityReportCategoryIllegalContent" xml:space="preserve"><value>違法コンテンツ</value></data>
+  <data name="CommunityReportCategoryMalware" xml:space="preserve"><value>マルウェアまたは有害なファイル</value></data>
+  <data name="CommunityReportCategoryCopyright" xml:space="preserve"><value>著作権侵害</value></data>
+  <data name="CommunityReportCategoryPrivacy" xml:space="preserve"><value>プライバシー侵害</value></data>
+  <data name="CommunityReportCategoryImpersonation" xml:space="preserve"><value>なりすまし</value></data>
+  <data name="CommunityReportCategoryChildSafety" xml:space="preserve"><value>子どもの安全</value></data>
+  <data name="CommunityReportCategoryOther" xml:space="preserve"><value>その他の違反</value></data>
+  <data name="CommunityReportUnavailableError" xml:space="preserve"><value>このコンテンツは報告できません。コミュニティガイドラインを確認し、再読み込み後にもう一度お試しください。</value></data>
+  <data name="CommunityReportPatRequiredError" xml:space="preserve"><value>reports:write または forum:write 権限の個人アクセストークンを保存してから、もう一度お試しください。</value></data>
+  <data name="CommunityReportInputInvalid" xml:space="preserve"><value>カテゴリーを選択し、4～1,900 文字の詳細を入力してください。</value></data>
+  <data name="CommunityReportDuplicateError" xml:space="preserve"><value>このコンテンツはすでに報告済みです。モデレーターが既存の報告を確認します。</value></data>
+  <data name="CommunityReportTargetUnavailableError" xml:space="preserve"><value>このコンテンツは報告できなくなりました。コミュニティページを再読み込みしてお試しください。</value></data>
+  <data name="CommunityReportCategoryInvalidError" xml:space="preserve"><value>そのカテゴリーは現在受け付けていません。カテゴリー一覧を更新して別のものを選択してください。</value></data>
+  <data name="CommunityReportDetailsInvalidError" xml:space="preserve"><value>報告の詳細を 4～1,900 文字で入力してください。</value></data>
+  <data name="CommunityReportUnauthorizedError" xml:space="preserve"><value>保存済みの個人アクセストークンが無効または期限切れです。交換してから再送信してください。</value></data>
+  <data name="CommunityReportScopeError" xml:space="preserve"><value>保存済みトークンには reports:write または互換性のある forum:write 権限が必要です。</value></data>
+  <data name="CommunityReportRateLimitedError" xml:space="preserve"><value>最近の報告数が多すぎます。しばらく待ってから再試行してください。</value></data>
+  <data name="CommunityReportSecurityUnavailableError" xml:space="preserve"><value>セキュリティサービスがオフラインのため、報告は一時的に利用できません。後でもう一度お試しください。</value></data>
+  <data name="CommunityReportTimeoutError" xml:space="preserve"><value>報告リクエストがタイムアウトしました。ネットワークを確認して再送信してください。</value></data>
+  <data name="CommunityReportNetworkError" xml:space="preserve"><value>報告サービスに接続できません。ネットワークを確認して再送信してください。</value></data>
+  <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>報告サービスから予期しない応答が返されました。再読み込みして後でもう一度お試しください。</value></data>
+  <data name="CommunityReportFailedError" xml:space="preserve"><value>報告を送信できませんでした。詳細を確認して後でもう一度お試しください。</value></data>
 </root>

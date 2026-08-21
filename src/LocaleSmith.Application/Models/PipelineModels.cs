@@ -148,11 +148,25 @@ public sealed record ExternalizationReport(
 
 public sealed record PackageArtifact(TranslationStyle Style, string Path);
 
+/// <summary>
+/// Identifies the strongest verification actually completed for an output artifact. Static
+/// analysis of a precompiled JAR is intentionally distinct from compiling source code.
+/// </summary>
+public enum ArtifactValidationMode
+{
+    ArchiveStaticAnalysis,
+    PrecompiledJarStaticAnalysis
+}
+
 public sealed record PackageVerification(
     bool IsValidArchive,
     bool MetadataPreserved,
     IReadOnlyList<string> Errors,
-    IReadOnlyList<PackageArtifact>? Artifacts = null);
+    IReadOnlyList<PackageArtifact>? Artifacts = null,
+    ArtifactValidationMode ValidationMode = ArtifactValidationMode.ArchiveStaticAnalysis,
+    bool SourceCompilationPerformed = false,
+    IReadOnlyList<string>? CompletedChecks = null,
+    IReadOnlyList<string>? Warnings = null);
 
 public sealed record PipelineProgress(
     Guid JobId,

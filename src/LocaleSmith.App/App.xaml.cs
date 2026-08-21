@@ -8,6 +8,7 @@ using LocaleSmith.Core.Services;
 using LocaleSmith.Infrastructure.Cli;
 using LocaleSmith.Infrastructure.Environment;
 using LocaleSmith.Infrastructure.Models;
+using LocaleSmith.Infrastructure.ModPlatform;
 using LocaleSmith.Infrastructure.Security;
 using LocaleSmith.Mcp;
 using LocaleSmith.Presentation.Abstractions;
@@ -179,6 +180,16 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<ISecretStore>(_ =>
             new MigratingSecretStore(currentCredentialStore, legacyCredentialStore));
         builder.Services.AddSingleton<IMasterKeyStore, CredentialManagerMasterKeyStore>();
+        builder.Services.AddSingleton(static services =>
+            ModPlatformClient.CreateForApplication(services.GetRequiredService<ISecretStore>()));
+        builder.Services.AddSingleton<IModPlatformClient>(static services =>
+            services.GetRequiredService<ModPlatformClient>());
+        builder.Services.AddSingleton(static _ => ModPlatformArtifactDownloader.CreateForApplication());
+        builder.Services.AddSingleton<IModPlatformArtifactDownloader>(static services =>
+            services.GetRequiredService<ModPlatformArtifactDownloader>());
+        builder.Services.AddSingleton<SecretStoreModPlatformCredentialService>();
+        builder.Services.AddSingleton<IModPlatformCredentialService>(static services =>
+            services.GetRequiredService<SecretStoreModPlatformCredentialService>());
         builder.Services.AddSingleton<IConfigurationStore<AppConfiguration>>(services =>
             new EncryptedJsonConfigurationStore<AppConfiguration>(
                 configPath,
@@ -252,6 +263,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<OnboardingViewModel>();
         builder.Services.AddSingleton<DashboardViewModel>();
         builder.Services.AddSingleton<AssistantViewModel>();
+        builder.Services.AddSingleton<CommunityViewModel>();
         builder.Services.AddSingleton<ModelSourcesViewModel>();
         builder.Services.AddSingleton<TranslationLogsViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();

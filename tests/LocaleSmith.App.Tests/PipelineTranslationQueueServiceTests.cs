@@ -62,6 +62,10 @@ public sealed class PipelineTranslationQueueServiceTests
         Assert.Equal(style, Assert.Single(scheduler.Request.Styles));
         Assert.Equal("saved-source", scheduler.Request.ModelSourceId);
         Assert.Equal("zh_CN", scheduler.Request.TargetLanguage);
+        Assert.Equal(SignedArchiveHandling.CreateUnsignedCopy, scheduler.Request.SignedArchiveHandling);
+        Assert.Equal(
+            HardcodedStringMode.ExternalizeRecognizedSafePatterns,
+            scheduler.Request.HardcodedStringMode);
         Assert.Equal(style, result.Style);
         Assert.Equal("zh_CN", result.TargetLanguage);
         Assert.Equal(outputPath, Assert.Single(result.ArtifactPaths));

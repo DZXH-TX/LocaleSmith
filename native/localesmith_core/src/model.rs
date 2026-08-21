@@ -152,7 +152,7 @@ pub struct SignatureEvidence {
     pub manifest_present: bool,
     /// `META-INF/*.SF` paths.
     pub signature_files: Vec<String>,
-    /// `META-INF/*.RSA`, `*.DSA`, or `*.EC` paths.
+    /// `META-INF/*.RSA`, `*.DSA`, `*.EC`, or `SIG-*` paths.
     pub signature_blocks: Vec<String>,
     /// Always false: this scanner does not validate certificate chains/digests.
     pub cryptographically_verified: bool,

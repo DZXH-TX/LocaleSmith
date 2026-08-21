@@ -30,6 +30,11 @@
                         <FontIcon Glyph="&#xE99A;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Uid="CommunityNavigationItem" Tag="Community">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8F2;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
                 <NavigationViewItem x:Uid="ModelSourcesNavigationItem" Tag="ModelSources">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE950;" />

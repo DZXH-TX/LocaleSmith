@@ -10,6 +10,7 @@ public sealed class ShellNavigationMapTests
         { ShellSection.Onboarding, typeof(OnboardingPage), false, "None", null },
         { ShellSection.Dashboard, typeof(DashboardPage), true, "MenuItem", "Dashboard" },
         { ShellSection.Assistant, typeof(AssistantPage), true, "MenuItem", "Assistant" },
+        { ShellSection.Community, typeof(CommunityPage), true, "MenuItem", "Community" },
         { ShellSection.ModelSources, typeof(ModelSourcesPage), true, "MenuItem", "ModelSources" },
         { ShellSection.Logs, typeof(LogsPage), true, "MenuItem", "Logs" },
         { ShellSection.Settings, typeof(SettingsPage), true, "Settings", null }
@@ -37,6 +38,7 @@ public sealed class ShellNavigationMapTests
     [Theory]
     [InlineData("Dashboard", ShellSection.Dashboard)]
     [InlineData("Assistant", ShellSection.Assistant)]
+    [InlineData("Community", ShellSection.Community)]
     [InlineData("ModelSources", ShellSection.ModelSources)]
     [InlineData("Logs", ShellSection.Logs)]
     public void MenuTagsMapToInvokableSections(string tag, ShellSection expected)

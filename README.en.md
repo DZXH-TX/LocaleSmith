@@ -61,6 +61,7 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 | **Multiple target languages** | Initially supports Simplified Chinese, English, Japanese, French, and Russian; the language catalog is centrally defined and can be extended. |
 | **Multiple model integrations** | Provides unified support for Ollama, OpenAI-compatible Chat Completions, and Anthropic Messages. |
 | **Provider presets** | Presets for DeepSeek, Qwen, Xiaomi MiMo, MiniMax, OpenAI, Doubao, Zhipu GLM, Kimi, and others fill in the service endpoint and model name and select the recommended completion-token parameter; you can also explicitly omit that parameter. |
+| **Online mod community** | Searches and paginates public mods and discussions; a PAT stored in Windows Credential Manager enables posting, replies, and reports, with direct access to the terms and community guidelines. |
 | **Persistent diagnostic logs** | When the log directory is writable, each translation attempts to persist a pair of Debug and All levels `.log` files through a bounded background writer; logs can be viewed from the left-hand “Logs” page, and the directory can be changed during onboarding or in Settings. |
 | **Native desktop experience** | Provides first-run onboarding, a processing queue, a model assistant, model source management, logs, settings, and CLI risk confirmation. |
 | **Credential and configuration protection** | Stores API keys in Windows Credential Manager and encrypts other configuration with AES-256-GCM. |
@@ -156,7 +157,7 @@ src/LocaleSmith.McpHost/        Standalone MCP console host
 src/LocaleSmith.Presentation/   Testable MVVM ViewModels and UI contracts
 src/LocaleSmith.App/            WinUI 3 views, composition root, and local application services
 tests/                      Eight .NET test projects and a restricted CLI probe
-packaging/                  x64 WAP / MSIX manifest, bilingual resources, and icons
+packaging/                  x64 WAP / MSIX manifest, five-language resources, and icons
 ```
 
 ## Security Boundaries
@@ -164,8 +165,9 @@ packaging/                  x64 WAP / MSIX manifest, bilingual resources, and ic
 The following principles are part of product behavior, not optional configuration:
 
 - **Models cannot authorize command execution.** Provider tool loops may only read safe context and propose commands. The user must still review the complete command, acknowledge the risk, and explicitly approve it.
-- **Signed JAR modification is blocked by default.** The original signature cannot be preserved without the original author's private key; the project either blocks modification or generates an unsigned copy after the user explicitly chooses to do so.
+- **Signed JARs produce an explicit unsigned copy by default.** The original JAR / ZIP always remains unchanged. The application translation queue removes signature blocks, `SIG-*`, and stale manifest digest claims only from an independent output; low-level callers may still choose complete blocking, and the project never impersonates the original signature or hashes.
 - **The CLI does not search the process PATH.** No process executable is trusted by default; any future explicit allowlist must use approved absolute paths. The private CLI sandbox defaults to `%LOCALAPPDATA%\LocaleSmith\CliSandbox`, with reparse points checked both before and after creation.
+- **The client carries no Cloudflare origin key.** `api.dzxh-tx.cn` uses ordinary server TLS validated by the Windows trust store. Authenticated Origin Pulls authenticates only the Cloudflare-to-origin connection; its certificate and private key must not enter the application, MSIX, or repository.
 - **Low IL is not the same as AppContainer.** A restricted token, private desktop, and Job Object reduce the execution surface, but do not automatically block network access or prevent access to files permitted by the current user's ACLs.
 
 <details>
@@ -178,7 +180,7 @@ Currently, LocaleSmith rewrites only structurally proven, immediately adjacent `
 <details>
 <summary><strong>Archive rebuilding and signatures</strong></summary>
 
-The original input always remains unchanged, critical metadata and manifests are revalidated, and transaction failures are rolled back. However, ZIP / JAR files are recompressed, so byte-for-byte preservation of compression streams, extra fields, entry comments, or ordering is not guaranteed. Modifying a signed archive invalidates its original signature; re-signing is not currently provided.
+The original input always remains unchanged, and every structural or behavioral change occurs only in a transactional working copy and independent output. JSON / lang / manifest content, Java classes, Loader metadata, services, and resource references are checked before an atomic commit; failures do not publish a partial artifact. ZIP / JAR files are still recompressed, so byte-for-byte preservation of streams, extra fields, comments, ordering, or Loader behavior compatibility is not guaranteed. A precompiled JAR reports only static bytecode and resource validation and is never described as “source compilation passed.” When source plus a Gradle / build entry is present, the current pipeline fails closed because no genuinely isolated build executor exists, and it never launches scripts from the archive directly.
 
 </details>
 
@@ -190,9 +192,11 @@ The MCP stdio Host exposes only `system.context` and `cli.propose`, not `cli.exe
 </details>
 
 <details>
-<summary><strong>MSIX development package status</strong></summary>
+<summary><strong>MSIX package status</strong></summary>
 
-The current manifest version is `0.1.0.2`. Historical development packages in the repository previously completed payload, PRI, MCP Host, SignPath Authenticode signing, and local launch verification, but that evidence does not cover the current source fixes. The current commit requires a newly generated, signed, and installation-verified MSIX. Before submission to the Microsoft Store, the package must also use the official package identity assigned through Partner Center.
+The Store manifest now uses the official identity assigned in Partner Center and package version `1.0.0.0`; the application itself remains at the independently versioned `0.1.0` preview stage. Historical development packages previously completed payload, PRI, MCP Host, SignPath Authenticode signing, and local launch verification, but that evidence does not cover the current source. Before submission to Microsoft Store, regenerate the MSIX and explain and request approval for the restricted `runFullTrust` capability in Partner Center's submission options.
+
+The official `CRTech.LocaleSmith` identity cannot update the earlier `LocaleSmith.Desktop` / `JaxI18n.Desktop` development packages in place, so Windows temporarily installs them side by side. Close the older application during the transition. The new application continues to use the per-user `%LOCALAPPDATA%\LocaleSmith` root and performs read-only discovery of redirected data belonging to any still-registered legacy package. Uninstall the development package only after confirming that the official-identity build works correctly.
 
 </details>
 
@@ -202,9 +206,9 @@ The following figures are the validation baseline recorded in the current source
 
 | Check | Baseline |
 | --- | --- |
-| .NET Release | `391 / 391` tests, `0` warnings, `0` errors |
-| Rust | `26 / 26` tests; `rustfmt` and `clippy -D warnings` passed |
-| Bilingual resources | `366` keys each for `zh-CN` / `en-US`, fully aligned |
+| .NET Release | `558 / 558` tests, `0` warnings, `0` errors |
+| Rust | `27 / 27` tests; `rustfmt` and `clippy -D warnings` passed |
+| Five-language resources | `485` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
 | Source security audit | Regression gates for local paths, archives, CLI, credentials, and migrations passed; GitHub CodeQL results depend on a fresh remote scan of the current commit, and the README does not claim zero alerts |
 
 These results demonstrate the source behavior covered by the current automation. They do not replace external penetration testing, real provider validation, or Minecraft / Loader runtime compatibility testing.

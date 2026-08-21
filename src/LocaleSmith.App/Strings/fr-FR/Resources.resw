@@ -407,4 +407,160 @@
   <data name="AssistantCleared" xml:space="preserve"><value>Conversation effacée.</value></data>
   <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>La source de modèle a changé. La conversation précédente a été effacée afin d’éviter toute divulgation entre fournisseurs.</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>Impossible d’ouvrir la proposition de commande pour examen. Rien n’a été exécuté.</value></data>
+  <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Communauté Mod</value></data>
+  <data name="CommunityTitle.Text" xml:space="preserve"><value>Communauté Mod</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Connectez-vous pour consulter les discussions sur les Mods dans LocaleSmith et publier en sécurité avec un jeton d’application.</value></data>
+  <data name="CommunitySignInGateTitle.Text" xml:space="preserve"><value>Connexion à la communauté Mod</value></data>
+  <data name="CommunitySignInGateBody.Text" xml:space="preserve"><value>Créez d’abord un compte et un jeton d’application sur le site, puis saisissez ici votre nom d’utilisateur, votre mot de passe et votre jeton. Le contenu de la communauté ne s’affiche qu’après une vérification réussie.</value></data>
+  <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>Chargement du contenu de la communauté</value></data>
+  <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>Annuler</value></data>
+  <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>Actualiser</value></data>
+  <data name="CommunitySearchInput.Header" xml:space="preserve"><value>Rechercher des Mods</value></data>
+  <data name="CommunitySearchInput.PlaceholderText" xml:space="preserve"><value>Rechercher par nom, résumé ou étiquette</value></data>
+  <data name="CommunitySearchButton.Content" xml:space="preserve"><value>Rechercher</value></data>
+  <data name="CommunitySearchButton.AccessKey" xml:space="preserve"><value>R</value></data>
+  <data name="CommunityError.Title" xml:space="preserve"><value>Échec de l’opération communautaire</value></data>
+  <data name="CommunityRetryButton.Content" xml:space="preserve"><value>Réessayer</value></data>
+  <data name="CommunityStatus.Title" xml:space="preserve"><value>Opération terminée</value></data>
+  <data name="CommunityModsHeading.Text" xml:space="preserve"><value>Mods</value></data>
+  <data name="CommunityModsHelp.Text" xml:space="preserve"><value>Sélectionnez un Mod pour afficher ses discussions.</value></data>
+  <data name="CommunityModsList.AutomationProperties.Name" xml:space="preserve"><value>Résultats de recherche de Mods</value></data>
+  <data name="CommunityModsEmptyTitle.Text" xml:space="preserve"><value>Aucun Mod trouvé</value></data>
+  <data name="CommunityModsEmptyBody.Text" xml:space="preserve"><value>Modifiez la recherche et réessayez, ou actualisez pour obtenir le contenu récent.</value></data>
+  <data name="CommunityThreadsHeading.Text" xml:space="preserve"><value>Discussions</value></data>
+  <data name="CommunityThreadsList.AutomationProperties.Name" xml:space="preserve"><value>Sujets de discussion</value></data>
+  <data name="CommunityThreadsEmptyTitle.Text" xml:space="preserve"><value>Aucune discussion</value></data>
+  <data name="CommunityThreadsEmptyBody.Text" xml:space="preserve"><value>Enregistrez un PAT avec l’autorisation forum:write pour créer le premier sujet.</value></data>
+  <data name="CommunitySelectModPrompt.Text" xml:space="preserve"><value>Sélectionnez d’abord un Mod pour charger ses discussions.</value></data>
+  <data name="CommunityRepliesLabel.Text" xml:space="preserve"><value>Réponses</value></data>
+  <data name="CommunityUpdatedLabel.Text" xml:space="preserve"><value>Mis à jour</value></data>
+  <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
+  <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>Sujet</value></data>
+  <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>Compte de la communauté</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Connexion requise</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Saisissez le nom d’utilisateur, le mot de passe et le jeton d’application du site. LocaleSmith n’utilise le mot de passe que pour cette vérification et ne l’enregistre jamais.</value></data>
+  <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>Nom d’utilisateur</value></data>
+  <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Votre nom d’utilisateur sur le site</value></data>
+  <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>Mot de passe</value></data>
+  <data name="CommunityPasswordInput.PlaceholderText" xml:space="preserve"><value>Votre mot de passe sur le site</value></data>
+  <data name="CommunityApplicationTokenInput.Header" xml:space="preserve"><value>Jeton d’application (PAT)</value></data>
+  <data name="CommunityApplicationTokenInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityApplicationLoginHelp.Text" xml:space="preserve"><value>Créez le compte et le jeton d’application sur le site. Seul le jeton est enregistré dans le Gestionnaire d’informations d’identification Windows ; le mot de passe sert une seule fois à la vérification initiale et n’est jamais enregistré. Les autorisations accordées au jeton déterminent les actions disponibles.</value></data>
+  <data name="CommunityApplicationLoginButton.Content" xml:space="preserve"><value>Se connecter en sécurité</value></data>
+  <data name="CommunityRegisterAccountLink.Content" xml:space="preserve"><value>Créer un compte sur le site</value></data>
+  <data name="CommunitySignedInInfo.Message" xml:space="preserve"><value>Vous êtes connecté sur cet appareil. LocaleSmith utilise le jeton enregistré uniquement pour les actions autorisées par ses permissions.</value></data>
+  <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>Autorisations accordées au jeton</value></data>
+  <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Créer ou gérer les jetons d’application sur le site</value></data>
+  <data name="CommunityPatExpander.Header" xml:space="preserve"><value>Identité communautaire et jeton d’accès personnel</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Connexion requise</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>Un compte vérifié et un jeton d’application sont requis pour accéder à la communauté. La publication nécessite forum:write ; le signalement nécessite reports:write ou l’autorisation compatible forum:write.</value></data>
+  <data name="CommunityPatInput.Header" xml:space="preserve"><value>Jeton d’accès personnel (PAT)</value></data>
+  <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityPatHelp.Text" xml:space="preserve"><value>Le jeton est enregistré uniquement dans le Gestionnaire d’informations d’identification Windows, jamais dans les paramètres, les journaux ou la page. Supprimer la copie locale ne révoque pas le jeton du serveur.</value></data>
+  <data name="CommunitySavePatButton.Content" xml:space="preserve"><value>Enregistrer en sécurité</value></data>
+  <data name="CommunityDeletePatButton.Content" xml:space="preserve"><value>Se déconnecter de cet appareil</value></data>
+  <data name="CommunityCreatePatLink.Content" xml:space="preserve"><value>Créer un PAT sur le site</value></data>
+  <data name="CommunityPostsHeading.Text" xml:space="preserve"><value>Messages</value></data>
+  <data name="CommunityPostsList.AutomationProperties.Name" xml:space="preserve"><value>Messages du sujet</value></data>
+  <data name="CommunitySelectThreadPrompt.Text" xml:space="preserve"><value>Sélectionnez un sujet pour lire ses messages.</value></data>
+  <data name="CommunityPostsEmptyTitle.Text" xml:space="preserve"><value>Aucun message visible</value></data>
+  <data name="CommunityPostsEmptyBody.Text" xml:space="preserve"><value>Actualisez et réessayez ; le contenu peut être en cours de modération ou masqué.</value></data>
+  <data name="CommunityLoadMorePostsButton.Content" xml:space="preserve"><value>Charger plus de messages</value></data>
+  <data name="CommunityThreadLockedInfo.Title" xml:space="preserve"><value>Réponses indisponibles</value></data>
+  <data name="CommunityThreadLockedInfo.Message" xml:space="preserve"><value>Ce sujet est fermé ou verrouillé. Les messages existants restent lisibles.</value></data>
+  <data name="CommunityNewThreadExpander.Header" xml:space="preserve"><value>Créer un nouveau sujet</value></data>
+  <data name="CommunityNewThreadTitleInput.Header" xml:space="preserve"><value>Titre</value></data>
+  <data name="CommunityNewThreadTitleInput.PlaceholderText" xml:space="preserve"><value>4 à 160 caractères</value></data>
+  <data name="CommunityNewThreadContentInput.Header" xml:space="preserve"><value>Contenu</value></data>
+  <data name="CommunityNewThreadContentInput.PlaceholderText" xml:space="preserve"><value>Décrivez une question, une suggestion ou une expérience</value></data>
+  <data name="CommunityMarkdownPlainTextHelp.Text" xml:space="preserve"><value>Le Markdown est accepté ; cette version l’affiche toujours en texte brut et n’exécute jamais de HTML.</value></data>
+  <data name="CommunityCreateThreadButton.Content" xml:space="preserve"><value>Publier le sujet</value></data>
+  <data name="CommunityReplyExpander.Header" xml:space="preserve"><value>Répondre au sujet</value></data>
+  <data name="CommunityReplyInput.Header" xml:space="preserve"><value>Réponse</value></data>
+  <data name="CommunityReplyInput.PlaceholderText" xml:space="preserve"><value>Rédigez une réponse utile et respectueuse</value></data>
+  <data name="CommunityMarkdownPlainTextHelpReply.Text" xml:space="preserve"><value>Le Markdown est accepté ; cette version l’affiche toujours en texte brut et n’exécute jamais de HTML.</value></data>
+  <data name="CommunityCreateReplyButton.Content" xml:space="preserve"><value>Publier la réponse</value></data>
+  <data name="CommunityDeletePatDialog.Title" xml:space="preserve"><value>Se déconnecter de cet appareil ?</value></data>
+  <data name="CommunityDeletePatDialog.Content" xml:space="preserve"><value>LocaleSmith supprimera le jeton enregistré dans le Gestionnaire d’informations d’identification Windows sur cet appareil. Le jeton restera actif sur le site tant que vous ne l’y aurez pas révoqué.</value></data>
+  <data name="CommunityDeletePatDialog.PrimaryButtonText" xml:space="preserve"><value>Se déconnecter</value></data>
+  <data name="CommunityDeletePatDialog.CloseButtonText" xml:space="preserve"><value>Annuler</value></data>
+  <data name="CommunityPostsLoadedText" xml:space="preserve"><value>{0} messages chargés sur {1}</value></data>
+  <data name="CommunityPatSavedStatus" xml:space="preserve"><value>Le jeton d’accès personnel a été enregistré en sécurité dans le Gestionnaire d’informations d’identification Windows.</value></data>
+  <data name="CommunityThreadCreatedStatus" xml:space="preserve"><value>La discussion a été créée.</value></data>
+  <data name="CommunityReplyCreatedStatus" xml:space="preserve"><value>Votre réponse a été publiée.</value></data>
+  <data name="CommunityPatDeletedStatus" xml:space="preserve"><value>Vous êtes déconnecté de cet appareil. Le jeton local a été supprimé, mais le jeton du site n’a pas été révoqué.</value></data>
+  <data name="CommunityOperationCancelledStatus" xml:space="preserve"><value>L’opération a été annulée.</value></data>
+  <data name="CommunityNetworkError" xml:space="preserve"><value>Impossible de joindre le service communautaire. Vérifiez le réseau et réessayez.</value></data>
+  <data name="CommunityOperationFailed" xml:space="preserve"><value>Échec de l’opération communautaire. Réessayez plus tard.</value></data>
+  <data name="CommunitySignedInDisplayText" xml:space="preserve"><value>Connecté en tant que {0}</value></data>
+  <data name="CommunityGrantedScopesNone" xml:space="preserve"><value>Le service n’a signalé aucune autorisation accordée.</value></data>
+  <data name="CommunityApplicationLoginFieldsRequiredError" xml:space="preserve"><value>Saisissez votre nom d’utilisateur, votre mot de passe et votre jeton d’application.</value></data>
+  <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>Connexion réussie. Le jeton d’application a été enregistré en sécurité dans le Gestionnaire d’informations d’identification Windows ; le mot de passe n’a pas été enregistré.</value></data>
+  <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>Ce service ne prend pas en charge la vérification du compte et du mot de passe. Le jeton d’application a été vérifié par l’ancien processus et enregistré en sécurité ; le mot de passe n’a été ni envoyé ni enregistré.</value></data>
+  <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>Le jeton d’application enregistré est invalide ou expiré. Reconnectez-vous avec un jeton valide.</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>Impossible de vérifier temporairement le compte enregistré. Les identifiants locaux sont conservés. Actualisez pour réessayer ou connectez-vous avec des identifiants à jour.</value></data>
+  <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>Le nom d’utilisateur, le mot de passe ou le jeton d’application est invalide, a expiré ou n’appartient pas au même compte.</value></data>
+  <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>Ce jeton d’application ne permet pas la connexion à l’application. Créez ou choisissez un jeton standard sur le site.</value></data>
+  <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>Trop de tentatives de connexion ont été effectuées. Patientez puis réessayez.</value></data>
+  <data name="CommunityApplicationLoginTimeoutError" xml:space="preserve"><value>La demande de connexion a expiré. Vérifiez le réseau et réessayez.</value></data>
+  <data name="CommunityApplicationLoginNetworkError" xml:space="preserve"><value>Impossible de joindre le service de compte. Vérifiez le réseau et réessayez.</value></data>
+  <data name="CommunityApplicationLoginInvalidResponseError" xml:space="preserve"><value>Le service de compte a renvoyé une réponse inattendue. Réessayez plus tard.</value></data>
+  <data name="CommunityApplicationLoginFailedError" xml:space="preserve"><value>Échec de la connexion. Vérifiez les informations saisies et réessayez plus tard.</value></data>
+  <data name="CommunityLoadMoreModsButton.Content" xml:space="preserve"><value>Charger plus de mods</value></data>
+  <data name="CommunityLoadMoreThreadsButton.Content" xml:space="preserve"><value>Charger plus de discussions</value></data>
+  <data name="CommunityReportPostButton.Content" xml:space="preserve"><value>Signaler le message</value></data>
+  <data name="CommunityReportSubmittedStatus" xml:space="preserve"><value>Le signalement a été envoyé à la modération.</value></data>
+  <data name="CommunityTimeoutError" xml:space="preserve"><value>La requête communautaire a expiré. Vérifiez le réseau et réessayez.</value></data>
+  <data name="CommunityTermsLink.Content" xml:space="preserve"><value>Conditions d’utilisation</value></data>
+  <data name="CommunityGuidelinesLink.Content" xml:space="preserve"><value>Règles de la communauté</value></data>
+  <data name="CommunityLatestVersionLabel.Text" xml:space="preserve"><value>Dernière version :</value></data>
+  <data name="CommunityReportModButton.Content" xml:space="preserve"><value>Signaler le Mod</value></data>
+  <data name="CommunityReportVersionButton.Content" xml:space="preserve"><value>Signaler la version</value></data>
+  <data name="CommunityReportUserButton.Content" xml:space="preserve"><value>Signaler l’auteur</value></data>
+  <data name="CommunityReportThreadButton.Content" xml:space="preserve"><value>Signaler la discussion</value></data>
+  <data name="CommunityReportDialog.Title" xml:space="preserve"><value>Signaler un contenu communautaire</value></data>
+  <data name="CommunityReportDialog.PrimaryButtonText" xml:space="preserve"><value>Envoyer le signalement</value></data>
+  <data name="CommunityReportDialog.CloseButtonText" xml:space="preserve"><value>Annuler</value></data>
+  <data name="CommunityReportTargetLabel.Text" xml:space="preserve"><value>Contenu signalé</value></data>
+  <data name="CommunityReportCategoryInput.Header" xml:space="preserve"><value>Catégorie</value></data>
+  <data name="CommunityReportCategoryInput.PlaceholderText" xml:space="preserve"><value>Choisissez la catégorie la plus proche</value></data>
+  <data name="CommunityReportDetailsInput.Header" xml:space="preserve"><value>Détails</value></data>
+  <data name="CommunityReportDetailsInput.PlaceholderText" xml:space="preserve"><value>Expliquez ce que les modérateurs doivent examiner</value></data>
+  <data name="CommunityReportDetailsHelp.Text" xml:space="preserve"><value>Saisissez 4 à 1 900 caractères. N’incluez aucun mot de passe, jeton ou autre secret.</value></data>
+  <data name="CommunityReportProgress.AutomationProperties.Name" xml:space="preserve"><value>Envoi du signalement</value></data>
+  <data name="CommunityReportSubmittingText.Text" xml:space="preserve"><value>Envoi du signalement…</value></data>
+  <data name="CommunityReportError.Title" xml:space="preserve"><value>Signalement non envoyé</value></data>
+  <data name="CommunityReportAccessDialog.Title" xml:space="preserve"><value>Configurer l’accès au signalement</value></data>
+  <data name="CommunityReportAccessDialog.CloseButtonText" xml:space="preserve"><value>Fermer</value></data>
+  <data name="CommunityReportAccessMessage.Text" xml:space="preserve"><value>La lecture reste disponible. Pour signaler un contenu, créez et enregistrez un PAT avec reports:write ou l’autorisation compatible forum:write. Consultez les règles ci-dessous avant l’envoi.</value></data>
+  <data name="CommunityReportUnavailableDialog.Title" xml:space="preserve"><value>Signalement indisponible</value></data>
+  <data name="CommunityReportUnavailableDialog.CloseButtonText" xml:space="preserve"><value>Fermer</value></data>
+  <data name="CommunityReportUnavailableMessage.Text" xml:space="preserve"><value>Ce contenu ne peut pas être signalé depuis LocaleSmith pour le moment. Actualisez après la mise à jour du service et consultez les conditions et règles ci-dessous.</value></data>
+  <data name="CommunityReportCategorySpam" xml:space="preserve"><value>Spam ou contenu trompeur</value></data>
+  <data name="CommunityReportCategoryHarassment" xml:space="preserve"><value>Harcèlement ou intimidation</value></data>
+  <data name="CommunityReportCategoryHateSpeech" xml:space="preserve"><value>Discours haineux</value></data>
+  <data name="CommunityReportCategorySexualContent" xml:space="preserve"><value>Contenu sexuel</value></data>
+  <data name="CommunityReportCategoryViolence" xml:space="preserve"><value>Violence ou menaces</value></data>
+  <data name="CommunityReportCategoryIllegalContent" xml:space="preserve"><value>Contenu illégal</value></data>
+  <data name="CommunityReportCategoryMalware" xml:space="preserve"><value>Logiciel malveillant ou fichier nuisible</value></data>
+  <data name="CommunityReportCategoryCopyright" xml:space="preserve"><value>Violation du droit d’auteur</value></data>
+  <data name="CommunityReportCategoryPrivacy" xml:space="preserve"><value>Atteinte à la vie privée</value></data>
+  <data name="CommunityReportCategoryImpersonation" xml:space="preserve"><value>Usurpation d’identité</value></data>
+  <data name="CommunityReportCategoryChildSafety" xml:space="preserve"><value>Sécurité des enfants</value></data>
+  <data name="CommunityReportCategoryOther" xml:space="preserve"><value>Autre infraction</value></data>
+  <data name="CommunityReportUnavailableError" xml:space="preserve"><value>Le signalement n’est pas disponible pour ce contenu. Consultez les règles de la communauté, actualisez et réessayez.</value></data>
+  <data name="CommunityReportPatRequiredError" xml:space="preserve"><value>Enregistrez un jeton d’accès personnel avec reports:write ou forum:write, puis réessayez.</value></data>
+  <data name="CommunityReportInputInvalid" xml:space="preserve"><value>Choisissez une catégorie et saisissez entre 4 et 1 900 caractères de détails.</value></data>
+  <data name="CommunityReportDuplicateError" xml:space="preserve"><value>Vous avez déjà signalé ce contenu. Les modérateurs peuvent examiner le signalement existant.</value></data>
+  <data name="CommunityReportTargetUnavailableError" xml:space="preserve"><value>Ce contenu ne peut plus être signalé. Actualisez la page de la communauté et réessayez.</value></data>
+  <data name="CommunityReportCategoryInvalidError" xml:space="preserve"><value>Cette catégorie n’est plus acceptée. Actualisez la liste et choisissez-en une autre.</value></data>
+  <data name="CommunityReportDetailsInvalidError" xml:space="preserve"><value>Saisissez entre 4 et 1 900 caractères de détails.</value></data>
+  <data name="CommunityReportUnauthorizedError" xml:space="preserve"><value>Le jeton d’accès personnel enregistré est invalide ou expiré. Remplacez-le puis renvoyez le signalement.</value></data>
+  <data name="CommunityReportScopeError" xml:space="preserve"><value>Le jeton enregistré nécessite reports:write ou l’autorisation compatible forum:write.</value></data>
+  <data name="CommunityReportRateLimitedError" xml:space="preserve"><value>Trop de signalements ont été envoyés récemment. Patientez puis réessayez.</value></data>
+  <data name="CommunityReportSecurityUnavailableError" xml:space="preserve"><value>Le signalement est temporairement indisponible car le service de sécurité est hors ligne. Réessayez plus tard.</value></data>
+  <data name="CommunityReportTimeoutError" xml:space="preserve"><value>La requête de signalement a expiré. Vérifiez le réseau puis renvoyez-la.</value></data>
+  <data name="CommunityReportNetworkError" xml:space="preserve"><value>Impossible de joindre le service de signalement. Vérifiez le réseau puis renvoyez-la.</value></data>
+  <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>Le service de signalement a renvoyé une réponse inattendue. Actualisez et réessayez plus tard.</value></data>
+  <data name="CommunityReportFailedError" xml:space="preserve"><value>Le signalement n’a pas pu être envoyé. Vérifiez les détails et réessayez plus tard.</value></data>
 </root>

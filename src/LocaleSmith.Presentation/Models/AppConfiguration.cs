@@ -232,6 +232,7 @@ public enum ShellSection
     Onboarding,
     Dashboard,
     Assistant,
+    Community,
     ModelSources,
     Logs,
     Settings

@@ -272,6 +272,7 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 }
             }
 
+            await PrepareUnsignedManifestOverrideAsync(cancellationToken).ConfigureAwait(false);
             _extracted = true;
             _journal.Write("extract", "ok", $"entries={_entries.Count}; bytes={totalBytes}");
         }
@@ -1267,6 +1268,43 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         return ArchivePathSafety.ValidateArchiveRelativePath(path);
     }
 
+    private async Task PrepareUnsignedManifestOverrideAsync(CancellationToken cancellationToken)
+    {
+        if (_request.SignedArchiveHandling != SignedArchiveHandling.CreateUnsignedCopy)
+        {
+            return;
+        }
+
+        const string manifestPath = "META-INF/MANIFEST.MF";
+        ArchiveEntrySnapshot? manifest = FindEntry(manifestPath);
+        if (manifest is null || manifest.IsDirectory)
+        {
+            return;
+        }
+
+        var info = new FileInfo(manifest.ExtractedPath);
+        if (!info.Exists || info.Length > MaximumTextResourceBytes || info.Length > int.MaxValue)
+        {
+            throw new InvalidDataException("Signed JAR manifest is missing or exceeds the static-analysis size limit.");
+        }
+
+        byte[] source = await File.ReadAllBytesAsync(manifest.ExtractedPath, cancellationToken).ConfigureAwait(false);
+        if (_inspection?.IsSigned != true && !JarManifestDocument.MayContainSignatureClaims(source))
+        {
+            return;
+        }
+
+        JarManifestDocument document = JarManifestDocument.Parse(source);
+        if (_inspection?.IsSigned != true && !document.ContainsSignatureClaims)
+        {
+            return;
+        }
+
+        _externalizationOverrides.Add(manifestPath, document.CreateUnsignedCopy());
+        AddWarning(
+            "The unsigned output copy removes signature blocks and manifest digest/signature claims; it does not claim the original signer or hashes.");
+    }
+
     private void AddSourceEntry(
         List<TranslationEntry> result,
         string relativePath,
@@ -1600,8 +1638,11 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         CancellationToken cancellationToken)
     {
         var errors = new List<string>();
+        var staticWarnings = new List<string>();
+        var completedChecks = new HashSet<string>(StringComparer.Ordinal);
         bool validArchive = true;
         bool metadataPreserved = true;
+        bool containsJavaBytecode = false;
         foreach (StagedArtifact artifact in _stagedArtifacts)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1663,6 +1704,46 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 continue;
             }
 
+            try
+            {
+                var modifiedPaths = _overrides[artifact.Style].Keys
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                ArtifactStaticValidation staticValidation = await ModArtifactStaticValidator
+                    .ValidateAsync(scanPath, modifiedPaths, cancellationToken)
+                    .ConfigureAwait(false);
+                containsJavaBytecode |= staticValidation.ContainsJavaBytecode;
+                completedChecks.UnionWith(staticValidation.CompletedChecks);
+                foreach (string error in staticValidation.BlockingErrors)
+                {
+                    errors.Add($"{artifact.Style}: static validation failed: {error}");
+                }
+
+                foreach (string warning in staticValidation.Warnings)
+                {
+                    string scopedWarning = $"{artifact.Style}: {warning}";
+                    staticWarnings.Add(scopedWarning);
+                    AddWarning(scopedWarning);
+                }
+
+                if (staticValidation.BlockingErrors.Count > 0)
+                {
+                    validArchive = false;
+                }
+
+                _journal.Write(
+                    "artifact_static_validation",
+                    staticValidation.BlockingErrors.Count == 0 ? "ok" : "failed",
+                    $"style={artifact.Style}; bytecode={staticValidation.ContainsJavaBytecode}; " +
+                    $"source_build={staticValidation.ContainsSourceBuild}; " +
+                    $"blocking={staticValidation.BlockingErrors.Count}; warnings={staticValidation.Warnings.Count}");
+            }
+            catch (Exception exception) when (
+                exception is InvalidDataException or IOException or UnauthorizedAccessException)
+            {
+                validArchive = false;
+                errors.Add($"{artifact.Style}: static validation could not complete: {exception.Message}");
+            }
+
             bool sourceUsesFallback = _manifest!.ModMetadata.UsedFilenameFallback;
             bool metadataMatches = sourceUsesFallback
                 ? rebuilt.ModMetadata.UsedFilenameFallback &&
@@ -1690,22 +1771,48 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             IEnumerable<string> expectedResources = _manifest.Resources
                 .Select(static resource => resource.Path)
-                .Concat(_overrides[artifact.Style].Keys.Where(static path =>
-                    !path.EndsWith(".class", StringComparison.OrdinalIgnoreCase)))
                 .Distinct(StringComparer.OrdinalIgnoreCase);
             foreach (string expectedResource in expectedResources)
             {
                 if (!rebuiltResources.Contains(expectedResource))
                 {
+                    validArchive = false;
                     errors.Add($"{artifact.Style}: expected resource '{expectedResource}' is missing.");
                 }
             }
 
+            var rebuiltEntries = rebuilt.Archive.Entries
+                .Select(static entry => entry.Path)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (string expectedOverride in _overrides[artifact.Style].Keys)
+            {
+                if (!rebuiltEntries.Contains(expectedOverride))
+                {
+                    validArchive = false;
+                    errors.Add($"{artifact.Style}: expected transformed entry '{expectedOverride}' is missing.");
+                }
+            }
+
+            StagedArtifact verificationArtifact = artifact.IsDirectory
+                ? artifact with { StagedPath = scanPath, IsDirectory = false }
+                : artifact;
             try
             {
-                StagedArtifact verificationArtifact = artifact.IsDirectory
-                    ? artifact with { StagedPath = scanPath, IsDirectory = false }
-                    : artifact;
+                await VerifyStagedOverrideContentsAsync(
+                        artifact,
+                        stagedArtifactGuards[artifact.StagedPath],
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception) when (
+                exception is InvalidDataException or IOException or UnauthorizedAccessException)
+            {
+                validArchive = false;
+                errors.Add($"{artifact.Style}: staged override content check failed: {exception.Message}");
+            }
+
+            try
+            {
                 await VerifyStagedExternalizationAsync(
                         verificationArtifact,
                         verificationGuard,
@@ -1722,7 +1829,37 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
             if (_request.SignedArchiveHandling == SignedArchiveHandling.CreateUnsignedCopy &&
                 !string.Equals(rebuilt.Archive.Signatures.Status, "none", StringComparison.Ordinal))
             {
+                validArchive = false;
                 errors.Add($"{artifact.Style}: signature files remain in the requested unsigned copy.");
+            }
+
+            if (_request.SignedArchiveHandling == SignedArchiveHandling.CreateUnsignedCopy &&
+                rebuilt.Archive.Entries.Any(static entry =>
+                    string.Equals(entry.Path, "META-INF/MANIFEST.MF", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    byte[] manifestBytes = await ReadStagedEntryBytesAsync(
+                            verificationArtifact,
+                            verificationGuard,
+                            "META-INF/MANIFEST.MF",
+                            MaximumTextResourceBytes,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    if (JarManifestDocument.MayContainSignatureClaims(manifestBytes) &&
+                        JarManifestDocument.Parse(manifestBytes).ContainsSignatureClaims)
+                    {
+                        validArchive = false;
+                        errors.Add(
+                            $"{artifact.Style}: the unsigned copy manifest still contains signature or digest claims.");
+                    }
+                }
+                catch (Exception exception) when (
+                    exception is InvalidDataException or IOException or UnauthorizedAccessException)
+                {
+                    validArchive = false;
+                    errors.Add($"{artifact.Style}: unsigned manifest verification failed: {exception.Message}");
+                }
             }
 
             if (artifact.IsDirectory && snapshotResult is not null)
@@ -1748,7 +1885,41 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
         IReadOnlyList<PackageArtifact> artifacts = _stagedArtifacts
             .Select(static artifact => new PackageArtifact(artifact.Style, artifact.TargetPath))
             .ToArray();
-        return new PackageVerification(validArchive, metadataPreserved, errors.AsReadOnly(), artifacts);
+        ArtifactValidationMode validationMode = containsJavaBytecode
+            ? ArtifactValidationMode.PrecompiledJarStaticAnalysis
+            : ArtifactValidationMode.ArchiveStaticAnalysis;
+        return new PackageVerification(
+            validArchive,
+            metadataPreserved,
+            errors.AsReadOnly(),
+            artifacts,
+            validationMode,
+            SourceCompilationPerformed: false,
+            completedChecks.Order(StringComparer.Ordinal).ToArray(),
+            staticWarnings.AsReadOnly());
+    }
+
+    private async Task VerifyStagedOverrideContentsAsync(
+        StagedArtifact artifact,
+        DirectoryMutationGuard artifactGuard,
+        CancellationToken cancellationToken)
+    {
+        foreach ((string archivePath, byte[] expected) in _overrides[artifact.Style])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            byte[] actual = await ReadStagedEntryBytesAsync(
+                    artifact,
+                    artifactGuard,
+                    archivePath,
+                    expected.Length,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (!CryptographicOperations.FixedTimeEquals(actual, expected))
+            {
+                throw new InvalidDataException(
+                    $"Transformed entry '{archivePath}' does not exactly match the verified override bytes.");
+            }
+        }
     }
 
     private async Task VerifyStagedExternalizationAsync(
