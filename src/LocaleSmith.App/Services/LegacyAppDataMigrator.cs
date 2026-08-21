@@ -62,9 +62,25 @@ public sealed class LegacyAppDataMigrator
 
     private async Task MigrateConfigurationAsync(CancellationToken cancellationToken)
     {
-        var legacyPath = Path.Combine(_legacyRoot, LegacyConfigurationFileName);
         var currentPath = Path.Combine(_currentRoot, CurrentConfigurationFileName);
-        if (File.Exists(currentPath) || !File.Exists(legacyPath))
+        if (File.Exists(currentPath))
+        {
+            return;
+        }
+
+        var previousLocaleSmithPath = Path.Combine(_legacyRoot, CurrentConfigurationFileName);
+        if (File.Exists(previousLocaleSmithPath))
+        {
+            await MigratePreviousLocaleSmithConfigurationAsync(
+                    previousLocaleSmithPath,
+                    currentPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return;
+        }
+
+        var legacyPath = Path.Combine(_legacyRoot, LegacyConfigurationFileName);
+        if (!File.Exists(legacyPath))
         {
             return;
         }
@@ -100,6 +116,57 @@ public sealed class LegacyAppDataMigrator
         await currentConfiguration.SaveIfAbsentAsync(configuration, cancellationToken).ConfigureAwait(false);
     }
 
+    private async Task MigratePreviousLocaleSmithConfigurationAsync(
+        string sourcePath,
+        string currentPath,
+        CancellationToken cancellationToken)
+    {
+        var currentMasterKeys = new CredentialManagerMasterKeyStore(_currentSecretStore);
+        using var sourceConfiguration = new EncryptedJsonConfigurationStore<AppConfiguration>(
+            sourcePath,
+            CurrentConfigurationPurpose,
+            currentMasterKeys);
+        using var currentConfiguration = new EncryptedJsonConfigurationStore<AppConfiguration>(
+            currentPath,
+            CurrentConfigurationPurpose,
+            currentMasterKeys);
+
+        var configuration = await sourceConfiguration.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (configuration is null)
+        {
+            return;
+        }
+
+        configuration = LegacyDefaultPathNormalizer.Normalize(
+            configuration,
+            out _,
+            _currentRoot);
+        configuration = NormalizeRelocatedAppDataPaths(configuration);
+        await currentConfiguration.SaveIfAbsentAsync(configuration, cancellationToken).ConfigureAwait(false);
+    }
+
+    private AppConfiguration NormalizeRelocatedAppDataPaths(AppConfiguration configuration)
+    {
+        var sourceSandbox = Path.Combine(_legacyRoot, "CliSandbox");
+        var sourceLogDirectory = Path.Combine(_legacyRoot, "logs", "translations");
+        var relocateSandbox = PathsEqual(configuration.SandboxPath, sourceSandbox);
+        var relocateLogDirectory = PathsEqual(configuration.LogDirectoryPath, sourceLogDirectory);
+        if (!relocateSandbox && !relocateLogDirectory)
+        {
+            return configuration;
+        }
+
+        return configuration with
+        {
+            SandboxPath = relocateSandbox
+                ? Path.Combine(_currentRoot, "CliSandbox")
+                : configuration.SandboxPath,
+            LogDirectoryPath = relocateLogDirectory
+                ? Path.Combine(_currentRoot, "logs", "translations")
+                : configuration.LogDirectoryPath
+        };
+    }
+
     private async Task MigrateSecretAsync(string reference, CancellationToken cancellationToken)
     {
         var migratingStore = new MigratingSecretStore(_currentSecretStore, _legacySecretStore);
@@ -115,6 +182,13 @@ public sealed class LegacyAppDataMigrator
         return normalizedFirst.StartsWith(normalizedSecond, StringComparison.OrdinalIgnoreCase)
             || normalizedSecond.StartsWith(normalizedFirst, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool PathsEqual(string? first, string second) =>
+        !string.IsNullOrWhiteSpace(first)
+        && string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(first)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(second)),
+            StringComparison.OrdinalIgnoreCase);
 
     private static void RejectReparsePoint(string path)
     {

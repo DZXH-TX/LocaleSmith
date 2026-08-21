@@ -26,6 +26,7 @@ internal static class ShellNavigationMap
             ShellNavigationSelection.None),
         ShellSection.Dashboard => MenuTarget<DashboardPage>(nameof(ShellSection.Dashboard)),
         ShellSection.Assistant => MenuTarget<AssistantPage>(nameof(ShellSection.Assistant)),
+        ShellSection.Community => MenuTarget<CommunityPage>(nameof(ShellSection.Community)),
         ShellSection.ModelSources => MenuTarget<ModelSourcesPage>(nameof(ShellSection.ModelSources)),
         ShellSection.Logs => MenuTarget<LogsPage>(nameof(ShellSection.Logs)),
         ShellSection.Settings => new(
@@ -42,6 +43,7 @@ internal static class ShellNavigationMap
             var type when type == typeof(OnboardingPage) => ShellSection.Onboarding,
             var type when type == typeof(DashboardPage) => ShellSection.Dashboard,
             var type when type == typeof(AssistantPage) => ShellSection.Assistant,
+            var type when type == typeof(CommunityPage) => ShellSection.Community,
             var type when type == typeof(ModelSourcesPage) => ShellSection.ModelSources,
             var type when type == typeof(LogsPage) => ShellSection.Logs,
             var type when type == typeof(SettingsPage) => ShellSection.Settings,
@@ -56,12 +58,14 @@ internal static class ShellNavigationMap
         {
             nameof(ShellSection.Dashboard) => ShellSection.Dashboard,
             nameof(ShellSection.Assistant) => ShellSection.Assistant,
+            nameof(ShellSection.Community) => ShellSection.Community,
             nameof(ShellSection.ModelSources) => ShellSection.ModelSources,
             nameof(ShellSection.Logs) => ShellSection.Logs,
             _ => default
         };
         return tag is nameof(ShellSection.Dashboard)
             or nameof(ShellSection.Assistant)
+            or nameof(ShellSection.Community)
             or nameof(ShellSection.ModelSources)
             or nameof(ShellSection.Logs);
     }

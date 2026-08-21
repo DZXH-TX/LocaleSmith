@@ -407,4 +407,158 @@
   <data name="AssistantCleared" xml:space="preserve"><value>Диалог очищен.</value></data>
   <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>Источник модели изменён. Предыдущий диалог очищен, чтобы предотвратить раскрытие данных между провайдерами.</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>Не удалось открыть предложение команды для проверки. Ничего не было выполнено.</value></data>
+  <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Сообщество модов</value></data>
+  <data name="CommunityTitle.Text" xml:space="preserve"><value>Сообщество модов</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Читайте обсуждения модов в LocaleSmith и безопасно публикуйте сообщения с персональным токеном доступа.</value></data>
+  <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>Загрузка материалов сообщества</value></data>
+  <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>Отмена</value></data>
+  <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>Обновить</value></data>
+  <data name="CommunitySearchInput.Header" xml:space="preserve"><value>Поиск модов</value></data>
+  <data name="CommunitySearchInput.PlaceholderText" xml:space="preserve"><value>Поиск по названию, описанию или тегу</value></data>
+  <data name="CommunitySearchButton.Content" xml:space="preserve"><value>Найти</value></data>
+  <data name="CommunitySearchButton.AccessKey" xml:space="preserve"><value>S</value></data>
+  <data name="CommunityError.Title" xml:space="preserve"><value>Операция сообщества не выполнена</value></data>
+  <data name="CommunityRetryButton.Content" xml:space="preserve"><value>Повторить</value></data>
+  <data name="CommunityStatus.Title" xml:space="preserve"><value>Операция завершена</value></data>
+  <data name="CommunityModsHeading.Text" xml:space="preserve"><value>Моды</value></data>
+  <data name="CommunityModsHelp.Text" xml:space="preserve"><value>Выберите мод, чтобы открыть его обсуждения.</value></data>
+  <data name="CommunityModsList.AutomationProperties.Name" xml:space="preserve"><value>Результаты поиска модов</value></data>
+  <data name="CommunityModsEmptyTitle.Text" xml:space="preserve"><value>Моды не найдены</value></data>
+  <data name="CommunityModsEmptyBody.Text" xml:space="preserve"><value>Измените запрос и повторите поиск либо обновите список.</value></data>
+  <data name="CommunityThreadsHeading.Text" xml:space="preserve"><value>Обсуждения</value></data>
+  <data name="CommunityThreadsList.AutomationProperties.Name" xml:space="preserve"><value>Темы обсуждений</value></data>
+  <data name="CommunityThreadsEmptyTitle.Text" xml:space="preserve"><value>Обсуждений пока нет</value></data>
+  <data name="CommunityThreadsEmptyBody.Text" xml:space="preserve"><value>Сохраните PAT с разрешением forum:write, чтобы создать первую тему.</value></data>
+  <data name="CommunitySelectModPrompt.Text" xml:space="preserve"><value>Сначала выберите мод, чтобы загрузить обсуждения.</value></data>
+  <data name="CommunityRepliesLabel.Text" xml:space="preserve"><value>Ответы</value></data>
+  <data name="CommunityUpdatedLabel.Text" xml:space="preserve"><value>Обновлено</value></data>
+  <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Мод</value></data>
+  <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>Тема</value></data>
+  <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>Учётная запись сообщества</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Войдите, чтобы использовать функции учётной записи</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Просмотр остаётся общедоступным. Войдите с именем пользователя, паролем и токеном приложения от сайта. LocaleSmith использует пароль только для этой проверки и не сохраняет его.</value></data>
+  <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>Имя пользователя</value></data>
+  <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Имя пользователя на сайте</value></data>
+  <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>Пароль</value></data>
+  <data name="CommunityPasswordInput.PlaceholderText" xml:space="preserve"><value>Пароль от сайта</value></data>
+  <data name="CommunityApplicationTokenInput.Header" xml:space="preserve"><value>Токен приложения (PAT)</value></data>
+  <data name="CommunityApplicationTokenInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityApplicationLoginHelp.Text" xml:space="preserve"><value>Зарегистрируйте учётную запись и создайте токен приложения на сайте. В диспетчере учётных данных Windows сохраняется только токен; пароль используется один раз для первоначальной проверки и никогда не сохраняется. Доступные действия определяются разрешениями токена.</value></data>
+  <data name="CommunityApplicationLoginButton.Content" xml:space="preserve"><value>Безопасно войти</value></data>
+  <data name="CommunityRegisterAccountLink.Content" xml:space="preserve"><value>Зарегистрироваться на сайте</value></data>
+  <data name="CommunitySignedInInfo.Message" xml:space="preserve"><value>На этом устройстве выполнен вход. LocaleSmith использует сохранённый токен только для действий, разрешённых его областью доступа.</value></data>
+  <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>Разрешения, предоставленные токену</value></data>
+  <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Создать токены приложения или управлять ими на сайте</value></data>
+  <data name="CommunityPatExpander.Header" xml:space="preserve"><value>Учётная запись сообщества и персональный токен</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Режим чтения</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>Чтение доступно всем. Для публикации нужен forum:write, а для жалоб — reports:write или совместимое разрешение forum:write.</value></data>
+  <data name="CommunityPatInput.Header" xml:space="preserve"><value>Персональный токен доступа (PAT)</value></data>
+  <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityPatHelp.Text" xml:space="preserve"><value>Токен хранится только в диспетчере учётных данных Windows и не записывается в настройки, журналы или страницу. Удаление локальной копии не отзывает токен на сервере.</value></data>
+  <data name="CommunitySavePatButton.Content" xml:space="preserve"><value>Сохранить безопасно</value></data>
+  <data name="CommunityDeletePatButton.Content" xml:space="preserve"><value>Выйти на этом устройстве</value></data>
+  <data name="CommunityCreatePatLink.Content" xml:space="preserve"><value>Создать PAT на сайте</value></data>
+  <data name="CommunityPostsHeading.Text" xml:space="preserve"><value>Сообщения</value></data>
+  <data name="CommunityPostsList.AutomationProperties.Name" xml:space="preserve"><value>Сообщения темы</value></data>
+  <data name="CommunitySelectThreadPrompt.Text" xml:space="preserve"><value>Выберите тему, чтобы прочитать сообщения.</value></data>
+  <data name="CommunityPostsEmptyTitle.Text" xml:space="preserve"><value>Нет видимых сообщений</value></data>
+  <data name="CommunityPostsEmptyBody.Text" xml:space="preserve"><value>Обновите и повторите попытку: материал может проходить проверку или быть скрыт.</value></data>
+  <data name="CommunityLoadMorePostsButton.Content" xml:space="preserve"><value>Загрузить ещё</value></data>
+  <data name="CommunityThreadLockedInfo.Title" xml:space="preserve"><value>Ответы недоступны</value></data>
+  <data name="CommunityThreadLockedInfo.Message" xml:space="preserve"><value>Тема закрыта или заблокирована. Существующие сообщения доступны для чтения.</value></data>
+  <data name="CommunityNewThreadExpander.Header" xml:space="preserve"><value>Создать тему</value></data>
+  <data name="CommunityNewThreadTitleInput.Header" xml:space="preserve"><value>Заголовок</value></data>
+  <data name="CommunityNewThreadTitleInput.PlaceholderText" xml:space="preserve"><value>От 4 до 160 символов</value></data>
+  <data name="CommunityNewThreadContentInput.Header" xml:space="preserve"><value>Текст</value></data>
+  <data name="CommunityNewThreadContentInput.PlaceholderText" xml:space="preserve"><value>Опишите вопрос, предложение или свой опыт</value></data>
+  <data name="CommunityMarkdownPlainTextHelp.Text" xml:space="preserve"><value>Можно вводить Markdown; эта версия всегда показывает его как обычный текст и не выполняет HTML.</value></data>
+  <data name="CommunityCreateThreadButton.Content" xml:space="preserve"><value>Опубликовать тему</value></data>
+  <data name="CommunityReplyExpander.Header" xml:space="preserve"><value>Ответить в теме</value></data>
+  <data name="CommunityReplyInput.Header" xml:space="preserve"><value>Ответ</value></data>
+  <data name="CommunityReplyInput.PlaceholderText" xml:space="preserve"><value>Напишите полезный и уважительный ответ</value></data>
+  <data name="CommunityMarkdownPlainTextHelpReply.Text" xml:space="preserve"><value>Можно вводить Markdown; эта версия всегда показывает его как обычный текст и не выполняет HTML.</value></data>
+  <data name="CommunityCreateReplyButton.Content" xml:space="preserve"><value>Опубликовать ответ</value></data>
+  <data name="CommunityDeletePatDialog.Title" xml:space="preserve"><value>Выйти на этом устройстве?</value></data>
+  <data name="CommunityDeletePatDialog.Content" xml:space="preserve"><value>LocaleSmith удалит токен из диспетчера учётных данных Windows на этом устройстве. Токен останется активным на сайте, пока вы не отзовёте его там.</value></data>
+  <data name="CommunityDeletePatDialog.PrimaryButtonText" xml:space="preserve"><value>Выйти</value></data>
+  <data name="CommunityDeletePatDialog.CloseButtonText" xml:space="preserve"><value>Отмена</value></data>
+  <data name="CommunityPostsLoadedText" xml:space="preserve"><value>Загружено {0} из {1}</value></data>
+  <data name="CommunityPatSavedStatus" xml:space="preserve"><value>Персональный токен безопасно сохранён в диспетчере учётных данных Windows.</value></data>
+  <data name="CommunityThreadCreatedStatus" xml:space="preserve"><value>Обсуждение создано.</value></data>
+  <data name="CommunityReplyCreatedStatus" xml:space="preserve"><value>Ответ опубликован.</value></data>
+  <data name="CommunityPatDeletedStatus" xml:space="preserve"><value>На этом устройстве выполнен выход, локальный токен удалён. Токен на сайте не отозван.</value></data>
+  <data name="CommunityOperationCancelledStatus" xml:space="preserve"><value>Операция отменена.</value></data>
+  <data name="CommunityNetworkError" xml:space="preserve"><value>Не удалось подключиться к сервису сообщества. Проверьте сеть и повторите попытку.</value></data>
+  <data name="CommunityOperationFailed" xml:space="preserve"><value>Не удалось выполнить операцию сообщества. Повторите попытку позже.</value></data>
+  <data name="CommunitySignedInDisplayText" xml:space="preserve"><value>Выполнен вход: {0}</value></data>
+  <data name="CommunityGrantedScopesNone" xml:space="preserve"><value>Сервис не сообщил о предоставленных разрешениях.</value></data>
+  <data name="CommunityApplicationLoginFieldsRequiredError" xml:space="preserve"><value>Введите имя пользователя, пароль и токен приложения.</value></data>
+  <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>Вход выполнен. Токен приложения безопасно сохранён в диспетчере учётных данных Windows; пароль не сохранён.</value></data>
+  <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>Этот сервис не поддерживает проверку учётной записи и пароля. Токен приложения проверен прежним способом и безопасно сохранён; пароль не отправлялся и не сохранялся.</value></data>
+  <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>Сохранённый токен приложения недействителен или просрочен. Войдите снова с действительным токеном.</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>Сейчас не удалось проверить сохранённую учётную запись. Локальные учётные данные сохранены, а общедоступный просмотр по-прежнему доступен. Обновите и повторите попытку.</value></data>
+  <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>Имя пользователя, пароль или токен приложения недействительны, просрочены либо не принадлежат одной учётной записи.</value></data>
+  <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>Этот токен приложения нельзя использовать для входа в приложение. Создайте или выберите обычный токен на сайте.</value></data>
+  <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>Слишком много попыток входа. Подождите и повторите попытку.</value></data>
+  <data name="CommunityApplicationLoginTimeoutError" xml:space="preserve"><value>Время ожидания запроса на вход истекло. Проверьте сеть и повторите попытку.</value></data>
+  <data name="CommunityApplicationLoginNetworkError" xml:space="preserve"><value>Не удалось подключиться к сервису учётных записей. Проверьте сеть и повторите попытку.</value></data>
+  <data name="CommunityApplicationLoginInvalidResponseError" xml:space="preserve"><value>Сервис учётных записей вернул неожиданный ответ. Повторите попытку позже.</value></data>
+  <data name="CommunityApplicationLoginFailedError" xml:space="preserve"><value>Не удалось войти. Проверьте введённые данные и повторите попытку позже.</value></data>
+  <data name="CommunityLoadMoreModsButton.Content" xml:space="preserve"><value>Загрузить ещё моды</value></data>
+  <data name="CommunityLoadMoreThreadsButton.Content" xml:space="preserve"><value>Загрузить ещё обсуждения</value></data>
+  <data name="CommunityReportPostButton.Content" xml:space="preserve"><value>Пожаловаться на сообщение</value></data>
+  <data name="CommunityReportSubmittedStatus" xml:space="preserve"><value>Жалоба отправлена на модерацию.</value></data>
+  <data name="CommunityTimeoutError" xml:space="preserve"><value>Время ожидания запроса к сообществу истекло. Проверьте сеть и повторите попытку.</value></data>
+  <data name="CommunityTermsLink.Content" xml:space="preserve"><value>Условия использования</value></data>
+  <data name="CommunityGuidelinesLink.Content" xml:space="preserve"><value>Правила сообщества</value></data>
+  <data name="CommunityLatestVersionLabel.Text" xml:space="preserve"><value>Последняя версия:</value></data>
+  <data name="CommunityReportModButton.Content" xml:space="preserve"><value>Пожаловаться на мод</value></data>
+  <data name="CommunityReportVersionButton.Content" xml:space="preserve"><value>Пожаловаться на версию</value></data>
+  <data name="CommunityReportUserButton.Content" xml:space="preserve"><value>Пожаловаться на автора</value></data>
+  <data name="CommunityReportThreadButton.Content" xml:space="preserve"><value>Пожаловаться на обсуждение</value></data>
+  <data name="CommunityReportDialog.Title" xml:space="preserve"><value>Пожаловаться на материал сообщества</value></data>
+  <data name="CommunityReportDialog.PrimaryButtonText" xml:space="preserve"><value>Отправить жалобу</value></data>
+  <data name="CommunityReportDialog.CloseButtonText" xml:space="preserve"><value>Отмена</value></data>
+  <data name="CommunityReportTargetLabel.Text" xml:space="preserve"><value>Материал жалобы</value></data>
+  <data name="CommunityReportCategoryInput.Header" xml:space="preserve"><value>Категория</value></data>
+  <data name="CommunityReportCategoryInput.PlaceholderText" xml:space="preserve"><value>Выберите наиболее подходящую категорию</value></data>
+  <data name="CommunityReportDetailsInput.Header" xml:space="preserve"><value>Подробности</value></data>
+  <data name="CommunityReportDetailsInput.PlaceholderText" xml:space="preserve"><value>Объясните, что должны проверить модераторы</value></data>
+  <data name="CommunityReportDetailsHelp.Text" xml:space="preserve"><value>Введите от 4 до 1 900 символов. Не указывайте пароли, токены и другие секреты.</value></data>
+  <data name="CommunityReportProgress.AutomationProperties.Name" xml:space="preserve"><value>Отправка жалобы</value></data>
+  <data name="CommunityReportSubmittingText.Text" xml:space="preserve"><value>Жалоба отправляется…</value></data>
+  <data name="CommunityReportError.Title" xml:space="preserve"><value>Жалоба не отправлена</value></data>
+  <data name="CommunityReportAccessDialog.Title" xml:space="preserve"><value>Настроить доступ для жалоб</value></data>
+  <data name="CommunityReportAccessDialog.CloseButtonText" xml:space="preserve"><value>Закрыть</value></data>
+  <data name="CommunityReportAccessMessage.Text" xml:space="preserve"><value>Просмотр по-прежнему доступен. Чтобы пожаловаться, создайте и сохраните PAT с разрешением reports:write или совместимым forum:write. Перед отправкой ознакомьтесь с правилами ниже.</value></data>
+  <data name="CommunityReportUnavailableDialog.Title" xml:space="preserve"><value>Жалобы недоступны</value></data>
+  <data name="CommunityReportUnavailableDialog.CloseButtonText" xml:space="preserve"><value>Закрыть</value></data>
+  <data name="CommunityReportUnavailableMessage.Text" xml:space="preserve"><value>Сейчас на этот материал нельзя пожаловаться из LocaleSmith. Обновите страницу после обновления сервиса и ознакомьтесь с условиями и правилами ниже.</value></data>
+  <data name="CommunityReportCategorySpam" xml:space="preserve"><value>Спам или вводящий в заблуждение материал</value></data>
+  <data name="CommunityReportCategoryHarassment" xml:space="preserve"><value>Домогательства или травля</value></data>
+  <data name="CommunityReportCategoryHateSpeech" xml:space="preserve"><value>Разжигание ненависти</value></data>
+  <data name="CommunityReportCategorySexualContent" xml:space="preserve"><value>Материалы сексуального характера</value></data>
+  <data name="CommunityReportCategoryViolence" xml:space="preserve"><value>Насилие или угрозы</value></data>
+  <data name="CommunityReportCategoryIllegalContent" xml:space="preserve"><value>Незаконный материал</value></data>
+  <data name="CommunityReportCategoryMalware" xml:space="preserve"><value>Вредоносная программа или опасный файл</value></data>
+  <data name="CommunityReportCategoryCopyright" xml:space="preserve"><value>Нарушение авторских прав</value></data>
+  <data name="CommunityReportCategoryPrivacy" xml:space="preserve"><value>Нарушение конфиденциальности</value></data>
+  <data name="CommunityReportCategoryImpersonation" xml:space="preserve"><value>Выдача себя за другое лицо</value></data>
+  <data name="CommunityReportCategoryChildSafety" xml:space="preserve"><value>Безопасность детей</value></data>
+  <data name="CommunityReportCategoryOther" xml:space="preserve"><value>Другое нарушение</value></data>
+  <data name="CommunityReportUnavailableError" xml:space="preserve"><value>На этот материал сейчас нельзя пожаловаться. Ознакомьтесь с правилами сообщества, обновите страницу и повторите попытку.</value></data>
+  <data name="CommunityReportPatRequiredError" xml:space="preserve"><value>Сохраните персональный токен с разрешением reports:write или forum:write и повторите попытку.</value></data>
+  <data name="CommunityReportInputInvalid" xml:space="preserve"><value>Выберите категорию и введите от 4 до 1 900 символов подробностей.</value></data>
+  <data name="CommunityReportDuplicateError" xml:space="preserve"><value>Вы уже жаловались на этот материал. Модераторы рассмотрят существующую жалобу.</value></data>
+  <data name="CommunityReportTargetUnavailableError" xml:space="preserve"><value>На этот материал больше нельзя пожаловаться. Обновите страницу сообщества и повторите попытку.</value></data>
+  <data name="CommunityReportCategoryInvalidError" xml:space="preserve"><value>Эта категория больше не принимается. Обновите список и выберите другую категорию.</value></data>
+  <data name="CommunityReportDetailsInvalidError" xml:space="preserve"><value>Введите от 4 до 1 900 символов подробностей жалобы.</value></data>
+  <data name="CommunityReportUnauthorizedError" xml:space="preserve"><value>Сохранённый персональный токен недействителен или просрочен. Замените его и отправьте жалобу снова.</value></data>
+  <data name="CommunityReportScopeError" xml:space="preserve"><value>Сохранённому токену нужно разрешение reports:write или совместимое forum:write.</value></data>
+  <data name="CommunityReportRateLimitedError" xml:space="preserve"><value>За последнее время отправлено слишком много жалоб. Подождите и повторите попытку.</value></data>
+  <data name="CommunityReportSecurityUnavailableError" xml:space="preserve"><value>Жалобы временно недоступны: служба безопасности не работает. Повторите попытку позже.</value></data>
+  <data name="CommunityReportTimeoutError" xml:space="preserve"><value>Время ожидания запроса истекло. Проверьте сеть и отправьте жалобу снова.</value></data>
+  <data name="CommunityReportNetworkError" xml:space="preserve"><value>Не удалось подключиться к сервису жалоб. Проверьте сеть и отправьте жалобу снова.</value></data>
+  <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>Сервис жалоб вернул неожиданный ответ. Обновите страницу и повторите попытку позже.</value></data>
+  <data name="CommunityReportFailedError" xml:space="preserve"><value>Не удалось отправить жалобу. Проверьте подробности и повторите попытку позже.</value></data>
 </root>

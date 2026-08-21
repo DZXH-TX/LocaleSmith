@@ -1,0 +1,721 @@
+<Page
+    x:Class="LocaleSmith.App.Pages.CommunityPage"
+    x:Name="CommunityPageRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behaviors="using:LocaleSmith.App.Behaviors"
+    NavigationCacheMode="Required">
+    <Grid
+        Padding="24"
+        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+        RowSpacing="16">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="CompactCommunityLayout">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="ModsPane.Visibility" Value="Collapsed" />
+                        <Setter Target="ThreadsPane.Visibility" Value="Collapsed" />
+                        <Setter Target="PostsPane.(Grid.Column)" Value="0" />
+                        <Setter Target="PostsPane.(Grid.ColumnSpan)" Value="3" />
+                        <Setter Target="CompactSelectors.Visibility" Value="Visible" />
+                        <Setter Target="CompactEmptyStates.Visibility" Value="Visible" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="WideCommunityLayout">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1050" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="ModsPane.Visibility" Value="Visible" />
+                        <Setter Target="ThreadsPane.Visibility" Value="Visible" />
+                        <Setter Target="PostsPane.(Grid.Column)" Value="2" />
+                        <Setter Target="PostsPane.(Grid.ColumnSpan)" Value="1" />
+                        <Setter Target="CompactSelectors.Visibility" Value="Collapsed" />
+                        <Setter Target="CompactEmptyStates.Visibility" Value="Collapsed" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid ColumnSpacing="16" RowSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Spacing="4">
+                <TextBlock
+                    x:Uid="CommunityTitle"
+                    AutomationProperties.HeadingLevel="Level1"
+                    Style="{ThemeResource PageTitleStyle}" />
+                <TextBlock x:Uid="CommunitySubtitle" TextWrapping="WrapWholeWords" />
+                <StackPanel HorizontalAlignment="Left" Spacing="0">
+                    <HyperlinkButton
+                        x:Uid="CommunityTermsLink"
+                        NavigateUri="{Binding TermsUri}" />
+                    <HyperlinkButton
+                        x:Uid="CommunityGuidelinesLink"
+                        NavigateUri="{Binding CommunityGuidelinesUri}" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel
+                Grid.Column="1"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="8">
+                <ProgressRing
+                    x:Uid="CommunityBusyIndicator"
+                    Width="32"
+                    Height="32"
+                    IsActive="{Binding IsBusy}"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Button Command="{Binding CancelCommand}" Visibility="{Binding CanCancel, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE711;" />
+                        <TextBlock x:Uid="CommunityCancelButtonText" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding RefreshCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                        <TextBlock x:Uid="CommunityRefreshButtonText" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox
+                    x:Name="CommunitySearchInput"
+                    x:Uid="CommunitySearchInput"
+                    KeyDown="OnSearchInputKeyDown"
+                    MaxLength="100"
+                    Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Button
+                    x:Uid="CommunitySearchButton"
+                    Grid.Column="1"
+                    Command="{Binding SearchCommand}"
+                    Style="{ThemeResource AccentButtonStyle}" />
+            </Grid>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Spacing="8">
+            <InfoBar
+                x:Uid="CommunityError"
+                AutomationProperties.LiveSetting="Assertive"
+                behaviors:AppMotion.StatusFeedback="True"
+                IsClosable="False"
+                IsOpen="{Binding HasError}"
+                Message="{Binding ErrorMessage}"
+                Severity="Error">
+                <InfoBar.ActionButton>
+                    <Button x:Uid="CommunityRetryButton" Command="{Binding RetryCommand}" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+            <InfoBar
+                x:Uid="CommunityStatus"
+                AutomationProperties.LiveSetting="Polite"
+                behaviors:AppMotion.StatusFeedback="True"
+                IsClosable="False"
+                IsOpen="{Binding HasStatus}"
+                Message="{Binding StatusMessage}"
+                Severity="Success" />
+        </StackPanel>
+
+        <Grid Grid.Row="2" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.9*" />
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="1.35*" />
+            </Grid.ColumnDefinitions>
+
+            <Border x:Name="ModsPane" Padding="16" Style="{ThemeResource CardBorderStyle}">
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Spacing="2">
+                        <TextBlock
+                            x:Uid="CommunityModsHeading"
+                            AutomationProperties.HeadingLevel="Level2"
+                            Style="{ThemeResource SectionTitleStyle}" />
+                        <TextBlock x:Uid="CommunityModsHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                    </StackPanel>
+                    <Grid Grid.Row="1">
+                        <ListView
+                            x:Name="CommunityModsList"
+                            x:Uid="CommunityModsList"
+                            IsItemClickEnabled="False"
+                            ItemsSource="{Binding Mods}"
+                            SelectedItem="{Binding SelectedMod, Mode=OneWay}"
+                            SelectionChanged="OnModSelectionChanged"
+                            SelectionMode="Single">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Padding="4" Spacing="4">
+                                        <TextBlock Text="{Binding Title}" Style="{ThemeResource BodyStrongTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                                        <TextBlock Text="{Binding Summary}" MaxLines="3" Style="{ThemeResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" TextWrapping="WrapWholeWords" />
+                                        <TextBlock Text="{Binding OwnerName}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        <StackPanel
+                                            Orientation="Horizontal"
+                                            Spacing="4"
+                                            Visibility="{Binding HasLatestVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock x:Uid="CommunityLatestVersionLabel" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                            <TextBlock Text="{Binding LatestVersion.VersionName}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        </StackPanel>
+                                        <StackPanel Spacing="6">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Button
+                                                    x:Uid="CommunityReportModButton"
+                                                    Click="OnReportModClicked" />
+                                                <Button
+                                                    x:Uid="CommunityReportVersionButton"
+                                                    Click="OnReportVersionClicked"
+                                                    Visibility="{Binding HasLatestVersion, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                            </StackPanel>
+                                            <Button
+                                                x:Uid="CommunityReportUserButton"
+                                                HorizontalAlignment="Left"
+                                                Click="OnReportModOwnerClicked" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <StackPanel
+                            MaxWidth="280"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                            Visibility="{Binding ShowModsEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <FontIcon FontSize="28" Glyph="&#xE8F1;" />
+                            <TextBlock x:Uid="CommunityModsEmptyTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" TextAlignment="Center" />
+                            <TextBlock x:Uid="CommunityModsEmptyBody" Style="{ThemeResource CaptionTextBlockStyle}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                    </Grid>
+                    <Button
+                        x:Uid="CommunityLoadMoreModsButton"
+                        Grid.Row="2"
+                        HorizontalAlignment="Center"
+                        Command="{Binding LoadMoreModsCommand}"
+                        Visibility="{Binding HasMoreMods, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </Border>
+
+            <Border x:Name="ThreadsPane" Grid.Column="1" Padding="16" Style="{ThemeResource CardBorderStyle}">
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Spacing="2">
+                        <TextBlock
+                            x:Uid="CommunityThreadsHeading"
+                            AutomationProperties.HeadingLevel="Level2"
+                            Style="{ThemeResource SectionTitleStyle}" />
+                        <TextBlock Text="{Binding SelectedMod.Title}" Style="{ThemeResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Grid Grid.Row="1">
+                        <ListView
+                            x:Name="CommunityThreadsList"
+                            x:Uid="CommunityThreadsList"
+                            IsEnabled="{Binding HasSelectedMod}"
+                            ItemsSource="{Binding Threads}"
+                            SelectedItem="{Binding SelectedThread, Mode=OneWay}"
+                            SelectionChanged="OnThreadSelectionChanged"
+                            SelectionMode="Single">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Padding="4" Spacing="4">
+                                        <TextBlock Text="{Binding Title}" Style="{ThemeResource BodyStrongTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                                        <TextBlock Text="{Binding AuthorName}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock x:Uid="CommunityRepliesLabel" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                            <TextBlock Text="{Binding ReplyCount}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                            <TextBlock x:Uid="CommunityUpdatedLabel" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                            <TextBlock Text="{Binding UpdatedAt}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Button
+                                                x:Uid="CommunityReportThreadButton"
+                                                Click="OnReportThreadClicked" />
+                                            <Button
+                                                x:Uid="CommunityReportUserButton"
+                                                Click="OnReportThreadAuthorClicked" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <StackPanel
+                            MaxWidth="280"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                            Visibility="{Binding ShowThreadsEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <FontIcon FontSize="28" Glyph="&#xE8BD;" />
+                            <TextBlock x:Uid="CommunityThreadsEmptyTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" TextAlignment="Center" />
+                            <TextBlock x:Uid="CommunityThreadsEmptyBody" Style="{ThemeResource CaptionTextBlockStyle}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                        <StackPanel
+                            MaxWidth="280"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                            Visibility="{Binding HasSelectedMod, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Invert}">
+                            <FontIcon FontSize="28" Glyph="&#xE8A7;" />
+                            <TextBlock x:Uid="CommunitySelectModPrompt" Style="{ThemeResource CaptionTextBlockStyle}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                    </Grid>
+                    <Button
+                        x:Uid="CommunityLoadMoreThreadsButton"
+                        Grid.Row="2"
+                        HorizontalAlignment="Center"
+                        Command="{Binding LoadMoreThreadsCommand}"
+                        Visibility="{Binding HasMoreThreads, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </Border>
+
+            <Border x:Name="PostsPane" Grid.Column="2" Padding="16" Style="{ThemeResource CardBorderStyle}">
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid x:Name="CompactSelectors" ColumnSpacing="8" RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ComboBox
+                            x:Uid="CommunityCompactModSelector"
+                            DisplayMemberPath="Title"
+                            ItemsSource="{Binding Mods}"
+                            SelectedItem="{Binding SelectedMod, Mode=OneWay}"
+                            SelectionChanged="OnModSelectionChanged" />
+                        <ComboBox
+                            x:Uid="CommunityCompactThreadSelector"
+                            Grid.Column="1"
+                            DisplayMemberPath="Title"
+                            IsEnabled="{Binding HasSelectedMod}"
+                            ItemsSource="{Binding Threads}"
+                            SelectedItem="{Binding SelectedThread, Mode=OneWay}"
+                            SelectionChanged="OnThreadSelectionChanged" />
+                        <Button
+                            x:Uid="CommunityLoadMoreModsButton"
+                            Grid.Row="1"
+                            HorizontalAlignment="Left"
+                            Command="{Binding LoadMoreModsCommand}"
+                            Visibility="{Binding HasMoreMods, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <Button
+                            x:Uid="CommunityLoadMoreThreadsButton"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            HorizontalAlignment="Left"
+                            Command="{Binding LoadMoreThreadsCommand}"
+                            Visibility="{Binding HasMoreThreads, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <Grid
+                            x:Name="CompactModReportActions"
+                            Grid.Row="2"
+                            Grid.ColumnSpan="2"
+                            ColumnSpacing="8"
+                            RowSpacing="6"
+                            Visibility="{Binding HasSelectedMod, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Button
+                                x:Uid="CommunityReportModButton"
+                                HorizontalAlignment="Stretch"
+                                Click="OnReportSelectedModClicked" />
+                            <Button
+                                x:Uid="CommunityReportVersionButton"
+                                Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                Click="OnReportSelectedModVersionClicked"
+                                Visibility="{Binding SelectedMod.HasLatestVersion, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <Button
+                                x:Uid="CommunityReportUserButton"
+                                Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                HorizontalAlignment="Stretch"
+                                Click="OnReportSelectedModOwnerClicked" />
+                        </Grid>
+                        <Grid
+                            x:Name="CompactThreadReportActions"
+                            Grid.Row="3"
+                            Grid.ColumnSpan="2"
+                            ColumnSpacing="8"
+                            Visibility="{Binding HasSelectedThread, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button
+                                x:Uid="CommunityReportThreadButton"
+                                HorizontalAlignment="Stretch"
+                                Click="OnReportSelectedThreadClicked" />
+                            <Button
+                                x:Uid="CommunityReportUserButton"
+                                Grid.Column="1"
+                                HorizontalAlignment="Stretch"
+                                Click="OnReportSelectedThreadAuthorClicked" />
+                        </Grid>
+                    </Grid>
+
+                    <Expander x:Uid="CommunityAccountExpander" Grid.Row="1" IsExpanded="False">
+                        <StackPanel Spacing="10">
+                            <InfoBar
+                                x:Uid="CommunityAccountRequiredInfo"
+                                IsClosable="False"
+                                IsOpen="{Binding ShowPatGuidance}"
+                                Severity="Informational" />
+                            <StackPanel
+                                Spacing="10"
+                                Visibility="{Binding ShowSignInForm, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBox
+                                    x:Name="CommunityUsernameInput"
+                                    x:Uid="CommunityUsernameInput"
+                                    MaxLength="32" />
+                                <PasswordBox
+                                    x:Name="CommunityPasswordInput"
+                                    x:Uid="CommunityPasswordInput"
+                                    MaxLength="128" />
+                                <PasswordBox
+                                    x:Name="CommunityPatInput"
+                                    x:Uid="CommunityApplicationTokenInput"
+                                    IsPasswordRevealButtonEnabled="True"
+                                    MaxLength="256" />
+                                <TextBlock x:Uid="CommunityApplicationLoginHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button
+                                        x:Uid="CommunityApplicationLoginButton"
+                                        Click="OnApplicationLoginClicked"
+                                        IsEnabled="{Binding CanSavePat}"
+                                        Style="{ThemeResource AccentButtonStyle}" />
+                                    <HyperlinkButton
+                                        x:Uid="CommunityRegisterAccountLink"
+                                        NavigateUri="https://dow.dzxh-tx.cn/register?next=/user/dashboard" />
+                                    <HyperlinkButton
+                                        x:Uid="CommunityCreatePatLink"
+                                        NavigateUri="https://dow.dzxh-tx.cn/user/dashboard" />
+                                </StackPanel>
+                            </StackPanel>
+                            <StackPanel
+                                Spacing="8"
+                                Visibility="{Binding IsAuthenticated, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <InfoBar
+                                    x:Uid="CommunitySignedInInfo"
+                                    IsClosable="False"
+                                    IsOpen="True"
+                                    Severity="Success"
+                                    Title="{Binding SignedInDisplayText}" />
+                                <TextBlock x:Uid="CommunityGrantedScopesHeading" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                <TextBlock Text="{Binding GrantedScopesText}" TextWrapping="WrapWholeWords" />
+                                <TextBlock x:Uid="CommunityPatHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button
+                                        x:Uid="CommunityDeletePatButton"
+                                        Click="OnDeletePatClicked"
+                                        IsEnabled="{Binding CanDeletePat}" />
+                                    <HyperlinkButton
+                                        x:Uid="CommunityManagePatLink"
+                                        NavigateUri="https://dow.dzxh-tx.cn/user/dashboard" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Expander>
+
+                    <Grid Grid.Row="2" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                x:Uid="CommunityPostsHeading"
+                                AutomationProperties.HeadingLevel="Level2"
+                                Style="{ThemeResource SectionTitleStyle}" />
+                            <TextBlock Text="{Binding SelectedThread.Title}" Style="{ThemeResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="{Binding PostsLoadedText}" />
+                    </Grid>
+
+                    <Grid Grid.Row="3">
+                        <ListView
+                            x:Uid="CommunityPostsList"
+                            IsEnabled="{Binding HasSelectedThread}"
+                            IsItemClickEnabled="False"
+                            IsTabStop="False"
+                            ItemsSource="{Binding Posts}"
+                            SelectionMode="None">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,8" Padding="12" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="8">
+                                        <StackPanel Spacing="6">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding AuthorName}" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                                <TextBlock Grid.Column="1" Text="{Binding CreatedAt}" Style="{ThemeResource CaptionTextBlockStyle}" />
+                                            </Grid>
+                                            <TextBlock
+                                                IsTextSelectionEnabled="True"
+                                                Text="{Binding ContentMarkdown}"
+                                                TextWrapping="WrapWholeWords" />
+                                            <StackPanel
+                                                HorizontalAlignment="Right"
+                                                Orientation="Horizontal"
+                                                Spacing="8">
+                                                <Button
+                                                    x:Uid="CommunityReportPostButton"
+                                                    Click="OnReportPostClicked" />
+                                                <Button
+                                                    x:Uid="CommunityReportUserButton"
+                                                    Click="OnReportPostAuthorClicked" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <StackPanel
+                            MaxWidth="360"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                            Visibility="{Binding ShowSelectThreadPrompt, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <FontIcon FontSize="28" Glyph="&#xE8A7;" />
+                            <TextBlock x:Uid="CommunitySelectThreadPrompt" Style="{ThemeResource CaptionTextBlockStyle}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                        <Grid x:Name="CompactEmptyStates" Visibility="Collapsed">
+                            <StackPanel
+                                MaxWidth="360"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8"
+                                Visibility="{Binding ShowModsEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <FontIcon FontSize="28" Glyph="&#xE8BD;" />
+                                <TextBlock x:Uid="CommunityModsEmptyTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" TextAlignment="Center" />
+                                <TextBlock x:Uid="CommunityModsEmptyBody" Style="{ThemeResource CaptionTextBlockStyle}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+                            <StackPanel
+                                MaxWidth="360"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8"
+                                Visibility="{Binding ShowThreadsEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <FontIcon FontSize="28" Glyph="&#xE8BD;" />
+                                <TextBlock x:Uid="CommunityThreadsEmptyTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" TextAlignment="Center" />
+                                <TextBlock x:Uid="CommunityThreadsEmptyBody" Style="{ThemeResource CaptionTextBlockStyle}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel
+                            MaxWidth="360"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                            Visibility="{Binding ShowPostsEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <FontIcon FontSize="28" Glyph="&#xE8BD;" />
+                            <TextBlock x:Uid="CommunityPostsEmptyTitle" Style="{ThemeResource BodyStrongTextBlockStyle}" TextAlignment="Center" />
+                            <TextBlock x:Uid="CommunityPostsEmptyBody" Style="{ThemeResource CaptionTextBlockStyle}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Button
+                        x:Uid="CommunityLoadMorePostsButton"
+                        Grid.Row="4"
+                        HorizontalAlignment="Center"
+                        Command="{Binding LoadMorePostsCommand}"
+                        Visibility="{Binding HasMorePosts, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <StackPanel Grid.Row="5" Spacing="8">
+                        <InfoBar
+                            x:Uid="CommunityThreadLockedInfo"
+                            IsClosable="False"
+                            IsOpen="{Binding IsSelectedThreadLocked}"
+                            Severity="Warning" />
+                        <Expander x:Uid="CommunityNewThreadExpander" IsEnabled="{Binding HasSelectedMod}" IsExpanded="False">
+                            <StackPanel Spacing="10">
+                                <TextBox
+                                    x:Uid="CommunityNewThreadTitleInput"
+                                    MaxLength="160"
+                                    Text="{Binding NewThreadTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBox
+                                    x:Uid="CommunityNewThreadContentInput"
+                                    AcceptsReturn="True"
+                                    MaxHeight="180"
+                                    MaxLength="100000"
+                                    MinHeight="96"
+                                    Text="{Binding NewThreadContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    TextWrapping="Wrap" />
+                                <TextBlock x:Uid="CommunityMarkdownPlainTextHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                                <Button
+                                    x:Uid="CommunityCreateThreadButton"
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding CreateThreadCommand}"
+                                    Style="{ThemeResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </Expander>
+                        <Expander x:Uid="CommunityReplyExpander" IsEnabled="{Binding HasSelectedThread}" IsExpanded="False">
+                            <StackPanel Spacing="10">
+                                <TextBox
+                                    x:Uid="CommunityReplyInput"
+                                    AcceptsReturn="True"
+                                    MaxHeight="180"
+                                    MaxLength="100000"
+                                    MinHeight="88"
+                                    Text="{Binding ReplyContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    TextWrapping="Wrap" />
+                                <TextBlock x:Uid="CommunityMarkdownPlainTextHelpReply" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                                <Button
+                                    x:Uid="CommunityCreateReplyButton"
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding CreateReplyCommand}"
+                                    Style="{ThemeResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <ContentDialog
+            x:Name="DeletePatDialog"
+            x:Uid="CommunityDeletePatDialog"
+            DefaultButton="Close" />
+        <ContentDialog
+            x:Name="ReportContentDialog"
+            x:Uid="CommunityReportDialog"
+            Closing="OnReportDialogClosing"
+            DefaultButton="Primary"
+            IsPrimaryButtonEnabled="False"
+            PrimaryButtonClick="OnReportPrimaryButtonClick">
+            <StackPanel MinWidth="360" Spacing="10">
+                <TextBlock
+                    x:Uid="CommunityReportTargetLabel"
+                    Style="{ThemeResource CaptionTextBlockStyle}" />
+                <TextBlock
+                    x:Name="ReportTargetText"
+                    Style="{ThemeResource BodyStrongTextBlockStyle}"
+                    TextWrapping="WrapWholeWords" />
+                <ComboBox
+                    x:Name="ReportCategoryInput"
+                    x:Uid="CommunityReportCategoryInput"
+                    DisplayMemberPath="DisplayName"
+                    ItemsSource="{Binding ReportCategories}"
+                    SelectionChanged="OnReportCategoryChanged" />
+                <TextBox
+                    x:Name="ReportDetailsInput"
+                    x:Uid="CommunityReportDetailsInput"
+                    AcceptsReturn="True"
+                    MaxHeight="180"
+                    MaxLength="1900"
+                    MinHeight="96"
+                    TextChanged="OnReportDetailsChanged"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    x:Uid="CommunityReportDetailsHelp"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextWrapping="WrapWholeWords" />
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    Visibility="{Binding IsReportSubmitting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ProgressRing
+                        x:Uid="CommunityReportProgress"
+                        Width="24"
+                        Height="24"
+                        IsActive="{Binding IsReportSubmitting}" />
+                    <TextBlock
+                        x:Uid="CommunityReportSubmittingText"
+                        VerticalAlignment="Center" />
+                </StackPanel>
+                <InfoBar
+                    x:Uid="CommunityReportError"
+                    AutomationProperties.LiveSetting="Assertive"
+                    IsClosable="False"
+                    IsOpen="{Binding HasReportError}"
+                    Message="{Binding ReportErrorMessage}"
+                    Severity="Error" />
+            </StackPanel>
+        </ContentDialog>
+        <ContentDialog
+            x:Name="ReportAccessDialog"
+            x:Uid="CommunityReportAccessDialog"
+            DefaultButton="Close">
+            <StackPanel Spacing="8">
+                <TextBlock
+                    x:Uid="CommunityReportAccessMessage"
+                    TextWrapping="WrapWholeWords" />
+                <HyperlinkButton
+                    x:Uid="CommunityCreatePatLink"
+                    NavigateUri="https://dow.dzxh-tx.cn/user/dashboard" />
+                <HyperlinkButton
+                    x:Uid="CommunityTermsLink"
+                    NavigateUri="{Binding TermsUri}" />
+                <HyperlinkButton
+                    x:Uid="CommunityGuidelinesLink"
+                    NavigateUri="{Binding CommunityGuidelinesUri}" />
+            </StackPanel>
+        </ContentDialog>
+        <ContentDialog
+            x:Name="ReportUnavailableDialog"
+            x:Uid="CommunityReportUnavailableDialog"
+            DefaultButton="Close">
+            <StackPanel Spacing="8">
+                <TextBlock
+                    x:Uid="CommunityReportUnavailableMessage"
+                    TextWrapping="WrapWholeWords" />
+                <HyperlinkButton
+                    x:Uid="CommunityTermsLink"
+                    NavigateUri="{Binding TermsUri}" />
+                <HyperlinkButton
+                    x:Uid="CommunityGuidelinesLink"
+                    NavigateUri="{Binding CommunityGuidelinesUri}" />
+            </StackPanel>
+        </ContentDialog>
+    </Grid>
+</Page>

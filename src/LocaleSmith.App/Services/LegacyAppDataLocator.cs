@@ -9,8 +9,12 @@ namespace LocaleSmith.App.Services;
 /// </summary>
 public static class LegacyAppDataLocator
 {
-    private const string LegacyPackageName = "JaxI18n.Desktop";
-    private const string LegacyDirectoryName = "JaxI18n";
+    private const string JaxI18nPackageName = "JaxI18n.Desktop";
+    private const string JaxI18nDirectoryName = "JaxI18n";
+    private const string LocaleSmithPackageName = "LocaleSmith.Desktop";
+    private const string LocaleSmithDirectoryName = "LocaleSmith";
+    private static readonly string[] LegacyPackageNames =
+        [JaxI18nPackageName, LocaleSmithPackageName];
     private const uint NoPackageRedirection = 0x00010000;
     private static readonly Guid LocalAppDataFolderId =
         new("F1B32785-6FBA-4FCF-9D55-7B8E7F157091");
@@ -75,21 +79,23 @@ public static class LegacyAppDataLocator
             foreach (var packageFamilyName in registeredPackageFamilyNames
                          .Where(IsSafeLegacyPackageFamilyName)
                          .Distinct(StringComparer.OrdinalIgnoreCase)
-                         .OrderBy(static name => name, StringComparer.OrdinalIgnoreCase)
+                         .OrderBy(GetLegacyPackagePriority)
+                         .ThenBy(static name => name, StringComparer.OrdinalIgnoreCase)
                          .ThenBy(static name => name, StringComparer.Ordinal))
             {
+                var directoryName = GetLegacyDirectoryName(packageFamilyName);
                 var candidate = Path.Combine(
                     packagesRoot,
                     packageFamilyName,
                     "LocalCache",
                     "Local",
-                    LegacyDirectoryName);
+                    directoryName);
                 AddIfSafeExistingDirectory(candidate, packagesRoot, roots, uniqueRoots);
             }
         }
 
         AddIfSafeExistingDirectory(
-            Path.Combine(localAppDataRoot, LegacyDirectoryName),
+            Path.Combine(localAppDataRoot, JaxI18nDirectoryName),
             localAppDataRoot,
             roots,
             uniqueRoots);
@@ -107,10 +113,7 @@ public static class LegacyAppDataLocator
         {
             return new PackageManager()
                 .FindPackagesForUser(string.Empty)
-                .Where(static package => string.Equals(
-                    package.Id.Name,
-                    LegacyPackageName,
-                    StringComparison.OrdinalIgnoreCase))
+                .Where(static package => IsLegacyPackageName(package.Id.Name))
                 .Select(static package => package.Id.FamilyName)
                 .Where(IsSafeLegacyPackageFamilyName)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -133,16 +136,51 @@ public static class LegacyAppDataLocator
     private static bool IsSafeLegacyPackageFamilyName(string? packageFamilyName)
     {
         const int MaximumPackageFamilyNameLength = 255;
-        var expectedPrefix = $"{LegacyPackageName}_";
         return !string.IsNullOrWhiteSpace(packageFamilyName)
             && packageFamilyName.Length <= MaximumPackageFamilyNameLength
-            && packageFamilyName.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase)
-            && packageFamilyName.Length > expectedPrefix.Length
+            && TryGetLegacyPackageName(packageFamilyName, out var packageName)
+            && packageFamilyName.Length > packageName.Length + 1
             && packageFamilyName.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
             && string.Equals(Path.GetFileName(packageFamilyName), packageFamilyName, StringComparison.Ordinal)
             && packageFamilyName.IndexOfAny(
                 [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) < 0;
     }
+
+    private static bool IsLegacyPackageName(string? packageName) =>
+        string.Equals(packageName, JaxI18nPackageName, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(packageName, LocaleSmithPackageName, StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryGetLegacyPackageName(string packageFamilyName, out string packageName)
+    {
+        foreach (var candidate in LegacyPackageNames)
+        {
+            if (packageFamilyName.StartsWith(
+                    candidate + "_",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                packageName = candidate;
+                return true;
+            }
+        }
+
+        packageName = string.Empty;
+        return false;
+    }
+
+    private static string GetLegacyDirectoryName(string packageFamilyName)
+    {
+        _ = TryGetLegacyPackageName(packageFamilyName, out var packageName);
+        return string.Equals(packageName, LocaleSmithPackageName, StringComparison.OrdinalIgnoreCase)
+            ? LocaleSmithDirectoryName
+            : JaxI18nDirectoryName;
+    }
+
+    private static int GetLegacyPackagePriority(string packageFamilyName) =>
+        packageFamilyName.StartsWith(
+            LocaleSmithPackageName + "_",
+            StringComparison.OrdinalIgnoreCase)
+            ? 0
+            : 1;
 
     private static void AddIfSafeExistingDirectory(
         string candidate,

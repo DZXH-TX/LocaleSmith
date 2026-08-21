@@ -38,8 +38,9 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             request.OutputPath,
             targetLanguage: request.TargetLanguage,
             styles: new HashSet<TranslationStyle> { request.Style },
-            // Signed archives remain blocked until a dedicated, explicit signature-choice dialog exists.
-            signedArchiveHandling: SignedArchiveHandling.Block,
+            // The source remains immutable. Repacking a signed JAR is allowed only as a clearly
+            // unsigned output copy whose signature blocks and stale manifest digests are removed.
+            signedArchiveHandling: SignedArchiveHandling.CreateUnsignedCopy,
             hardcodedStringMode: HardcodedStringMode.ExternalizeRecognizedSafePatterns,
             modelSourceId: request.ModelSourceId,
             requestedJobId: jobId);

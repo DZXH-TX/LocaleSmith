@@ -19,7 +19,7 @@ use crate::{
     path_safety::validate_archive_path,
 };
 
-const REPACK_WARNING: &str = "Signature material is recorded but not cryptographically verified. Any content-changing JAR repack invalidates an existing signature; modification is blocked by default and requires an explicit re-signing workflow.";
+const REPACK_WARNING: &str = "Signature material is recorded but not cryptographically verified. Any content-changing JAR repack invalidates an existing signature; callers must either block the change or produce an explicitly unsigned copy with signature and digest claims removed.";
 const CLASS_MUTATION_POLICY: &str =
     "read_only_candidates_only; bytecode is never rewritten by this scanner";
 
@@ -630,7 +630,8 @@ fn inspect_signature_path(
     }
     if file_name.ends_with(".SF") {
         signature_files.push(path.to_owned());
-    } else if file_name.ends_with(".RSA")
+    } else if file_name.starts_with("SIG-")
+        || file_name.ends_with(".RSA")
         || file_name.ends_with(".DSA")
         || file_name.ends_with(".EC")
     {
@@ -914,13 +915,14 @@ mod tests {
             "meta-inf/manifest.mf",
             "META-INF/CERT.SF",
             "META-INF/CERT.RSA",
+            "META-INF/SIG-CUSTOM",
             "META-INF/nested/NOPE.SF",
         ] {
             inspect_signature_path(path, &mut manifest, &mut files, &mut blocks);
         }
         assert!(manifest);
         assert_eq!(files, ["META-INF/CERT.SF"]);
-        assert_eq!(blocks, ["META-INF/CERT.RSA"]);
+        assert_eq!(blocks, ["META-INF/CERT.RSA", "META-INF/SIG-CUSTOM"]);
     }
 
     #[test]

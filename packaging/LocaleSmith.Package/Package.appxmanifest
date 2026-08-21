@@ -5,13 +5,13 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap">
   <Identity
-    Name="LocaleSmith.Desktop"
-    Publisher="CN=CR Tech, O=CR Tech, C=CN, S=重庆市, L=两江新区, E=xinghedaoze@gmail.com"
-    Version="0.1.0.2"
+    Name="CRTech.LocaleSmith"
+    Publisher="CN=33E83C71-5BAE-4CB2-A70A-1F0545DACFB1"
+    Version="1.0.0.0"
     ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>ms-resource:PackageDisplayName</DisplayName>
-    <PublisherDisplayName>ms-resource:PublisherDisplayName</PublisherDisplayName>
+    <PublisherDisplayName>DZXH CR Tech</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Resources>
@@ -27,6 +27,10 @@
       Name="Microsoft.WindowsAppRuntime.2"
       Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
       MinVersion="2.3.1.0" />
+    <PackageDependency
+      Name="Microsoft.VCLibs.140.00.UWPDesktop"
+      MinVersion="14.0.24217.0"
+      Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
   </Dependencies>
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="Windows.FullTrustApplication">

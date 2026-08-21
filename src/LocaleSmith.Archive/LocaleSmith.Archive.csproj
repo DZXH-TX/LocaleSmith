@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LocaleSmith.Application\LocaleSmith.Application.csproj" />
     <ProjectReference Include="..\LocaleSmith.NativeInterop\LocaleSmith.NativeInterop.csproj" />
+    <InternalsVisibleTo Include="LocaleSmith.Archive.Tests" />
   </ItemGroup>
 
   <ItemGroup>

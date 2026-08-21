@@ -145,7 +145,8 @@ internal static class ArchivePathSafety
             return false;
         }
 
-        return fileName.EndsWith(".SF", StringComparison.OrdinalIgnoreCase) ||
+        return fileName.StartsWith("SIG-", StringComparison.OrdinalIgnoreCase) ||
+            fileName.EndsWith(".SF", StringComparison.OrdinalIgnoreCase) ||
             fileName.EndsWith(".RSA", StringComparison.OrdinalIgnoreCase) ||
             fileName.EndsWith(".DSA", StringComparison.OrdinalIgnoreCase) ||
             fileName.EndsWith(".EC", StringComparison.OrdinalIgnoreCase);

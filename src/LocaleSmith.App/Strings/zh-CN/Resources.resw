@@ -407,4 +407,158 @@
   <data name="AssistantCleared" xml:space="preserve"><value>对话已清空。</value></data>
   <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>模型来源已切换。为防止跨提供商泄露，之前的对话已清空。</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>无法打开命令草案审阅窗口。未执行任何命令。</value></data>
+  <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod 社区</value></data>
+  <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod 社区</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>在 LocaleSmith 内浏览 Mod 讨论，并通过个人访问令牌安全地发帖。</value></data>
+  <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>正在加载社区内容</value></data>
+  <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>取消</value></data>
+  <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>刷新</value></data>
+  <data name="CommunitySearchInput.Header" xml:space="preserve"><value>搜索 Mod</value></data>
+  <data name="CommunitySearchInput.PlaceholderText" xml:space="preserve"><value>按名称、简介或标签搜索</value></data>
+  <data name="CommunitySearchButton.Content" xml:space="preserve"><value>搜索</value></data>
+  <data name="CommunitySearchButton.AccessKey" xml:space="preserve"><value>S</value></data>
+  <data name="CommunityError.Title" xml:space="preserve"><value>社区操作失败</value></data>
+  <data name="CommunityRetryButton.Content" xml:space="preserve"><value>重试</value></data>
+  <data name="CommunityStatus.Title" xml:space="preserve"><value>操作完成</value></data>
+  <data name="CommunityModsHeading.Text" xml:space="preserve"><value>Mod</value></data>
+  <data name="CommunityModsHelp.Text" xml:space="preserve"><value>选择一个 Mod 以查看相关主题。</value></data>
+  <data name="CommunityModsList.AutomationProperties.Name" xml:space="preserve"><value>Mod 搜索结果</value></data>
+  <data name="CommunityModsEmptyTitle.Text" xml:space="preserve"><value>没有找到 Mod</value></data>
+  <data name="CommunityModsEmptyBody.Text" xml:space="preserve"><value>调整搜索词后重试，或刷新以获取最新内容。</value></data>
+  <data name="CommunityThreadsHeading.Text" xml:space="preserve"><value>讨论主题</value></data>
+  <data name="CommunityThreadsList.AutomationProperties.Name" xml:space="preserve"><value>讨论主题列表</value></data>
+  <data name="CommunityThreadsEmptyTitle.Text" xml:space="preserve"><value>还没有讨论</value></data>
+  <data name="CommunityThreadsEmptyBody.Text" xml:space="preserve"><value>保存具有 forum:write 权限的 PAT 后，可以发起第一个主题。</value></data>
+  <data name="CommunitySelectModPrompt.Text" xml:space="preserve"><value>先选择一个 Mod 以加载讨论主题。</value></data>
+  <data name="CommunityRepliesLabel.Text" xml:space="preserve"><value>回复</value></data>
+  <data name="CommunityUpdatedLabel.Text" xml:space="preserve"><value>更新</value></data>
+  <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
+  <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>主题</value></data>
+  <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>社区账号</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>登录以使用账号功能</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>浏览仍然公开。请使用网站用户名、密码和应用令牌登录。LocaleSmith 仅在本次验证中使用密码，不会保存密码。</value></data>
+  <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>用户名</value></data>
+  <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>网站用户名</value></data>
+  <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>密码</value></data>
+  <data name="CommunityPasswordInput.PlaceholderText" xml:space="preserve"><value>网站密码</value></data>
+  <data name="CommunityApplicationTokenInput.Header" xml:space="preserve"><value>应用令牌（PAT）</value></data>
+  <data name="CommunityApplicationTokenInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityApplicationLoginHelp.Text" xml:space="preserve"><value>账号注册和应用令牌创建均在网站完成。LocaleSmith 仅将令牌保存到 Windows 凭据管理器；密码只用于首次验证，绝不保存。实际可用功能由令牌授予的权限范围决定。</value></data>
+  <data name="CommunityApplicationLoginButton.Content" xml:space="preserve"><value>安全登录</value></data>
+  <data name="CommunityRegisterAccountLink.Content" xml:space="preserve"><value>在网站注册账号</value></data>
+  <data name="CommunitySignedInInfo.Message" xml:space="preserve"><value>已在本机登录。LocaleSmith 仅使用已保存的令牌执行其权限范围允许的操作。</value></data>
+  <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>令牌已授予的权限</value></data>
+  <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>在网站创建或管理应用令牌</value></data>
+  <data name="CommunityPatExpander.Header" xml:space="preserve"><value>社区身份与个人访问令牌</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>只读模式</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>浏览无需登录；发起主题或回复需要 forum:write，举报需要 reports:write 或兼容的 forum:write 权限。</value></data>
+  <data name="CommunityPatInput.Header" xml:space="preserve"><value>个人访问令牌（PAT）</value></data>
+  <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityPatHelp.Text" xml:space="preserve"><value>令牌仅保存在 Windows 凭据管理器中，不会写入设置、日志或页面。删除本地副本不会撤销服务端令牌。</value></data>
+  <data name="CommunitySavePatButton.Content" xml:space="preserve"><value>安全保存</value></data>
+  <data name="CommunityDeletePatButton.Content" xml:space="preserve"><value>退出本机登录</value></data>
+  <data name="CommunityCreatePatLink.Content" xml:space="preserve"><value>在网站创建 PAT</value></data>
+  <data name="CommunityPostsHeading.Text" xml:space="preserve"><value>帖子</value></data>
+  <data name="CommunityPostsList.AutomationProperties.Name" xml:space="preserve"><value>主题帖子</value></data>
+  <data name="CommunitySelectThreadPrompt.Text" xml:space="preserve"><value>选择一个主题以阅读帖子。</value></data>
+  <data name="CommunityPostsEmptyTitle.Text" xml:space="preserve"><value>暂无可见帖子</value></data>
+  <data name="CommunityPostsEmptyBody.Text" xml:space="preserve"><value>刷新后重试；内容可能正在审核或已被隐藏。</value></data>
+  <data name="CommunityLoadMorePostsButton.Content" xml:space="preserve"><value>加载更多帖子</value></data>
+  <data name="CommunityThreadLockedInfo.Title" xml:space="preserve"><value>主题不可回复</value></data>
+  <data name="CommunityThreadLockedInfo.Message" xml:space="preserve"><value>此主题已关闭或锁定，仍可阅读现有帖子。</value></data>
+  <data name="CommunityNewThreadExpander.Header" xml:space="preserve"><value>发起新主题</value></data>
+  <data name="CommunityNewThreadTitleInput.Header" xml:space="preserve"><value>标题</value></data>
+  <data name="CommunityNewThreadTitleInput.PlaceholderText" xml:space="preserve"><value>4–160 个字符</value></data>
+  <data name="CommunityNewThreadContentInput.Header" xml:space="preserve"><value>正文</value></data>
+  <data name="CommunityNewThreadContentInput.PlaceholderText" xml:space="preserve"><value>描述问题、建议或使用经验</value></data>
+  <data name="CommunityMarkdownPlainTextHelp.Text" xml:space="preserve"><value>可输入 Markdown；本版本始终按纯文本显示，不执行 HTML。</value></data>
+  <data name="CommunityCreateThreadButton.Content" xml:space="preserve"><value>发布主题</value></data>
+  <data name="CommunityReplyExpander.Header" xml:space="preserve"><value>回复主题</value></data>
+  <data name="CommunityReplyInput.Header" xml:space="preserve"><value>回复内容</value></data>
+  <data name="CommunityReplyInput.PlaceholderText" xml:space="preserve"><value>写下有帮助且尊重他人的回复</value></data>
+  <data name="CommunityMarkdownPlainTextHelpReply.Text" xml:space="preserve"><value>可输入 Markdown；本版本始终按纯文本显示，不执行 HTML。</value></data>
+  <data name="CommunityCreateReplyButton.Content" xml:space="preserve"><value>发布回复</value></data>
+  <data name="CommunityDeletePatDialog.Title" xml:space="preserve"><value>退出本机登录？</value></data>
+  <data name="CommunityDeletePatDialog.Content" xml:space="preserve"><value>LocaleSmith 将从本机的 Windows 凭据管理器中移除已保存令牌，但不会撤销网站上的令牌。若要使令牌彻底失效，请在网站撤销。</value></data>
+  <data name="CommunityDeletePatDialog.PrimaryButtonText" xml:space="preserve"><value>退出本机</value></data>
+  <data name="CommunityDeletePatDialog.CloseButtonText" xml:space="preserve"><value>取消</value></data>
+  <data name="CommunityPostsLoadedText" xml:space="preserve"><value>已加载 {0}/{1} 条</value></data>
+  <data name="CommunityPatSavedStatus" xml:space="preserve"><value>个人访问令牌已安全保存到 Windows 凭据管理器。</value></data>
+  <data name="CommunityThreadCreatedStatus" xml:space="preserve"><value>讨论主题已创建。</value></data>
+  <data name="CommunityReplyCreatedStatus" xml:space="preserve"><value>回复已发布。</value></data>
+  <data name="CommunityPatDeletedStatus" xml:space="preserve"><value>已退出本机登录并移除本地令牌；网站令牌尚未撤销。</value></data>
+  <data name="CommunityOperationCancelledStatus" xml:space="preserve"><value>操作已取消。</value></data>
+  <data name="CommunityNetworkError" xml:space="preserve"><value>无法连接社区服务。请检查网络后重试。</value></data>
+  <data name="CommunityOperationFailed" xml:space="preserve"><value>社区操作失败，请稍后重试。</value></data>
+  <data name="CommunitySignedInDisplayText" xml:space="preserve"><value>已登录：{0}</value></data>
+  <data name="CommunityGrantedScopesNone" xml:space="preserve"><value>服务未返回任何已授予权限。</value></data>
+  <data name="CommunityApplicationLoginFieldsRequiredError" xml:space="preserve"><value>请输入用户名、密码和应用令牌。</value></data>
+  <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>登录成功。应用令牌已安全保存到 Windows 凭据管理器；密码未保存。</value></data>
+  <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>当前服务不支持账号与密码联合验证。已通过旧版流程验证并安全保存应用令牌；密码未发送、也未保存。</value></data>
+  <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>已保存的应用令牌无效或已过期，请使用有效令牌重新登录。</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>暂时无法验证已保存的账号。本地凭证仍会保留，公开浏览仍可使用；请刷新后重试。</value></data>
+  <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>用户名、密码或应用令牌无效、已过期，或不属于同一账号。</value></data>
+  <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>此应用令牌不允许用于应用登录。请在网站创建或选择普通令牌。</value></data>
+  <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>登录尝试过于频繁，请稍候再试。</value></data>
+  <data name="CommunityApplicationLoginTimeoutError" xml:space="preserve"><value>登录请求超时。请检查网络后重试。</value></data>
+  <data name="CommunityApplicationLoginNetworkError" xml:space="preserve"><value>无法连接账号服务。请检查网络后重试。</value></data>
+  <data name="CommunityApplicationLoginInvalidResponseError" xml:space="preserve"><value>账号服务返回了异常响应，请稍后重试。</value></data>
+  <data name="CommunityApplicationLoginFailedError" xml:space="preserve"><value>登录失败。请检查填写内容后稍后重试。</value></data>
+  <data name="CommunityLoadMoreModsButton.Content" xml:space="preserve"><value>加载更多 Mod</value></data>
+  <data name="CommunityLoadMoreThreadsButton.Content" xml:space="preserve"><value>加载更多讨论</value></data>
+  <data name="CommunityReportPostButton.Content" xml:space="preserve"><value>举报帖子</value></data>
+  <data name="CommunityReportSubmittedStatus" xml:space="preserve"><value>举报已提交，等待版主审核。</value></data>
+  <data name="CommunityTimeoutError" xml:space="preserve"><value>社区请求超时。请检查网络后重试。</value></data>
+  <data name="CommunityTermsLink.Content" xml:space="preserve"><value>服务条款</value></data>
+  <data name="CommunityGuidelinesLink.Content" xml:space="preserve"><value>社区规范</value></data>
+  <data name="CommunityLatestVersionLabel.Text" xml:space="preserve"><value>最新版本：</value></data>
+  <data name="CommunityReportModButton.Content" xml:space="preserve"><value>举报 Mod</value></data>
+  <data name="CommunityReportVersionButton.Content" xml:space="preserve"><value>举报版本</value></data>
+  <data name="CommunityReportUserButton.Content" xml:space="preserve"><value>举报作者</value></data>
+  <data name="CommunityReportThreadButton.Content" xml:space="preserve"><value>举报讨论</value></data>
+  <data name="CommunityReportDialog.Title" xml:space="preserve"><value>举报社区内容</value></data>
+  <data name="CommunityReportDialog.PrimaryButtonText" xml:space="preserve"><value>提交举报</value></data>
+  <data name="CommunityReportDialog.CloseButtonText" xml:space="preserve"><value>取消</value></data>
+  <data name="CommunityReportTargetLabel.Text" xml:space="preserve"><value>正在举报的内容</value></data>
+  <data name="CommunityReportCategoryInput.Header" xml:space="preserve"><value>举报类别</value></data>
+  <data name="CommunityReportCategoryInput.PlaceholderText" xml:space="preserve"><value>选择最符合的类别</value></data>
+  <data name="CommunityReportDetailsInput.Header" xml:space="preserve"><value>详细说明</value></data>
+  <data name="CommunityReportDetailsInput.PlaceholderText" xml:space="preserve"><value>说明需要版主审核的内容</value></data>
+  <data name="CommunityReportDetailsHelp.Text" xml:space="preserve"><value>请输入 4–1,900 个字符。请勿填写密码、令牌或其他秘密。</value></data>
+  <data name="CommunityReportProgress.AutomationProperties.Name" xml:space="preserve"><value>正在提交举报</value></data>
+  <data name="CommunityReportSubmittingText.Text" xml:space="preserve"><value>正在提交举报…</value></data>
+  <data name="CommunityReportError.Title" xml:space="preserve"><value>举报未提交</value></data>
+  <data name="CommunityReportAccessDialog.Title" xml:space="preserve"><value>配置举报权限</value></data>
+  <data name="CommunityReportAccessDialog.CloseButtonText" xml:space="preserve"><value>关闭</value></data>
+  <data name="CommunityReportAccessMessage.Text" xml:space="preserve"><value>你仍可继续浏览。若要举报内容，请创建并保存具有 reports:write 或兼容 forum:write 权限的 PAT；提交前请先阅读下方规则。</value></data>
+  <data name="CommunityReportUnavailableDialog.Title" xml:space="preserve"><value>暂时无法举报</value></data>
+  <data name="CommunityReportUnavailableDialog.CloseButtonText" xml:space="preserve"><value>关闭</value></data>
+  <data name="CommunityReportUnavailableMessage.Text" xml:space="preserve"><value>当前无法从译匠举报此内容。请在服务更新后刷新重试，并阅读下方适用的服务条款与社区规范。</value></data>
+  <data name="CommunityReportCategorySpam" xml:space="preserve"><value>垃圾信息或误导性内容</value></data>
+  <data name="CommunityReportCategoryHarassment" xml:space="preserve"><value>骚扰或欺凌</value></data>
+  <data name="CommunityReportCategoryHateSpeech" xml:space="preserve"><value>仇恨言论</value></data>
+  <data name="CommunityReportCategorySexualContent" xml:space="preserve"><value>色情或性内容</value></data>
+  <data name="CommunityReportCategoryViolence" xml:space="preserve"><value>暴力或威胁</value></data>
+  <data name="CommunityReportCategoryIllegalContent" xml:space="preserve"><value>违法内容</value></data>
+  <data name="CommunityReportCategoryMalware" xml:space="preserve"><value>恶意软件或有害文件</value></data>
+  <data name="CommunityReportCategoryCopyright" xml:space="preserve"><value>侵犯版权</value></data>
+  <data name="CommunityReportCategoryPrivacy" xml:space="preserve"><value>侵犯隐私</value></data>
+  <data name="CommunityReportCategoryImpersonation" xml:space="preserve"><value>冒充他人</value></data>
+  <data name="CommunityReportCategoryChildSafety" xml:space="preserve"><value>儿童安全</value></data>
+  <data name="CommunityReportCategoryOther" xml:space="preserve"><value>其他违规</value></data>
+  <data name="CommunityReportUnavailableError" xml:space="preserve"><value>此内容暂不支持举报。请阅读社区规范并刷新后重试。</value></data>
+  <data name="CommunityReportPatRequiredError" xml:space="preserve"><value>请保存具有 reports:write 或 forum:write 权限的个人访问令牌，然后重试。</value></data>
+  <data name="CommunityReportInputInvalid" xml:space="preserve"><value>请选择类别，并填写 4 到 1,900 个字符的详细说明。</value></data>
+  <data name="CommunityReportDuplicateError" xml:space="preserve"><value>你已举报过此内容，版主会处理现有举报。</value></data>
+  <data name="CommunityReportTargetUnavailableError" xml:space="preserve"><value>此内容已无法举报。请刷新社区页面后重试。</value></data>
+  <data name="CommunityReportCategoryInvalidError" xml:space="preserve"><value>该类别已不再接受。请刷新类别列表并选择其他类别。</value></data>
+  <data name="CommunityReportDetailsInvalidError" xml:space="preserve"><value>请填写 4 到 1,900 个字符的举报说明。</value></data>
+  <data name="CommunityReportUnauthorizedError" xml:space="preserve"><value>已保存的个人访问令牌无效或已过期。请更换令牌后重新提交。</value></data>
+  <data name="CommunityReportScopeError" xml:space="preserve"><value>已保存的令牌需要 reports:write 或兼容的 forum:write 权限。</value></data>
+  <data name="CommunityReportRateLimitedError" xml:space="preserve"><value>近期提交的举报过多，请稍候再试。</value></data>
+  <data name="CommunityReportSecurityUnavailableError" xml:space="preserve"><value>安全服务当前离线，举报功能暂不可用，请稍后重试。</value></data>
+  <data name="CommunityReportTimeoutError" xml:space="preserve"><value>举报请求超时。请检查网络后重新提交。</value></data>
+  <data name="CommunityReportNetworkError" xml:space="preserve"><value>无法连接举报服务。请检查网络后重新提交。</value></data>
+  <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>举报服务返回了异常响应，请刷新后稍后重试。</value></data>
+  <data name="CommunityReportFailedError" xml:space="preserve"><value>举报未能提交。请检查说明后稍后重试。</value></data>
 </root>

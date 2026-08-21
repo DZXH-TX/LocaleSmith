@@ -48,6 +48,56 @@ public sealed class LegacyAppDataLocatorTests
     }
 
     [Fact]
+    public void FindLegacyRootsIncludesPreviousLocaleSmithPackageIdentity()
+    {
+        var root = Directory.CreateTempSubdirectory("localesmith-legacy-locator-identity-");
+        try
+        {
+            const string packageFamilyName = "LocaleSmith.Desktop_pch3d3na4gbw2";
+            var previousIdentityRoot = CreateMsixLegacyRoot(
+                root.FullName,
+                packageFamilyName,
+                "LocaleSmith");
+
+            var roots = LegacyAppDataLocator.FindLegacyRoots(
+                root.FullName,
+                [packageFamilyName]);
+
+            Assert.Equal([previousIdentityRoot], roots);
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void FindLegacyRootsPrioritizesPreviousLocaleSmithIdentityOverJaxI18n()
+    {
+        var root = Directory.CreateTempSubdirectory("localesmith-legacy-locator-priority-");
+        try
+        {
+            const string jaxPackageFamilyName = "JaxI18n.Desktop_apublisher";
+            const string localeSmithPackageFamilyName = "LocaleSmith.Desktop_zpublisher";
+            var jaxRoot = CreateMsixLegacyRoot(root.FullName, jaxPackageFamilyName);
+            var localeSmithRoot = CreateMsixLegacyRoot(
+                root.FullName,
+                localeSmithPackageFamilyName,
+                "LocaleSmith");
+
+            var roots = LegacyAppDataLocator.FindLegacyRoots(
+                root.FullName,
+                [jaxPackageFamilyName, localeSmithPackageFamilyName]);
+
+            Assert.Equal([localeSmithRoot, jaxRoot], roots);
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public void FindLegacyRootsReturnsEmptyWhenNoLegacyStateExists()
     {
         var root = Directory.CreateTempSubdirectory("localesmith-legacy-locator-empty-");
@@ -124,7 +174,10 @@ public sealed class LegacyAppDataLocatorTests
         Assert.True(Directory.Exists(path));
     }
 
-    private static string CreateMsixLegacyRoot(string localAppDataRoot, string packageFamilyName)
+    private static string CreateMsixLegacyRoot(
+        string localAppDataRoot,
+        string packageFamilyName,
+        string productDirectoryName = "JaxI18n")
     {
         return Directory.CreateDirectory(Path.Combine(
             localAppDataRoot,
@@ -132,6 +185,6 @@ public sealed class LegacyAppDataLocatorTests
             packageFamilyName,
             "LocalCache",
             "Local",
-            "JaxI18n")).FullName;
+            productDirectoryName)).FullName;
     }
 }

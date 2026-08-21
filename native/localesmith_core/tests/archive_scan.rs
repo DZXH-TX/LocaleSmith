@@ -150,6 +150,30 @@ fn scans_fabric_resources_zip_metadata_and_signature_evidence() {
 }
 
 #[test]
+fn sig_prefixed_signature_block_is_detected_without_sf_pair() {
+    let archive = TestArchive::new("sig-only.jar");
+    archive.write_entries(
+        &[
+            ("fabric.mod.json", br#"{"schemaVersion":1,"id":"sig_only"}"#),
+            ("META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\r\n"),
+            ("META-INF/SIG-CUSTOM", b"custom signature block"),
+        ],
+        None,
+    );
+
+    let manifest = scan_archive(&archive.path).unwrap();
+    assert_eq!(
+        manifest.archive.signatures.status,
+        SignatureEvidenceStatus::IncompleteUnverified
+    );
+    assert_eq!(
+        manifest.archive.signatures.signature_blocks,
+        ["META-INF/SIG-CUSTOM"]
+    );
+    assert!(manifest.archive.signatures.modification_blocked_by_default);
+}
+
+#[test]
 fn scans_shader_pack_language_resources() {
     let archive = TestArchive::new("shader-pack.zip");
     archive.write_entries(

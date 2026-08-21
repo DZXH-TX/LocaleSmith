@@ -61,6 +61,7 @@
 | **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
 | **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
 | **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；也可明确选择不发送该参数。 |
+| **联机模组社区** | 可搜索和分页浏览公开模组与讨论；使用保存在 Windows Credential Manager 中的 PAT 发帖、回复和举报，并可直接查看服务条款与社区规范。 |
 | **持久化诊断日志** | 日志目录可写时，每次翻译都会尝试通过有界后台写入器持久化一对 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
 | **原生桌面体验** | 提供首次引导、处理队列、模型助手、模型源管理、日志、设置和 CLI 风险确认。 |
 | **凭据与配置保护** | API Key 存入 Windows Credential Manager，其他配置使用 AES-256-GCM 加密。 |
@@ -156,7 +157,7 @@ src/LocaleSmith.McpHost/        独立 MCP 控制台宿主
 src/LocaleSmith.Presentation/   可测试的 MVVM ViewModel 与 UI 契约
 src/LocaleSmith.App/            WinUI 3 视图、组合根和本地应用服务
 tests/                      八个 .NET 测试项目和受限 CLI probe
-packaging/                  x64 WAP / MSIX manifest、双语资源和图标
+packaging/                  x64 WAP / MSIX manifest、五语言资源和图标
 ```
 
 ## 安全边界
@@ -164,8 +165,9 @@ packaging/                  x64 WAP / MSIX manifest、双语资源和图标
 以下原则是产品行为的一部分，而不是可选配置：
 
 - **模型不能授权命令执行。** Provider 工具循环只允许读取安全上下文和提出命令，完整命令仍需用户查看、勾选风险确认并批准。
-- **签名 JAR 默认禁止修改。** 没有原作者私钥就无法保持原签名；项目只会阻断修改，或在用户明确选择后生成 unsigned copy。
+- **签名 JAR 默认只生成明确的 unsigned 副本。** 原 JAR / ZIP 始终保持不动；应用翻译队列只在独立输出中移除签名块、`SIG-*` 与失效的 manifest 摘要声明，底层调用仍可选择完全阻断，且项目绝不冒充原签名或哈希。
 - **CLI 不搜索进程 PATH。** 默认不信任任何进程型可执行文件；后续显式白名单必须使用已批准的绝对路径。私有 CLI 沙箱默认位于 `%LOCALAPPDATA%\LocaleSmith\CliSandbox`，并在创建前后检查重解析点。
+- **客户端不携带 Cloudflare 源站密钥。** `api.dzxh-tx.cn` 使用系统信任库完成普通服务器 TLS 验证；Authenticated Origin Pulls 只认证 Cloudflare 到源站的连接，其证书和私钥不得进入应用、MSIX 或仓库。
 - **Low IL 不等于 AppContainer。** 受限 token、私有 desktop 与 Job Object 会缩小执行面，但不会自动阻断网络，也不能阻止读取当前用户 ACL 已允许的文件。
 
 <details>
@@ -178,7 +180,7 @@ packaging/                  x64 WAP / MSIX manifest、双语资源和图标
 <details>
 <summary><strong>归档重建与签名</strong></summary>
 
-原输入始终保持不动，关键 metadata 与清单会复核，事务失败会回滚。不过 ZIP / JAR 会被重新压缩，因此不保证压缩流、extra field、条目注释或顺序在字节级完全一致。对签名归档的修改会使原签名失效；当前不提供重新签名功能。
+原输入始终保持不动，所有结构和行为调整只发生在事务工作副本与独立输出中；逐项验证 JSON / lang / manifest、Java class、Loader、服务及资源引用后才会原子提交，失败不会发布半成品。不过 ZIP / JAR 会被重新压缩，因此不保证压缩流、extra field、条目注释、顺序或 Loader 行为兼容性在字节级完全一致。预编译 JAR 只报告静态字节码与资源验证，绝不声称“源码编译通过”；若输入含源码和 Gradle / build 入口，当前因没有真正隔离的构建器而失败关闭，且不会直接执行归档内脚本。
 
 </details>
 
@@ -190,9 +192,11 @@ MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.exe
 </details>
 
 <details>
-<summary><strong>MSIX 开发包状态</strong></summary>
+<summary><strong>MSIX 程序包状态</strong></summary>
 
-当前 manifest 版本为 `0.1.0.2`。仓库中的历史开发包曾完成 payload、PRI、MCP Host、SignPath Authenticode 签名与本机启动验证，但该证据不覆盖本次源码修复；当前提交需重新生成、签名和安装验证 MSIX，微软商店上架前还需使用 Partner Center 分配的正式包身份。
+当前 Store manifest 使用 Partner Center 分配的正式身份，程序包版本为 `1.0.0.0`；应用自身仍处于 `0.1.0` 预览阶段，两者独立版本化。仓库中的历史开发包曾完成 payload、PRI、MCP Host、SignPath Authenticode 签名与本机启动验证，但该证据不覆盖当前源码；提交 Microsoft Store 前需重新生成 MSIX，并在 Partner Center 的提交选项中说明和申请 `runFullTrust` 受限功能。
+
+正式 Identity `CRTech.LocaleSmith` 不会原位升级早期的 `LocaleSmith.Desktop` / `JaxI18n.Desktop` 开发包，Windows 会暂时并列安装。切换时请关闭旧程序；新程序会继续使用用户级 `%LOCALAPPDATA%\LocaleSmith`，并只读检查仍已注册的旧包重定向数据。确认新版本工作正常后再卸载旧开发包。
 
 </details>
 
@@ -202,9 +206,9 @@ MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.exe
 
 | 检查项 | 基线 |
 | --- | --- |
-| .NET Release | `391 / 391` tests，`0` warnings，`0` errors |
-| Rust | `26 / 26` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
-| 双语资源 | `zh-CN` / `en-US` 各 `366` 个 key，完全对齐 |
+| .NET Release | `558 / 558` tests，`0` warnings，`0` errors |
+| Rust | `27 / 27` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
+| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `485` 个 key，完全对齐 |
 | 源码安全审计 | 本地路径、归档、CLI、凭据和迁移回归门通过；GitHub CodeQL 结果以当前提交的远端重扫为准，不在 README 中宣称零告警 |
 
 这些结果证明当前自动化覆盖的源码行为，不替代外部渗透测试、真实 Provider 验证或 Minecraft / Loader 运行时兼容测试。

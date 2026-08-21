@@ -1002,13 +1002,21 @@ public sealed class ArchiveWorkspaceBackendTests
     }
 
     [Fact]
-    public async Task UnsignedCopyRemovesSignatureFilesButPreservesManifest()
+    public async Task UnsignedCopyRemovesSignatureFilesAndStaleManifestClaims()
     {
         using var fixture = new ArchiveFixture("signed.jar");
         fixture.AddText("fabric.mod.json", "{\"schemaVersion\":1,\"id\":\"signed_demo\"}");
-        fixture.AddText("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\r\n\r\n");
+        fixture.AddText(
+            "META-INF/MANIFEST.MF",
+            "Manifest-Version: 1.0\r\n" +
+            "Signature-Version: 1.0\r\n" +
+            "SHA-256-Digest-Manifest: stale-main-digest\r\n\r\n" +
+            "Name: fabric.mod.json\r\n" +
+            "SHA-256-Digest: stale-entry-digest\r\n" +
+            "Custom-Metadata: preserve-me\r\n\r\n");
         fixture.AddText("META-INF/DEMO.SF", "signature file");
         fixture.AddText("META-INF/DEMO.RSA", "signature block");
+        fixture.AddText("META-INF/SIG-CUSTOM", "custom signature block");
         fixture.AddText("assets/signed_demo/lang/en_us.json", "{\"demo.key\":\"Demo\"}");
         fixture.Complete();
         var request = CreateRequest(
@@ -1040,9 +1048,14 @@ public sealed class ArchiveWorkspaceBackendTests
         Assert.NotNull(inspection);
         Assert.Contains(inspection.Warnings, static warning => warning.Contains("unsigned copy", StringComparison.Ordinal));
         using ZipArchive output = ZipFile.OpenRead(request.OutputPath);
-        Assert.NotNull(output.GetEntry("META-INF/MANIFEST.MF"));
+        string manifest = ReadText(output, "META-INF/MANIFEST.MF");
+        Assert.Contains("Manifest-Version: 1.0", manifest, StringComparison.Ordinal);
+        Assert.Contains("Custom-Metadata: preserve-me", manifest, StringComparison.Ordinal);
+        Assert.DoesNotContain("Signature-Version", manifest, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Digest", manifest, StringComparison.OrdinalIgnoreCase);
         Assert.Null(output.GetEntry("META-INF/DEMO.SF"));
         Assert.Null(output.GetEntry("META-INF/DEMO.RSA"));
+        Assert.Null(output.GetEntry("META-INF/SIG-CUSTOM"));
     }
 
     [Fact]

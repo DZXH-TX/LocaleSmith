@@ -407,4 +407,158 @@
   <data name="AssistantCleared" xml:space="preserve"><value>Conversation cleared.</value></data>
   <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>Model source changed. The previous conversation was cleared to prevent cross-provider disclosure.</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>The command proposal could not be opened for review. Nothing was executed.</value></data>
+  <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod community</value></data>
+  <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod community</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Browse Mod discussions in LocaleSmith and post securely with a personal access token.</value></data>
+  <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>Loading community content</value></data>
+  <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>Cancel</value></data>
+  <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>Refresh</value></data>
+  <data name="CommunitySearchInput.Header" xml:space="preserve"><value>Search Mods</value></data>
+  <data name="CommunitySearchInput.PlaceholderText" xml:space="preserve"><value>Search by name, summary, or tag</value></data>
+  <data name="CommunitySearchButton.Content" xml:space="preserve"><value>Search</value></data>
+  <data name="CommunitySearchButton.AccessKey" xml:space="preserve"><value>S</value></data>
+  <data name="CommunityError.Title" xml:space="preserve"><value>Community operation failed</value></data>
+  <data name="CommunityRetryButton.Content" xml:space="preserve"><value>Retry</value></data>
+  <data name="CommunityStatus.Title" xml:space="preserve"><value>Operation complete</value></data>
+  <data name="CommunityModsHeading.Text" xml:space="preserve"><value>Mods</value></data>
+  <data name="CommunityModsHelp.Text" xml:space="preserve"><value>Select a Mod to see its discussions.</value></data>
+  <data name="CommunityModsList.AutomationProperties.Name" xml:space="preserve"><value>Mod search results</value></data>
+  <data name="CommunityModsEmptyTitle.Text" xml:space="preserve"><value>No Mods found</value></data>
+  <data name="CommunityModsEmptyBody.Text" xml:space="preserve"><value>Adjust the search and try again, or refresh for the latest content.</value></data>
+  <data name="CommunityThreadsHeading.Text" xml:space="preserve"><value>Discussions</value></data>
+  <data name="CommunityThreadsList.AutomationProperties.Name" xml:space="preserve"><value>Discussion topics</value></data>
+  <data name="CommunityThreadsEmptyTitle.Text" xml:space="preserve"><value>No discussions yet</value></data>
+  <data name="CommunityThreadsEmptyBody.Text" xml:space="preserve"><value>Save a PAT with forum:write permission to start the first topic.</value></data>
+  <data name="CommunitySelectModPrompt.Text" xml:space="preserve"><value>Select a Mod first to load its discussions.</value></data>
+  <data name="CommunityRepliesLabel.Text" xml:space="preserve"><value>Replies</value></data>
+  <data name="CommunityUpdatedLabel.Text" xml:space="preserve"><value>Updated</value></data>
+  <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
+  <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>Topic</value></data>
+  <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>Community account</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Sign in to use account features</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Browsing stays public. Sign in with your website username, password, and application token. LocaleSmith uses the password only for this verification and does not save it.</value></data>
+  <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>Username</value></data>
+  <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Your website username</value></data>
+  <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>Password</value></data>
+  <data name="CommunityPasswordInput.PlaceholderText" xml:space="preserve"><value>Your website password</value></data>
+  <data name="CommunityApplicationTokenInput.Header" xml:space="preserve"><value>Application token (PAT)</value></data>
+  <data name="CommunityApplicationTokenInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityApplicationLoginHelp.Text" xml:space="preserve"><value>Create your account and application token on the website. Only the token is saved in Windows Credential Manager; the password is used once for verification and is never saved. The token's granted scopes determine which actions are available.</value></data>
+  <data name="CommunityApplicationLoginButton.Content" xml:space="preserve"><value>Sign in securely</value></data>
+  <data name="CommunityRegisterAccountLink.Content" xml:space="preserve"><value>Register on the website</value></data>
+  <data name="CommunitySignedInInfo.Message" xml:space="preserve"><value>You are signed in on this device. LocaleSmith uses the saved token only for actions allowed by its scopes.</value></data>
+  <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>Granted token permissions</value></data>
+  <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Create or manage application tokens on the website</value></data>
+  <data name="CommunityPatExpander.Header" xml:space="preserve"><value>Community identity and personal access token</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Read-only mode</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>Browsing is public. Writing requires forum:write; reporting requires reports:write or compatible forum:write permission.</value></data>
+  <data name="CommunityPatInput.Header" xml:space="preserve"><value>Personal access token (PAT)</value></data>
+  <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
+  <data name="CommunityPatHelp.Text" xml:space="preserve"><value>The token is stored only in Windows Credential Manager, never in settings, logs, or the page. Removing the local copy does not revoke the server token.</value></data>
+  <data name="CommunitySavePatButton.Content" xml:space="preserve"><value>Save securely</value></data>
+  <data name="CommunityDeletePatButton.Content" xml:space="preserve"><value>Sign out on this device</value></data>
+  <data name="CommunityCreatePatLink.Content" xml:space="preserve"><value>Create a PAT on the website</value></data>
+  <data name="CommunityPostsHeading.Text" xml:space="preserve"><value>Posts</value></data>
+  <data name="CommunityPostsList.AutomationProperties.Name" xml:space="preserve"><value>Topic posts</value></data>
+  <data name="CommunitySelectThreadPrompt.Text" xml:space="preserve"><value>Select a topic to read its posts.</value></data>
+  <data name="CommunityPostsEmptyTitle.Text" xml:space="preserve"><value>No visible posts</value></data>
+  <data name="CommunityPostsEmptyBody.Text" xml:space="preserve"><value>Refresh and try again; content may be under review or hidden.</value></data>
+  <data name="CommunityLoadMorePostsButton.Content" xml:space="preserve"><value>Load more posts</value></data>
+  <data name="CommunityThreadLockedInfo.Title" xml:space="preserve"><value>Replies unavailable</value></data>
+  <data name="CommunityThreadLockedInfo.Message" xml:space="preserve"><value>This topic is closed or locked. Existing posts remain readable.</value></data>
+  <data name="CommunityNewThreadExpander.Header" xml:space="preserve"><value>Start a new topic</value></data>
+  <data name="CommunityNewThreadTitleInput.Header" xml:space="preserve"><value>Title</value></data>
+  <data name="CommunityNewThreadTitleInput.PlaceholderText" xml:space="preserve"><value>4–160 characters</value></data>
+  <data name="CommunityNewThreadContentInput.Header" xml:space="preserve"><value>Body</value></data>
+  <data name="CommunityNewThreadContentInput.PlaceholderText" xml:space="preserve"><value>Describe a question, suggestion, or experience</value></data>
+  <data name="CommunityMarkdownPlainTextHelp.Text" xml:space="preserve"><value>Markdown may be entered; this version always displays it as plain text and never executes HTML.</value></data>
+  <data name="CommunityCreateThreadButton.Content" xml:space="preserve"><value>Publish topic</value></data>
+  <data name="CommunityReplyExpander.Header" xml:space="preserve"><value>Reply to topic</value></data>
+  <data name="CommunityReplyInput.Header" xml:space="preserve"><value>Reply</value></data>
+  <data name="CommunityReplyInput.PlaceholderText" xml:space="preserve"><value>Write a helpful and respectful reply</value></data>
+  <data name="CommunityMarkdownPlainTextHelpReply.Text" xml:space="preserve"><value>Markdown may be entered; this version always displays it as plain text and never executes HTML.</value></data>
+  <data name="CommunityCreateReplyButton.Content" xml:space="preserve"><value>Publish reply</value></data>
+  <data name="CommunityDeletePatDialog.Title" xml:space="preserve"><value>Sign out on this device?</value></data>
+  <data name="CommunityDeletePatDialog.Content" xml:space="preserve"><value>LocaleSmith will remove the token saved in Windows Credential Manager on this device. The token will remain active on the website until you revoke it there.</value></data>
+  <data name="CommunityDeletePatDialog.PrimaryButtonText" xml:space="preserve"><value>Sign out</value></data>
+  <data name="CommunityDeletePatDialog.CloseButtonText" xml:space="preserve"><value>Cancel</value></data>
+  <data name="CommunityPostsLoadedText" xml:space="preserve"><value>Loaded {0} of {1}</value></data>
+  <data name="CommunityPatSavedStatus" xml:space="preserve"><value>The personal access token was saved securely in Windows Credential Manager.</value></data>
+  <data name="CommunityThreadCreatedStatus" xml:space="preserve"><value>The discussion was created.</value></data>
+  <data name="CommunityReplyCreatedStatus" xml:space="preserve"><value>Your reply was posted.</value></data>
+  <data name="CommunityPatDeletedStatus" xml:space="preserve"><value>Signed out on this device. The local token was removed, but the website token was not revoked.</value></data>
+  <data name="CommunityOperationCancelledStatus" xml:space="preserve"><value>The operation was cancelled.</value></data>
+  <data name="CommunityNetworkError" xml:space="preserve"><value>The community service could not be reached. Check the network and try again.</value></data>
+  <data name="CommunityOperationFailed" xml:space="preserve"><value>The community operation failed. Try again later.</value></data>
+  <data name="CommunitySignedInDisplayText" xml:space="preserve"><value>Signed in as {0}</value></data>
+  <data name="CommunityGrantedScopesNone" xml:space="preserve"><value>No permissions were reported by the service.</value></data>
+  <data name="CommunityApplicationLoginFieldsRequiredError" xml:space="preserve"><value>Enter your username, password, and application token.</value></data>
+  <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>Signed in. The application token was saved securely in Windows Credential Manager; your password was not saved.</value></data>
+  <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>This service does not support account-and-password verification. The application token was verified using the legacy flow and saved securely; your password was not sent or saved.</value></data>
+  <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>Your saved application token is invalid or expired. Sign in again with a current token.</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>The saved account could not be verified right now. Your local credential is still stored, and public browsing remains available. Refresh and try again.</value></data>
+  <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>The username, password, or application token is invalid, expired, or does not belong to the same account.</value></data>
+  <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>This application token is not permitted for account sign-in. Create or choose a regular token on the website.</value></data>
+  <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>Too many sign-in attempts were made. Wait a moment, then try again.</value></data>
+  <data name="CommunityApplicationLoginTimeoutError" xml:space="preserve"><value>The sign-in request timed out. Check the network and try again.</value></data>
+  <data name="CommunityApplicationLoginNetworkError" xml:space="preserve"><value>The account service could not be reached. Check the network and try again.</value></data>
+  <data name="CommunityApplicationLoginInvalidResponseError" xml:space="preserve"><value>The account service returned an unexpected response. Try again later.</value></data>
+  <data name="CommunityApplicationLoginFailedError" xml:space="preserve"><value>Sign-in failed. Review the entries and try again later.</value></data>
+  <data name="CommunityLoadMoreModsButton.Content" xml:space="preserve"><value>Load more mods</value></data>
+  <data name="CommunityLoadMoreThreadsButton.Content" xml:space="preserve"><value>Load more discussions</value></data>
+  <data name="CommunityReportPostButton.Content" xml:space="preserve"><value>Report post</value></data>
+  <data name="CommunityReportSubmittedStatus" xml:space="preserve"><value>The report was submitted for moderation.</value></data>
+  <data name="CommunityTimeoutError" xml:space="preserve"><value>The community request timed out. Check the network and try again.</value></data>
+  <data name="CommunityTermsLink.Content" xml:space="preserve"><value>Terms of service</value></data>
+  <data name="CommunityGuidelinesLink.Content" xml:space="preserve"><value>Community guidelines</value></data>
+  <data name="CommunityLatestVersionLabel.Text" xml:space="preserve"><value>Latest version:</value></data>
+  <data name="CommunityReportModButton.Content" xml:space="preserve"><value>Report Mod</value></data>
+  <data name="CommunityReportVersionButton.Content" xml:space="preserve"><value>Report version</value></data>
+  <data name="CommunityReportUserButton.Content" xml:space="preserve"><value>Report author</value></data>
+  <data name="CommunityReportThreadButton.Content" xml:space="preserve"><value>Report discussion</value></data>
+  <data name="CommunityReportDialog.Title" xml:space="preserve"><value>Report community content</value></data>
+  <data name="CommunityReportDialog.PrimaryButtonText" xml:space="preserve"><value>Submit report</value></data>
+  <data name="CommunityReportDialog.CloseButtonText" xml:space="preserve"><value>Cancel</value></data>
+  <data name="CommunityReportTargetLabel.Text" xml:space="preserve"><value>Content being reported</value></data>
+  <data name="CommunityReportCategoryInput.Header" xml:space="preserve"><value>Category</value></data>
+  <data name="CommunityReportCategoryInput.PlaceholderText" xml:space="preserve"><value>Choose the closest category</value></data>
+  <data name="CommunityReportDetailsInput.Header" xml:space="preserve"><value>Details</value></data>
+  <data name="CommunityReportDetailsInput.PlaceholderText" xml:space="preserve"><value>Explain what moderators should review</value></data>
+  <data name="CommunityReportDetailsHelp.Text" xml:space="preserve"><value>Enter 4–1,900 characters. Do not include passwords, tokens, or other secrets.</value></data>
+  <data name="CommunityReportProgress.AutomationProperties.Name" xml:space="preserve"><value>Submitting report</value></data>
+  <data name="CommunityReportSubmittingText.Text" xml:space="preserve"><value>Submitting report…</value></data>
+  <data name="CommunityReportError.Title" xml:space="preserve"><value>Report not submitted</value></data>
+  <data name="CommunityReportAccessDialog.Title" xml:space="preserve"><value>Set up reporting access</value></data>
+  <data name="CommunityReportAccessDialog.CloseButtonText" xml:space="preserve"><value>Close</value></data>
+  <data name="CommunityReportAccessMessage.Text" xml:space="preserve"><value>Browsing remains available. To report content, create and save a PAT with reports:write or compatible forum:write permission. Review the rules below before submitting.</value></data>
+  <data name="CommunityReportUnavailableDialog.Title" xml:space="preserve"><value>Reporting unavailable</value></data>
+  <data name="CommunityReportUnavailableDialog.CloseButtonText" xml:space="preserve"><value>Close</value></data>
+  <data name="CommunityReportUnavailableMessage.Text" xml:space="preserve"><value>This content cannot currently be reported from LocaleSmith. Refresh after the service is updated, and review the applicable terms and community guidelines below.</value></data>
+  <data name="CommunityReportCategorySpam" xml:space="preserve"><value>Spam or misleading content</value></data>
+  <data name="CommunityReportCategoryHarassment" xml:space="preserve"><value>Harassment or bullying</value></data>
+  <data name="CommunityReportCategoryHateSpeech" xml:space="preserve"><value>Hate speech</value></data>
+  <data name="CommunityReportCategorySexualContent" xml:space="preserve"><value>Sexual content</value></data>
+  <data name="CommunityReportCategoryViolence" xml:space="preserve"><value>Violence or threats</value></data>
+  <data name="CommunityReportCategoryIllegalContent" xml:space="preserve"><value>Illegal content</value></data>
+  <data name="CommunityReportCategoryMalware" xml:space="preserve"><value>Malware or harmful files</value></data>
+  <data name="CommunityReportCategoryCopyright" xml:space="preserve"><value>Copyright infringement</value></data>
+  <data name="CommunityReportCategoryPrivacy" xml:space="preserve"><value>Privacy violation</value></data>
+  <data name="CommunityReportCategoryImpersonation" xml:space="preserve"><value>Impersonation</value></data>
+  <data name="CommunityReportCategoryChildSafety" xml:space="preserve"><value>Child safety</value></data>
+  <data name="CommunityReportCategoryOther" xml:space="preserve"><value>Other violation</value></data>
+  <data name="CommunityReportUnavailableError" xml:space="preserve"><value>Reporting is not available for this content. Review the community guidelines and try again after refreshing.</value></data>
+  <data name="CommunityReportPatRequiredError" xml:space="preserve"><value>Save a personal access token with reports:write or forum:write permission, then try again.</value></data>
+  <data name="CommunityReportInputInvalid" xml:space="preserve"><value>Choose a category and enter details between 4 and 1,900 characters.</value></data>
+  <data name="CommunityReportDuplicateError" xml:space="preserve"><value>You already reported this content. Moderators can review the existing report.</value></data>
+  <data name="CommunityReportTargetUnavailableError" xml:space="preserve"><value>This content is no longer available for reporting. Refresh the community page and try again.</value></data>
+  <data name="CommunityReportCategoryInvalidError" xml:space="preserve"><value>That category is no longer accepted. Refresh the category list and choose another category.</value></data>
+  <data name="CommunityReportDetailsInvalidError" xml:space="preserve"><value>Enter report details between 4 and 1,900 characters.</value></data>
+  <data name="CommunityReportUnauthorizedError" xml:space="preserve"><value>The saved personal access token is invalid or expired. Replace it and submit the report again.</value></data>
+  <data name="CommunityReportScopeError" xml:space="preserve"><value>The saved token needs reports:write or compatible forum:write permission.</value></data>
+  <data name="CommunityReportRateLimitedError" xml:space="preserve"><value>Too many reports were submitted recently. Wait a moment, then try again.</value></data>
+  <data name="CommunityReportSecurityUnavailableError" xml:space="preserve"><value>Reporting is temporarily unavailable because the security service is offline. Try again later.</value></data>
+  <data name="CommunityReportTimeoutError" xml:space="preserve"><value>The report request timed out. Check the network and submit it again.</value></data>
+  <data name="CommunityReportNetworkError" xml:space="preserve"><value>The report service could not be reached. Check the network and submit it again.</value></data>
+  <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>The report service returned an unexpected response. Refresh and try again later.</value></data>
+  <data name="CommunityReportFailedError" xml:space="preserve"><value>The report could not be submitted. Review the details and try again later.</value></data>
 </root>

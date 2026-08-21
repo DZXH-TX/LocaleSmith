@@ -8,6 +8,62 @@ namespace LocaleSmith.App.Tests;
 public sealed class LegacyAppDataMigratorTests
 {
     [Fact]
+    public async Task MigratesConfigurationFromPreviousLocaleSmithPackageIdentity()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var root = Directory.CreateTempSubdirectory("localesmith-package-identity-migration-");
+        using var legacySecrets = new InMemorySecretStore();
+        using var currentSecrets = new InMemorySecretStore();
+        try
+        {
+            var previousIdentityRoot = Directory.CreateDirectory(
+                Path.Combine(root.FullName, "previous", "LocaleSmith")).FullName;
+            var currentRoot = Path.Combine(root.FullName, "current", "LocaleSmith");
+            var previousConfigurationPath = Path.Combine(
+                previousIdentityRoot,
+                LegacyAppDataMigrator.CurrentConfigurationFileName);
+            using (var previousConfiguration = new EncryptedJsonConfigurationStore<AppConfiguration>(
+                       previousConfigurationPath,
+                       LegacyAppDataMigrator.CurrentConfigurationPurpose,
+                       new CredentialManagerMasterKeyStore(currentSecrets)))
+            {
+                await previousConfiguration.SaveAsync(new AppConfiguration
+                {
+                    IsOnboardingComplete = true,
+                    Language = AppDisplayLanguages.JapaneseJapan,
+                    SandboxPath = Path.Combine(previousIdentityRoot, "CliSandbox"),
+                    LogDirectoryPath = Path.Combine(previousIdentityRoot, "logs", "translations")
+                }, cancellationToken);
+            }
+
+            var migrator = new LegacyAppDataMigrator(
+                previousIdentityRoot,
+                currentRoot,
+                legacySecrets,
+                currentSecrets);
+            await migrator.MigrateAsync(cancellationToken);
+
+            using var currentConfiguration = new EncryptedJsonConfigurationStore<AppConfiguration>(
+                Path.Combine(currentRoot, LegacyAppDataMigrator.CurrentConfigurationFileName),
+                LegacyAppDataMigrator.CurrentConfigurationPurpose,
+                new CredentialManagerMasterKeyStore(currentSecrets));
+            var migrated = await currentConfiguration.LoadAsync(cancellationToken);
+            Assert.NotNull(migrated);
+            Assert.True(migrated.IsOnboardingComplete);
+            Assert.Equal(AppDisplayLanguages.JapaneseJapan, migrated.Language);
+            Assert.Equal(Path.Combine(currentRoot, "CliSandbox"), migrated.SandboxPath);
+            Assert.Equal(
+                Path.Combine(currentRoot, "logs", "translations"),
+                migrated.LogDirectoryPath);
+            Assert.True(File.Exists(previousConfigurationPath));
+        }
+        finally
+        {
+            root.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task MigratesEssentialConfigurationAndCredentialsWithoutCopyingCachesOrLogsAtStartup()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
