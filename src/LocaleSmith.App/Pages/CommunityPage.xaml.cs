@@ -50,22 +50,22 @@ public sealed partial class CommunityPage : Page
         if (_reportContentDialogOpen)
         {
             _allowReportDialogClose = true;
-            ReportContentDialog.Hide();
+            TryHideDialog(ReportContentDialog);
         }
 
         if (_reportAccessDialogOpen)
         {
-            ReportAccessDialog.Hide();
+            TryHideDialog(ReportAccessDialog);
         }
 
         if (_reportUnavailableDialogOpen)
         {
-            ReportUnavailableDialog.Hide();
+            TryHideDialog(ReportUnavailableDialog);
         }
 
         if (_deletePatDialogOpen)
         {
-            DeletePatDialog.Hide();
+            TryHideDialog(DeletePatDialog);
         }
 
         base.OnNavigatedFrom(e);
@@ -428,4 +428,18 @@ public sealed partial class CommunityPage : Page
 
     private bool IsAnyReportDialogOpen() =>
         _reportContentDialogOpen || _reportAccessDialogOpen || _reportUnavailableDialogOpen;
+
+    private static void TryHideDialog(ContentDialog dialog)
+    {
+        try
+        {
+            dialog.Hide();
+        }
+        catch (Exception exception) when (
+            exception is not OutOfMemoryException and
+            not AccessViolationException)
+        {
+            // Dialog state may already be transitioning during navigation.
+        }
+    }
 }
