@@ -409,7 +409,9 @@
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>コマンド案の確認画面を開けませんでした。何も実行されていません。</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod コミュニティ</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod コミュニティ</value></data>
-  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>LocaleSmith 内で Mod のディスカッションを閲覧し、個人アクセストークンで安全に投稿できます。</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>サインインすると、LocaleSmith 内で Mod のディスカッションを閲覧し、アプリケーション トークンで安全に投稿できます。</value></data>
+  <data name="CommunitySignInGateTitle.Text" xml:space="preserve"><value>Mod コミュニティにサインイン</value></data>
+  <data name="CommunitySignInGateBody.Text" xml:space="preserve"><value>先に Web サイトでアカウントを登録してアプリケーション トークンを作成し、ここにユーザー名、パスワード、トークンを入力してください。確認に成功した後でのみコミュニティの内容が表示されます。</value></data>
   <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>コミュニティのコンテンツを読み込み中</value></data>
   <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>キャンセル</value></data>
   <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>更新</value></data>
@@ -435,8 +437,8 @@
   <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
   <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>トピック</value></data>
   <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>コミュニティ アカウント</value></data>
-  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>アカウント機能を使うにはサインインしてください</value></data>
-  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>閲覧は引き続き公開されています。Web サイトのユーザー名、パスワード、アプリケーション トークンでサインインしてください。LocaleSmith は今回の確認にのみパスワードを使用し、保存しません。</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>サインインが必要です</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Web サイトのユーザー名、パスワード、アプリケーション トークンを入力してください。LocaleSmith は今回の確認にのみパスワードを使用し、保存しません。</value></data>
   <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>ユーザー名</value></data>
   <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Web サイトのユーザー名</value></data>
   <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>パスワード</value></data>
@@ -450,8 +452,8 @@
   <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>付与されたトークン権限</value></data>
   <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Web サイトでアプリケーション トークンを作成または管理</value></data>
   <data name="CommunityPatExpander.Header" xml:space="preserve"><value>コミュニティ ID と個人アクセストークン</value></data>
-  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>読み取り専用モード</value></data>
-  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>閲覧は公開されています。投稿には forum:write、報告には reports:write または互換性のある forum:write 権限が必要です。</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>サインインが必要です</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>コミュニティに入るには、確認済みアカウントとアプリケーション トークンが必要です。投稿には forum:write、報告には reports:write または互換性のある forum:write 権限が必要です。</value></data>
   <data name="CommunityPatInput.Header" xml:space="preserve"><value>個人アクセストークン（PAT）</value></data>
   <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
   <data name="CommunityPatHelp.Text" xml:space="preserve"><value>トークンは Windows 資格情報マネージャーのみに保存され、設定、ログ、ページには書き込まれません。ローカルのコピーを削除してもサーバー上のトークンは失効しません。</value></data>
@@ -496,7 +498,7 @@
   <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>サインインしました。アプリケーション トークンは Windows 資格情報マネージャーに安全に保存され、パスワードは保存されていません。</value></data>
   <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>このサービスはアカウントとパスワードによる確認に対応していません。従来の方法でアプリケーション トークンを確認して安全に保存しました。パスワードは送信も保存もされていません。</value></data>
   <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>保存されたアプリケーション トークンは無効か、有効期限が切れています。有効なトークンでサインインし直してください。</value></data>
-  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>保存済みのアカウントを現在確認できません。ローカルの資格情報は保持され、公開コンテンツの閲覧は引き続き利用できます。更新して再試行してください。</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>保存済みのアカウントを現在確認できません。ローカルの資格情報は保持されています。更新して再試行するか、現在の資格情報でサインインしてください。</value></data>
   <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>ユーザー名、パスワード、アプリケーション トークンのいずれかが無効、期限切れ、または同じアカウントに属していません。</value></data>
   <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>このアプリケーション トークンはアプリへのサインインに使用できません。Web サイトで通常のトークンを作成するか選択してください。</value></data>
   <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>サインイン試行回数が多すぎます。しばらく待ってから再試行してください。</value></data>

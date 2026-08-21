@@ -1116,7 +1116,7 @@ public sealed class CommunityViewModel : ViewModelBase, IDisposable
             ClearAuthenticatedSession(hasStoredCredential: true);
             StatusMessage = Text(
                 "CommunityStoredLoginUnavailableStatus",
-                "The saved account could not be verified right now. Public browsing remains available; refresh to try again.");
+                "The saved account could not be verified right now. Refresh to retry or sign in with current credentials.");
         }
     }
 

@@ -409,7 +409,9 @@
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>无法打开命令草案审阅窗口。未执行任何命令。</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod 社区</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod 社区</value></data>
-  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>在 LocaleSmith 内浏览 Mod 讨论，并通过个人访问令牌安全地发帖。</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>登录后在 LocaleSmith 内浏览 Mod 讨论，并使用应用令牌安全发帖。</value></data>
+  <data name="CommunitySignInGateTitle.Text" xml:space="preserve"><value>登录 Mod 社区</value></data>
+  <data name="CommunitySignInGateBody.Text" xml:space="preserve"><value>请先在网站注册账号并创建应用令牌，然后在此输入账号、密码和令牌。验证成功后才会显示社区内容。</value></data>
   <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>正在加载社区内容</value></data>
   <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>取消</value></data>
   <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>刷新</value></data>
@@ -435,8 +437,8 @@
   <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
   <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>主题</value></data>
   <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>社区账号</value></data>
-  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>登录以使用账号功能</value></data>
-  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>浏览仍然公开。请使用网站用户名、密码和应用令牌登录。LocaleSmith 仅在本次验证中使用密码，不会保存密码。</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>需要登录</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>请输入网站账号、密码和应用令牌。LocaleSmith 只会用密码完成本次验证，绝不会保存密码。</value></data>
   <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>用户名</value></data>
   <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>网站用户名</value></data>
   <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>密码</value></data>
@@ -450,8 +452,8 @@
   <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>令牌已授予的权限</value></data>
   <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>在网站创建或管理应用令牌</value></data>
   <data name="CommunityPatExpander.Header" xml:space="preserve"><value>社区身份与个人访问令牌</value></data>
-  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>只读模式</value></data>
-  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>浏览无需登录；发起主题或回复需要 forum:write，举报需要 reports:write 或兼容的 forum:write 权限。</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>需要登录</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>进入社区需要已验证账号和应用令牌；发起主题或回复需要 forum:write，举报需要 reports:write 或兼容的 forum:write 权限。</value></data>
   <data name="CommunityPatInput.Header" xml:space="preserve"><value>个人访问令牌（PAT）</value></data>
   <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
   <data name="CommunityPatHelp.Text" xml:space="preserve"><value>令牌仅保存在 Windows 凭据管理器中，不会写入设置、日志或页面。删除本地副本不会撤销服务端令牌。</value></data>
@@ -496,7 +498,7 @@
   <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>登录成功。应用令牌已安全保存到 Windows 凭据管理器；密码未保存。</value></data>
   <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>当前服务不支持账号与密码联合验证。已通过旧版流程验证并安全保存应用令牌；密码未发送、也未保存。</value></data>
   <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>已保存的应用令牌无效或已过期，请使用有效令牌重新登录。</value></data>
-  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>暂时无法验证已保存的账号。本地凭证仍会保留，公开浏览仍可使用；请刷新后重试。</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>暂时无法验证已保存的账号。本地凭证仍会保留；请刷新重试，或使用当前凭证重新登录。</value></data>
   <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>用户名、密码或应用令牌无效、已过期，或不属于同一账号。</value></data>
   <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>此应用令牌不允许用于应用登录。请在网站创建或选择普通令牌。</value></data>
   <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>登录尝试过于频繁，请稍候再试。</value></data>

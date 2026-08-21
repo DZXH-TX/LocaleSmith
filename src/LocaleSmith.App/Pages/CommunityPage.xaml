@@ -97,7 +97,11 @@
                 </Button>
             </StackPanel>
 
-            <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnSpacing="8">
+            <Grid
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                ColumnSpacing="8"
+                Visibility="{Binding IsAuthenticated, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -139,7 +143,74 @@
                 Severity="Success" />
         </StackPanel>
 
-        <Grid Grid.Row="2" ColumnSpacing="16">
+        <Border
+            x:Name="CommunitySignInGate"
+            Grid.Row="2"
+            MaxWidth="640"
+            Padding="32"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Style="{ThemeResource CardBorderStyle}"
+            Visibility="{Binding ShowSignInForm, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ScrollViewer HorizontalScrollMode="Disabled" VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="12">
+                    <FontIcon
+                        HorizontalAlignment="Left"
+                        FontSize="32"
+                        Glyph="&#xE77B;" />
+                    <TextBlock
+                        x:Uid="CommunitySignInGateTitle"
+                        AutomationProperties.HeadingLevel="Level2"
+                        Style="{ThemeResource SectionTitleStyle}" />
+                    <TextBlock
+                        x:Uid="CommunitySignInGateBody"
+                        Style="{ThemeResource CaptionTextBlockStyle}"
+                        TextWrapping="WrapWholeWords" />
+                    <InfoBar
+                        x:Uid="CommunityAccountRequiredInfo"
+                        IsClosable="False"
+                        IsOpen="True"
+                        Severity="Informational" />
+                    <TextBox
+                        x:Name="CommunityUsernameInput"
+                        x:Uid="CommunityUsernameInput"
+                        MaxLength="32" />
+                    <PasswordBox
+                        x:Name="CommunityPasswordInput"
+                        x:Uid="CommunityPasswordInput"
+                        MaxLength="128" />
+                    <PasswordBox
+                        x:Name="CommunityPatInput"
+                        x:Uid="CommunityApplicationTokenInput"
+                        IsPasswordRevealButtonEnabled="True"
+                        MaxLength="256" />
+                    <TextBlock
+                        x:Uid="CommunityApplicationLoginHelp"
+                        Style="{ThemeResource CaptionTextBlockStyle}"
+                        TextWrapping="WrapWholeWords" />
+                    <Button
+                        x:Uid="CommunityApplicationLoginButton"
+                        HorizontalAlignment="Left"
+                        Click="OnApplicationLoginClicked"
+                        IsEnabled="{Binding CanSavePat}"
+                        Style="{ThemeResource AccentButtonStyle}" />
+                    <StackPanel HorizontalAlignment="Left" Spacing="0">
+                        <HyperlinkButton
+                            x:Uid="CommunityRegisterAccountLink"
+                            NavigateUri="https://dow.dzxh-tx.cn/register?next=/user/dashboard" />
+                        <HyperlinkButton
+                            x:Uid="CommunityCreatePatLink"
+                            NavigateUri="https://dow.dzxh-tx.cn/user/dashboard" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid
+            x:Name="AuthenticatedCommunityContent"
+            Grid.Row="2"
+            ColumnSpacing="16"
+            Visibility="{Binding IsAuthenticated, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="0.9*" />
                 <ColumnDefinition Width="1*" />
@@ -399,44 +470,12 @@
                         </Grid>
                     </Grid>
 
-                    <Expander x:Uid="CommunityAccountExpander" Grid.Row="1" IsExpanded="False">
+                    <Expander
+                        x:Uid="CommunityAccountExpander"
+                        Grid.Row="1"
+                        behaviors:AppMotion.ExpandFeedback="True"
+                        IsExpanded="False">
                         <StackPanel Spacing="10">
-                            <InfoBar
-                                x:Uid="CommunityAccountRequiredInfo"
-                                IsClosable="False"
-                                IsOpen="{Binding ShowPatGuidance}"
-                                Severity="Informational" />
-                            <StackPanel
-                                Spacing="10"
-                                Visibility="{Binding ShowSignInForm, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBox
-                                    x:Name="CommunityUsernameInput"
-                                    x:Uid="CommunityUsernameInput"
-                                    MaxLength="32" />
-                                <PasswordBox
-                                    x:Name="CommunityPasswordInput"
-                                    x:Uid="CommunityPasswordInput"
-                                    MaxLength="128" />
-                                <PasswordBox
-                                    x:Name="CommunityPatInput"
-                                    x:Uid="CommunityApplicationTokenInput"
-                                    IsPasswordRevealButtonEnabled="True"
-                                    MaxLength="256" />
-                                <TextBlock x:Uid="CommunityApplicationLoginHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button
-                                        x:Uid="CommunityApplicationLoginButton"
-                                        Click="OnApplicationLoginClicked"
-                                        IsEnabled="{Binding CanSavePat}"
-                                        Style="{ThemeResource AccentButtonStyle}" />
-                                    <HyperlinkButton
-                                        x:Uid="CommunityRegisterAccountLink"
-                                        NavigateUri="https://dow.dzxh-tx.cn/register?next=/user/dashboard" />
-                                    <HyperlinkButton
-                                        x:Uid="CommunityCreatePatLink"
-                                        NavigateUri="https://dow.dzxh-tx.cn/user/dashboard" />
-                                </StackPanel>
-                            </StackPanel>
                             <StackPanel
                                 Spacing="8"
                                 Visibility="{Binding IsAuthenticated, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -577,7 +616,11 @@
                             IsClosable="False"
                             IsOpen="{Binding IsSelectedThreadLocked}"
                             Severity="Warning" />
-                        <Expander x:Uid="CommunityNewThreadExpander" IsEnabled="{Binding HasSelectedMod}" IsExpanded="False">
+                        <Expander
+                            x:Uid="CommunityNewThreadExpander"
+                            behaviors:AppMotion.ExpandFeedback="True"
+                            IsEnabled="{Binding HasSelectedMod}"
+                            IsExpanded="False">
                             <StackPanel Spacing="10">
                                 <TextBox
                                     x:Uid="CommunityNewThreadTitleInput"
@@ -599,7 +642,11 @@
                                     Style="{ThemeResource AccentButtonStyle}" />
                             </StackPanel>
                         </Expander>
-                        <Expander x:Uid="CommunityReplyExpander" IsEnabled="{Binding HasSelectedThread}" IsExpanded="False">
+                        <Expander
+                            x:Uid="CommunityReplyExpander"
+                            behaviors:AppMotion.ExpandFeedback="True"
+                            IsEnabled="{Binding HasSelectedThread}"
+                            IsExpanded="False">
                             <StackPanel Spacing="10">
                                 <TextBox
                                     x:Uid="CommunityReplyInput"

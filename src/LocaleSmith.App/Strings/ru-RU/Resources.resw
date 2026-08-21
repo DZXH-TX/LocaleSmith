@@ -409,7 +409,9 @@
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>Не удалось открыть предложение команды для проверки. Ничего не было выполнено.</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Сообщество модов</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Сообщество модов</value></data>
-  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Читайте обсуждения модов в LocaleSmith и безопасно публикуйте сообщения с персональным токеном доступа.</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Войдите, чтобы читать обсуждения модов в LocaleSmith и безопасно публиковать сообщения с помощью токена приложения.</value></data>
+  <data name="CommunitySignInGateTitle.Text" xml:space="preserve"><value>Вход в сообщество модов</value></data>
+  <data name="CommunitySignInGateBody.Text" xml:space="preserve"><value>Сначала зарегистрируйте учётную запись и создайте токен приложения на сайте, затем введите здесь имя пользователя, пароль и токен. Содержимое сообщества появится только после успешной проверки.</value></data>
   <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>Загрузка материалов сообщества</value></data>
   <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>Отмена</value></data>
   <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>Обновить</value></data>
@@ -435,8 +437,8 @@
   <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Мод</value></data>
   <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>Тема</value></data>
   <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>Учётная запись сообщества</value></data>
-  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Войдите, чтобы использовать функции учётной записи</value></data>
-  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Просмотр остаётся общедоступным. Войдите с именем пользователя, паролем и токеном приложения от сайта. LocaleSmith использует пароль только для этой проверки и не сохраняет его.</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Требуется вход</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Введите имя пользователя, пароль и токен приложения от сайта. LocaleSmith использует пароль только для этой проверки и никогда не сохраняет его.</value></data>
   <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>Имя пользователя</value></data>
   <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Имя пользователя на сайте</value></data>
   <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>Пароль</value></data>
@@ -450,8 +452,8 @@
   <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>Разрешения, предоставленные токену</value></data>
   <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Создать токены приложения или управлять ими на сайте</value></data>
   <data name="CommunityPatExpander.Header" xml:space="preserve"><value>Учётная запись сообщества и персональный токен</value></data>
-  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Режим чтения</value></data>
-  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>Чтение доступно всем. Для публикации нужен forum:write, а для жалоб — reports:write или совместимое разрешение forum:write.</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Требуется вход</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>Для доступа к сообществу нужны подтверждённая учётная запись и токен приложения. Для публикации нужен forum:write, а для жалоб — reports:write или совместимое разрешение forum:write.</value></data>
   <data name="CommunityPatInput.Header" xml:space="preserve"><value>Персональный токен доступа (PAT)</value></data>
   <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
   <data name="CommunityPatHelp.Text" xml:space="preserve"><value>Токен хранится только в диспетчере учётных данных Windows и не записывается в настройки, журналы или страницу. Удаление локальной копии не отзывает токен на сервере.</value></data>
@@ -496,7 +498,7 @@
   <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>Вход выполнен. Токен приложения безопасно сохранён в диспетчере учётных данных Windows; пароль не сохранён.</value></data>
   <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>Этот сервис не поддерживает проверку учётной записи и пароля. Токен приложения проверен прежним способом и безопасно сохранён; пароль не отправлялся и не сохранялся.</value></data>
   <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>Сохранённый токен приложения недействителен или просрочен. Войдите снова с действительным токеном.</value></data>
-  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>Сейчас не удалось проверить сохранённую учётную запись. Локальные учётные данные сохранены, а общедоступный просмотр по-прежнему доступен. Обновите и повторите попытку.</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>Сейчас не удалось проверить сохранённую учётную запись. Локальные учётные данные сохранены. Обновите страницу для повторной попытки или войдите с актуальными данными.</value></data>
   <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>Имя пользователя, пароль или токен приложения недействительны, просрочены либо не принадлежат одной учётной записи.</value></data>
   <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>Этот токен приложения нельзя использовать для входа в приложение. Создайте или выберите обычный токен на сайте.</value></data>
   <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>Слишком много попыток входа. Подождите и повторите попытку.</value></data>

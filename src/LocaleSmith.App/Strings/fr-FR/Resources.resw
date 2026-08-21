@@ -409,7 +409,9 @@
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>Impossible d’ouvrir la proposition de commande pour examen. Rien n’a été exécuté.</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Communauté Mod</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Communauté Mod</value></data>
-  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Consultez les discussions sur les Mods dans LocaleSmith et publiez en sécurité avec un jeton d’accès personnel.</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Connectez-vous pour consulter les discussions sur les Mods dans LocaleSmith et publier en sécurité avec un jeton d’application.</value></data>
+  <data name="CommunitySignInGateTitle.Text" xml:space="preserve"><value>Connexion à la communauté Mod</value></data>
+  <data name="CommunitySignInGateBody.Text" xml:space="preserve"><value>Créez d’abord un compte et un jeton d’application sur le site, puis saisissez ici votre nom d’utilisateur, votre mot de passe et votre jeton. Le contenu de la communauté ne s’affiche qu’après une vérification réussie.</value></data>
   <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>Chargement du contenu de la communauté</value></data>
   <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>Annuler</value></data>
   <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>Actualiser</value></data>
@@ -435,8 +437,8 @@
   <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
   <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>Sujet</value></data>
   <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>Compte de la communauté</value></data>
-  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Connectez-vous pour utiliser les fonctions du compte</value></data>
-  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>La consultation reste publique. Connectez-vous avec le nom d’utilisateur, le mot de passe et le jeton d’application du site. LocaleSmith n’utilise le mot de passe que pour cette vérification et ne l’enregistre pas.</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Connexion requise</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Saisissez le nom d’utilisateur, le mot de passe et le jeton d’application du site. LocaleSmith n’utilise le mot de passe que pour cette vérification et ne l’enregistre jamais.</value></data>
   <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>Nom d’utilisateur</value></data>
   <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Votre nom d’utilisateur sur le site</value></data>
   <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>Mot de passe</value></data>
@@ -450,8 +452,8 @@
   <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>Autorisations accordées au jeton</value></data>
   <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Créer ou gérer les jetons d’application sur le site</value></data>
   <data name="CommunityPatExpander.Header" xml:space="preserve"><value>Identité communautaire et jeton d’accès personnel</value></data>
-  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Mode lecture seule</value></data>
-  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>La lecture est publique. La publication nécessite forum:write ; le signalement nécessite reports:write ou l’autorisation compatible forum:write.</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Connexion requise</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>Un compte vérifié et un jeton d’application sont requis pour accéder à la communauté. La publication nécessite forum:write ; le signalement nécessite reports:write ou l’autorisation compatible forum:write.</value></data>
   <data name="CommunityPatInput.Header" xml:space="preserve"><value>Jeton d’accès personnel (PAT)</value></data>
   <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
   <data name="CommunityPatHelp.Text" xml:space="preserve"><value>Le jeton est enregistré uniquement dans le Gestionnaire d’informations d’identification Windows, jamais dans les paramètres, les journaux ou la page. Supprimer la copie locale ne révoque pas le jeton du serveur.</value></data>
@@ -496,7 +498,7 @@
   <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>Connexion réussie. Le jeton d’application a été enregistré en sécurité dans le Gestionnaire d’informations d’identification Windows ; le mot de passe n’a pas été enregistré.</value></data>
   <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>Ce service ne prend pas en charge la vérification du compte et du mot de passe. Le jeton d’application a été vérifié par l’ancien processus et enregistré en sécurité ; le mot de passe n’a été ni envoyé ni enregistré.</value></data>
   <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>Le jeton d’application enregistré est invalide ou expiré. Reconnectez-vous avec un jeton valide.</value></data>
-  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>Impossible de vérifier temporairement le compte enregistré. Les identifiants locaux sont conservés et la consultation publique reste disponible. Actualisez puis réessayez.</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>Impossible de vérifier temporairement le compte enregistré. Les identifiants locaux sont conservés. Actualisez pour réessayer ou connectez-vous avec des identifiants à jour.</value></data>
   <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>Le nom d’utilisateur, le mot de passe ou le jeton d’application est invalide, a expiré ou n’appartient pas au même compte.</value></data>
   <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>Ce jeton d’application ne permet pas la connexion à l’application. Créez ou choisissez un jeton standard sur le site.</value></data>
   <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>Trop de tentatives de connexion ont été effectuées. Patientez puis réessayez.</value></data>

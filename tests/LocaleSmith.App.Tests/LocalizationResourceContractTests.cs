@@ -75,6 +75,69 @@ public sealed class LocalizationResourceContractTests
     }
 
     [Fact]
+    public void CommunityPageRequiresVerifiedSignInBeforeShowingCommunityContent()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var page = XDocument.Load(Path.Combine(
+            repositoryRoot,
+            "src",
+            "LocaleSmith.App",
+            "Pages",
+            "CommunityPage.xaml"));
+        var presentationNamespace = page.Root!.Name.Namespace;
+        XNamespace xamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
+
+        var gate = Assert.Single(
+            page.Descendants(presentationNamespace + "Border"),
+            element => (string?)element.Attribute(xamlNamespace + "Name") == "CommunitySignInGate");
+        Assert.True(HasVisibilityBinding(gate, "ShowSignInForm"));
+
+        var authenticatedContent = Assert.Single(
+            page.Descendants(presentationNamespace + "Grid"),
+            element => (string?)element.Attribute(xamlNamespace + "Name") ==
+                "AuthenticatedCommunityContent");
+        Assert.True(HasVisibilityBinding(authenticatedContent, "IsAuthenticated"));
+
+        Assert.Single(
+            gate.Descendants(presentationNamespace + "TextBox"),
+            element => (string?)element.Attribute(xamlNamespace + "Name") ==
+                "CommunityUsernameInput");
+        Assert.Single(
+            gate.Descendants(presentationNamespace + "PasswordBox"),
+            element => (string?)element.Attribute(xamlNamespace + "Name") ==
+                "CommunityPasswordInput");
+        Assert.Single(
+            gate.Descendants(presentationNamespace + "PasswordBox"),
+            element => (string?)element.Attribute(xamlNamespace + "Name") ==
+                "CommunityPatInput");
+        Assert.Contains(
+            gate.Descendants(presentationNamespace + "Button"),
+            element => HasUidAndClick(
+                element,
+                xamlNamespace,
+                "CommunityApplicationLoginButton",
+                "OnApplicationLoginClicked"));
+        Assert.Contains(
+            gate.Descendants(presentationNamespace + "HyperlinkButton"),
+            element => (string?)element.Attribute(xamlNamespace + "Uid") ==
+                    "CommunityRegisterAccountLink"
+                && (string?)element.Attribute("NavigateUri") ==
+                    "https://dow.dzxh-tx.cn/register?next=/user/dashboard");
+
+        var stringsRoot = Path.Combine(repositoryRoot, "src", "LocaleSmith.App", "Strings");
+        foreach (var language in AppDisplayLanguages.Supported)
+        {
+            var resources = ReadResourcePack(stringsRoot, language);
+            Assert.Contains("CommunitySignInGateTitle.Text", resources.Keys);
+            Assert.Contains("CommunitySignInGateBody.Text", resources.Keys);
+            Assert.Contains("CommunityUsernameInput.Header", resources.Keys);
+            Assert.Contains("CommunityPasswordInput.Header", resources.Keys);
+            Assert.Contains("CommunityApplicationTokenInput.Header", resources.Keys);
+            Assert.Contains("CommunityRegisterAccountLink.Content", resources.Keys);
+        }
+    }
+
+    [Fact]
     public void CommunityPageExposesNativeReportFlowForEveryVisibleUgcTarget()
     {
         var repositoryRoot = FindRepositoryRoot();

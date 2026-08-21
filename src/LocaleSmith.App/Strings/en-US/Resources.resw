@@ -409,7 +409,9 @@
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>The command proposal could not be opened for review. Nothing was executed.</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod community</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod community</value></data>
-  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Browse Mod discussions in LocaleSmith and post securely with a personal access token.</value></data>
+  <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Sign in to browse Mod discussions in LocaleSmith and post securely with an application token.</value></data>
+  <data name="CommunitySignInGateTitle.Text" xml:space="preserve"><value>Sign in to Mod Community</value></data>
+  <data name="CommunitySignInGateBody.Text" xml:space="preserve"><value>Create an account and application token on the website first, then enter your username, password, and token here. Community content is shown only after verification succeeds.</value></data>
   <data name="CommunityBusyIndicator.AutomationProperties.Name" xml:space="preserve"><value>Loading community content</value></data>
   <data name="CommunityCancelButtonText.Text" xml:space="preserve"><value>Cancel</value></data>
   <data name="CommunityRefreshButtonText.Text" xml:space="preserve"><value>Refresh</value></data>
@@ -435,8 +437,8 @@
   <data name="CommunityCompactModSelector.Header" xml:space="preserve"><value>Mod</value></data>
   <data name="CommunityCompactThreadSelector.Header" xml:space="preserve"><value>Topic</value></data>
   <data name="CommunityAccountExpander.Header" xml:space="preserve"><value>Community account</value></data>
-  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Sign in to use account features</value></data>
-  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Browsing stays public. Sign in with your website username, password, and application token. LocaleSmith uses the password only for this verification and does not save it.</value></data>
+  <data name="CommunityAccountRequiredInfo.Title" xml:space="preserve"><value>Sign-in required</value></data>
+  <data name="CommunityAccountRequiredInfo.Message" xml:space="preserve"><value>Enter your website username, password, and application token. LocaleSmith uses the password only for this verification and never saves it.</value></data>
   <data name="CommunityUsernameInput.Header" xml:space="preserve"><value>Username</value></data>
   <data name="CommunityUsernameInput.PlaceholderText" xml:space="preserve"><value>Your website username</value></data>
   <data name="CommunityPasswordInput.Header" xml:space="preserve"><value>Password</value></data>
@@ -450,8 +452,8 @@
   <data name="CommunityGrantedScopesHeading.Text" xml:space="preserve"><value>Granted token permissions</value></data>
   <data name="CommunityManagePatLink.Content" xml:space="preserve"><value>Create or manage application tokens on the website</value></data>
   <data name="CommunityPatExpander.Header" xml:space="preserve"><value>Community identity and personal access token</value></data>
-  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Read-only mode</value></data>
-  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>Browsing is public. Writing requires forum:write; reporting requires reports:write or compatible forum:write permission.</value></data>
+  <data name="CommunityPatRequiredInfo.Title" xml:space="preserve"><value>Sign-in required</value></data>
+  <data name="CommunityPatRequiredInfo.Message" xml:space="preserve"><value>A verified account and application token are required to enter the community. Writing requires forum:write; reporting requires reports:write or compatible forum:write permission.</value></data>
   <data name="CommunityPatInput.Header" xml:space="preserve"><value>Personal access token (PAT)</value></data>
   <data name="CommunityPatInput.PlaceholderText" xml:space="preserve"><value>mctx_pat_…</value></data>
   <data name="CommunityPatHelp.Text" xml:space="preserve"><value>The token is stored only in Windows Credential Manager, never in settings, logs, or the page. Removing the local copy does not revoke the server token.</value></data>
@@ -496,7 +498,7 @@
   <data name="CommunityApplicationLoginSuccessStatus" xml:space="preserve"><value>Signed in. The application token was saved securely in Windows Credential Manager; your password was not saved.</value></data>
   <data name="CommunityLegacyTokenLoginSuccessStatus" xml:space="preserve"><value>This service does not support account-and-password verification. The application token was verified using the legacy flow and saved securely; your password was not sent or saved.</value></data>
   <data name="CommunityStoredLoginExpiredStatus" xml:space="preserve"><value>Your saved application token is invalid or expired. Sign in again with a current token.</value></data>
-  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>The saved account could not be verified right now. Your local credential is still stored, and public browsing remains available. Refresh and try again.</value></data>
+  <data name="CommunityStoredLoginUnavailableStatus" xml:space="preserve"><value>The saved account could not be verified right now. Your local credential remains stored. Refresh to retry or sign in with current credentials.</value></data>
   <data name="CommunityApplicationLoginUnauthorizedError" xml:space="preserve"><value>The username, password, or application token is invalid, expired, or does not belong to the same account.</value></data>
   <data name="CommunityApplicationLoginScopeError" xml:space="preserve"><value>This application token is not permitted for account sign-in. Create or choose a regular token on the website.</value></data>
   <data name="CommunityApplicationLoginRateLimitedError" xml:space="preserve"><value>Too many sign-in attempts were made. Wait a moment, then try again.</value></data>
