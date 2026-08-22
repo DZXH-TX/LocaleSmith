@@ -7,7 +7,7 @@
   <Identity
     Name="CRTech.LocaleSmith"
     Publisher="CN=33E83C71-5BAE-4CB2-A70A-1F0545DACFB1"
-    Version="1.0.0.0"
+    Version="1.1.0.0"
     ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>ms-resource:PackageDisplayName</DisplayName>
