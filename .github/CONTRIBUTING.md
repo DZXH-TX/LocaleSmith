@@ -29,7 +29,7 @@ dotnet restore LocaleSmith.slnx
 dotnet build LocaleSmith.slnx --configuration Release --no-restore
 ```
 
-`dotnet build LocaleSmith.slnx` 不生成 WAP/MSIX。只有修改 `packaging/` 或发布配置时，才需要在安装了 Desktop Bridge/WAP targets 的 Visual Studio Developer PowerShell 中额外验证打包工程；具体命令见 `packaging/README.md`。
+`dotnet build LocaleSmith.slnx` 不生成 WAP/MSIX。只有修改 `packaging/` 或发布配置时，才需要在安装了 Desktop Bridge/WAP targets 的 Visual Studio Developer PowerShell 中额外验证 `packaging/LocaleSmith.Package/LocaleSmith.Package.wapproj`，并在 Pull Request 中记录实际命令和结果。
 
 ## 实现约定
 
@@ -42,7 +42,7 @@ dotnet build LocaleSmith.slnx --configuration Release --no-restore
 - 修改界面文案时，同步 `zh-CN`、`en-US`、`ja-JP`、`fr-FR`、`ru-RU` 五套 `.resw` key。面向用户的长期文档变更应同步中文与英文 README。
 - 不提交生成的构建产物、测试结果、真实用户样本、私钥、证书或秘密配置。
 
-架构和风险边界的权威说明见 `docs/architecture.md`、`README.md` 的“安全边界”以及[安全政策](SECURITY.md)。
+架构和风险边界的权威说明见 `README.md` 的“源码结构”和“安全边界”以及[安全政策](SECURITY.md)。
 
 ## 测试与格式检查
 

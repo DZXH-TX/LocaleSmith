@@ -77,17 +77,11 @@ body:
     validations:
       required: true
 
-  - type: input
-    id: minecraft_context
-    attributes:
-      label: Minecraft / Loader / Provider 范围
-      description: 如果建议只适用于特定 Minecraft、Loader、输入类型或模型 Provider，请在此说明。
-
   - type: textarea
     id: additional_context
     attributes:
       label: 补充资料
-      description: 可添加脱敏截图、草图、规范链接或相关 Issue；不要上传秘密或受限制的第三方内容。
+      description: 可添加脱敏截图、草图、规范链接或相关 Issue；如果建议只适用于特定 Minecraft、Loader、输入类型或模型 Provider，也请在此说明。不要上传秘密或受限制的第三方内容。
 
   - type: checkboxes
     id: contribution

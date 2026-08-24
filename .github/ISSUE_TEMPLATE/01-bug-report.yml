@@ -20,6 +20,8 @@ body:
           required: true
         - label: 我已确认这不是需要私密披露的安全漏洞。
           required: true
+        - label: 我确认本 Issue 不包含秘密、真实用户归档、受限制内容、私人路径或其他敏感信息。
+          required: true
 
   - type: input
     id: affected_version
@@ -30,24 +32,17 @@ body:
     validations:
       required: true
 
-  - type: dropdown
-    id: install_source
+  - type: textarea
+    id: environment
     attributes:
-      label: 安装或构建来源
-      options:
-        - Microsoft Store
-        - GitHub Release
-        - main 分支源码构建
-        - 其他分支、Fork 或非官方构建
-    validations:
-      required: true
-
-  - type: input
-    id: windows_environment
-    attributes:
-      label: Windows 环境
-      description: 请填写 Windows 版本、Build 和架构。
-      placeholder: 例如 Windows 11 24H2 (Build 26100), x64
+      label: 运行环境与输入上下文
+      description: 请填写与你的问题相关的各项；不适用的项目可写“不适用”，且不要包含凭据或私人路径。
+      placeholder: |
+        - 安装或构建来源：Microsoft Store / GitHub Release / 源码构建
+        - Windows：版本、Build、架构
+        - 输入：JAR / ZIP / 展开目录 / 不适用
+        - Minecraft / Loader：版本与名称
+        - 模型：Provider、模型名、本地或云端
     validations:
       required: true
 
@@ -66,32 +61,6 @@ body:
         - 其他
     validations:
       required: true
-
-  - type: dropdown
-    id: input_type
-    attributes:
-      label: 输入类型
-      options:
-        - JAR
-        - ZIP
-        - 展开后的目录
-        - 不适用
-    validations:
-      required: true
-
-  - type: input
-    id: minecraft_context
-    attributes:
-      label: Minecraft / Loader 信息
-      description: 如果相关，请填写 Minecraft 版本、Loader 名称和版本。
-      placeholder: 例如 Minecraft 1.21.1, NeoForge 21.1.x
-
-  - type: input
-    id: provider_context
-    attributes:
-      label: 模型 Provider 信息
-      description: 如果相关，请只填写 Provider、模型名和本地/云端类型；不要填写 API Key、端点凭据或完整请求。
-      placeholder: 例如 Ollama + qwen3，本地
 
   - type: textarea
     id: summary
@@ -133,11 +102,3 @@ body:
     attributes:
       label: 脱敏日志、截图或补充信息
       description: 可拖入截图或粘贴最小日志片段。删除访问令牌、API Key、用户内容、私人路径和命令参数中的敏感值。
-
-  - type: checkboxes
-    id: data_safety
-    attributes:
-      label: 数据安全确认
-      options:
-        - label: 我确认本 Issue 不包含秘密、真实用户归档、受限制内容、私人路径或其他敏感信息。
-          required: true
