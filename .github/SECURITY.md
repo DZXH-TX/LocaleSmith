@@ -4,14 +4,16 @@
 
 ## 支持版本（Supported Versions）
 
-LocaleSmith 目前处于开发预览阶段，尚无正式 Release 或 Tag。
+LocaleSmith 已发布 `v1.0.0` 正式版。Microsoft Store 与同版本 GitHub
+Release 是当前受支持的正式分发，`main` 默认分支的最新提交同时接受安全报告。
 
 | 对象 | 安全支持状态 |
 | --- | --- |
+| `v1.0.0` 正式版（Microsoft Store / GitHub Release） | ✅ 支持 |
 | `main` 默认分支的最新提交 | ✅ 支持 |
-| 历史提交、旧预览构建与非官方构建 | ❌ 不提供持续安全更新 |
+| 更早版本、历史提交、预览构建与非官方构建 | ❌ 不提供持续安全更新 |
 
-报告旧版本问题前，请先确认 `main` 的最新代码是否仍受影响。
+报告旧版本或历史提交问题前，请先确认当前正式版或 `main` 的最新代码是否仍受影响。
 
 ## 私密报告漏洞（Reporting a Vulnerability）
 
