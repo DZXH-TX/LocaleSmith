@@ -31,10 +31,12 @@
     <AppxBundle>Never</AppxBundle>
     <EntryPointProjectUniqueName>..\..\src\LocaleSmith.App\LocaleSmith.App.csproj</EntryPointProjectUniqueName>
     <Platforms>x64</Platforms>
+    <PackageFlavor Condition="'$(PackageFlavor)' == ''">Development</PackageFlavor>
   </PropertyGroup>
 
   <ItemGroup>
-    <AppxManifest Include="Package.appxmanifest" />
+    <AppxManifest Include="Package.dev.appxmanifest" Condition="'$(PackageFlavor)' == 'Development'" />
+    <AppxManifest Include="Package.appxmanifest" Condition="'$(PackageFlavor)' == 'Store'" />
     <ProjectReference Include="..\..\src\LocaleSmith.App\LocaleSmith.App.csproj">
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
       <PublishProfile>Properties\PublishProfiles\win-x64.pubxml</PublishProfile>
@@ -58,6 +60,9 @@
   </ItemGroup>
 
   <Target Name="ValidateReleaseBrandAssets" BeforeTargets="PrepareForBuild">
+    <Error
+      Condition="'$(PackageFlavor)' != 'Development' And '$(PackageFlavor)' != 'Store'"
+      Text="PackageFlavor must be Development or Store." />
     <Error
       Condition="!Exists('Assets\Square44x44Logo.png') Or !Exists('Assets\Square150x150Logo.png') Or !Exists('Assets\StoreLogo.png') Or !Exists('Assets\Wide310x150Logo.png')"
       Text="Approved MSIX PNG assets are missing. See packaging/README.md; placeholder images are not permitted." />

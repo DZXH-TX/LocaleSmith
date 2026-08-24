@@ -1,14 +1,17 @@
 using System.Collections.ObjectModel;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using LocaleSmith.Core.Abstractions;
 using LocaleSmith.Core.Models;
 
 namespace LocaleSmith.Infrastructure.Models;
 
-public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
+public sealed class OpenAiCompatibleModelService : HttpModelServiceBase, IModelCatalogService
 {
     private const int MaximumReasoningContentCharacters = 256 * 1024;
+    private const int MaximumCatalogModels = 2048;
+    private const int MaximumModelIdCharacters = 512;
 
     public OpenAiCompatibleModelService(HttpClient httpClient, ModelSource source, ISecretResolver secretResolver)
         : base(httpClient, source, secretResolver)
@@ -41,6 +44,11 @@ public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
                     parameters = tool.InputSchema
                 }
             });
+        }
+
+        if (Source.UsesReasoningDetailsReplay)
+        {
+            body["reasoning_split"] = true;
         }
 
         if (Source.SupportsCustomTemperature && request.Temperature is { } temperature)
@@ -124,13 +132,110 @@ public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
         }
     }
 
+    public async Task<IReadOnlyList<AvailableModelInfo>> ListModelsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var secret = await ResolveRequiredSecretAsync(cancellationToken).ConfigureAwait(false);
+        string apiKey = secret.DangerousGetString();
+        using var request = new HttpRequestMessage(HttpMethod.Get, BuildModelsEndpoint());
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await HttpClient
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        catch (HttpRequestException exception)
+        {
+            throw CreateSafeNetworkException("OpenAI-compatible model catalog", exception, apiKey);
+        }
+
+        using (response)
+        using (var document = await ReadSuccessfulJsonAsync(
+                   response,
+                   "OpenAI-compatible model catalog",
+                   cancellationToken,
+                   apiKey).ConfigureAwait(false))
+        {
+            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty("data", out var data) ||
+                data.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                throw new ModelServiceException(
+                    "OpenAI-compatible model catalog response did not contain a 'data' array.");
+            }
+
+            if (data.GetArrayLength() > MaximumCatalogModels)
+            {
+                throw new ModelServiceException(
+                    $"OpenAI-compatible model catalog returned more than {MaximumCatalogModels} models.");
+            }
+
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var item in data.EnumerateArray())
+            {
+                if (item.ValueKind != System.Text.Json.JsonValueKind.Object ||
+                    !item.TryGetProperty("id", out var idValue) ||
+                    idValue.ValueKind != System.Text.Json.JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                string id = idValue.GetString()?.Trim() ?? string.Empty;
+                if (id.Length is 0 or > MaximumModelIdCharacters ||
+                    id.Any(static character => char.IsControl(character)))
+                {
+                    continue;
+                }
+
+                names.Add(id);
+            }
+
+            return names
+                .Order(StringComparer.Ordinal)
+                .Select(static name => new AvailableModelInfo(
+                    name,
+                    Digest: null,
+                    SizeBytes: null,
+                    ModifiedAt: null,
+                    Family: null,
+                    ParameterSize: null,
+                    QuantizationLevel: null))
+                .ToArray();
+        }
+    }
+
+    private Uri BuildModelsEndpoint()
+    {
+        var builder = new UriBuilder(Source.Endpoint);
+        string path = builder.Path.TrimEnd('/');
+        const string chatCompletionsSuffix = "/chat/completions";
+        if (path.EndsWith(chatCompletionsSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            path = path[..^chatCompletionsSuffix.Length].TrimEnd('/');
+        }
+
+        if (!path.EndsWith("/models", StringComparison.OrdinalIgnoreCase))
+        {
+            path = string.IsNullOrEmpty(path) ? "/models" : $"{path}/models";
+        }
+
+        builder.Path = path;
+        return builder.Uri;
+    }
+
     private object ToOpenAiMessage(ModelMessage message)
     {
         var result = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["role"] = RoleName(message.Role),
             ["content"] = message.Role == ModelMessageRole.Assistant && message.Content.Length == 0
-                ? null
+                ? Source.RequiresNonNullToolCallContent && message.ToolCalls.Count > 0
+                    ? string.Empty
+                    : null
                 : message.Content
         };
         if (message.Role == ModelMessageRole.Assistant && message.ToolCalls.Count > 0)
@@ -161,7 +266,32 @@ public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
                     $"OpenAI-compatible request reasoning content exceeds {MaximumReasoningContentCharacters} characters.");
             }
 
-            result["reasoning_content"] = reasoningContent;
+            if (Source.UsesReasoningDetailsReplay)
+            {
+                JsonNode? reasoningDetails;
+                try
+                {
+                    reasoningDetails = JsonNode.Parse(reasoningContent);
+                }
+                catch (System.Text.Json.JsonException exception)
+                {
+                    throw new ModelServiceException(
+                        "Stored provider reasoning_details is not valid JSON.",
+                        innerException: exception);
+                }
+
+                if (reasoningDetails is not JsonArray)
+                {
+                    throw new ModelServiceException(
+                        "Stored provider reasoning_details must be a JSON array.");
+                }
+
+                result["reasoning_details"] = reasoningDetails;
+            }
+            else
+            {
+                result["reasoning_content"] = reasoningContent;
+            }
         }
 
         return result;
@@ -169,20 +299,41 @@ public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
 
     private string? ParseReasoningContent(System.Text.Json.JsonElement message)
     {
-        if (!Source.RequiresReasoningContentReplay ||
-            !message.TryGetProperty("reasoning_content", out var reasoningContent) ||
+        if (!Source.RequiresReasoningContentReplay)
+        {
+            return null;
+        }
+
+        string propertyName = Source.UsesReasoningDetailsReplay
+            ? "reasoning_details"
+            : "reasoning_content";
+        if (!message.TryGetProperty(propertyName, out var reasoningContent) ||
             reasoningContent.ValueKind == System.Text.Json.JsonValueKind.Null)
         {
             return null;
         }
 
-        if (reasoningContent.ValueKind != System.Text.Json.JsonValueKind.String)
+        string value;
+        if (Source.UsesReasoningDetailsReplay)
+        {
+            if (reasoningContent.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                throw new ModelServiceException(
+                    "OpenAI-compatible response 'choices[0].message.reasoning_details' must be an array or null.");
+            }
+
+            value = reasoningContent.GetRawText();
+        }
+        else if (reasoningContent.ValueKind == System.Text.Json.JsonValueKind.String)
+        {
+            value = reasoningContent.GetString()!;
+        }
+        else
         {
             throw new ModelServiceException(
                 "OpenAI-compatible response 'choices[0].message.reasoning_content' must be a string or null.");
         }
 
-        var value = reasoningContent.GetString()!;
         if (value.Length > MaximumReasoningContentCharacters)
         {
             throw new ModelServiceException(

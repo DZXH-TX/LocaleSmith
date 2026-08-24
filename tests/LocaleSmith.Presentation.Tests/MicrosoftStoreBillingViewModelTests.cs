@@ -176,14 +176,17 @@ public sealed class MicrosoftStoreBillingViewModelTests
         Assert.Equal(0, billing.VerifyCalls);
     }
 
-    [Fact]
-    public async Task RestoreUsesBackendReconciliationWithoutOpeningPurchaseUi()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RestoreUsesBackendReconciliationAcrossDevicesWithoutOpeningPurchaseUi(
+        bool localCollectionPresent)
     {
         var events = new List<string>();
         var billing = new FakeBillingClient(events);
         billing.EntitlementResponses.Enqueue(CreateEntitlements(active: false));
         billing.EntitlementResponses.Enqueue(CreateEntitlements(active: true));
-        var store = new FakeStorefront(events) { InUserCollection = true };
+        var store = new FakeStorefront(events) { InUserCollection = localCollectionPresent };
         var viewModel = CreateViewModel(
             billing,
             new FakeCredentialService { IsConfigured = true },
@@ -193,6 +196,7 @@ public sealed class MicrosoftStoreBillingViewModelTests
         await viewModel.RestoreCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.HasActiveEntitlement);
+        Assert.Equal(localCollectionPresent, viewModel.IsStorePurchaseFound);
         Assert.Equal(0, store.PurchaseCalls);
         Assert.Equal(1, billing.VerifyCalls);
     }

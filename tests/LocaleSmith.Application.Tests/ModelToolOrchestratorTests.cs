@@ -83,11 +83,12 @@ public sealed class ModelToolOrchestratorTests
                 reasoningContent: privateReasoning),
             new ModelResponse("visible final"));
         var progress = new RecordingProgress();
+        var publicTaskId = Guid.NewGuid();
 
         ModelResponse response = await new ModelToolOrchestrator().CompleteAsync(
             service,
             new ModelRequest([new ModelMessage(ModelMessageRole.User, "inspect")]),
-            new RecordingExecutor(),
+            new RecordingExecutor(publicTaskId: publicTaskId),
             progress,
             TestContext.Current.CancellationToken);
 
@@ -104,6 +105,9 @@ public sealed class ModelToolOrchestratorTests
             progress.Events.Select(static item => item.Kind));
         Assert.Equal(Enumerable.Range(1, progress.Events.Count), progress.Events.Select(static item => item.Sequence));
         Assert.Equal("system_context", progress.Events.Single(item => item.Kind == ModelRunEventKind.ToolStarted).ToolName);
+        Assert.Equal(
+            publicTaskId,
+            progress.Events.Single(item => item.Kind == ModelRunEventKind.ToolCompleted).TaskId);
         Assert.All(progress.Events, item =>
         {
             string display = item.ToString();
@@ -309,10 +313,12 @@ public sealed class ModelToolOrchestratorTests
     private sealed class RecordingExecutor : IModelToolExecutor
     {
         private readonly bool _throwOnExecute;
+        private readonly Guid? _publicTaskId;
 
-        public RecordingExecutor(bool throwOnExecute = false)
+        public RecordingExecutor(bool throwOnExecute = false, Guid? publicTaskId = null)
         {
             _throwOnExecute = throwOnExecute;
+            _publicTaskId = publicTaskId;
             using var schema = JsonDocument.Parse("""{"type":"object","additionalProperties":false}""");
             Tools = [new ModelToolDefinition("system_context", "Read safe context.", schema.RootElement)];
         }
@@ -332,7 +338,11 @@ public sealed class ModelToolOrchestratorTests
                 throw new InvalidOperationException("credential=secret");
             }
 
-            return Task.FromResult(new ModelToolResult(toolCall.Id, toolCall.Name, "safe result"));
+            return Task.FromResult(new ModelToolResult(
+                toolCall.Id,
+                toolCall.Name,
+                "safe result",
+                PublicTaskId: _publicTaskId));
         }
     }
 

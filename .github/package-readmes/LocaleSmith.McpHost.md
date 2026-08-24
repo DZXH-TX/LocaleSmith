@@ -2,6 +2,8 @@
 
 `CRTech.LocaleSmith.McpHost` is the Windows x64 stdio MCP companion for [LocaleSmith | 译匠](https://github.com/DZXH-TX/LocaleSmith). It exposes bounded, safety-gated local context to MCP clients without granting them command-execution authority.
 
+Version 0.1.1 synchronizes protocol validation and shared security hardening with LocaleSmith 1.2.0. App-only project tools such as project inspection and translation-task control are deliberately not included in this standalone package because they require the desktop application's user-selected project workspace and UI authorization.
+
 ## Requirements
 
 - Windows x64;
@@ -52,5 +54,7 @@ The standalone host exposes only:
 - `cli.propose`: validation and summary of a proposed command.
 
 It does not expose `cli.execute`, execute processes, or issue approval tokens. A proposal never implies user approval. LocaleSmith's desktop application keeps execution behind independent policy revalidation, a command-bound single-use approval, and explicit UI confirmation. See the repository [security policy](https://github.com/DZXH-TX/LocaleSmith/security/policy) for reporting and supported-version details.
+
+The host does not accept an arbitrary project, task, file, or directory path. File and translation project operations belong to the desktop application and remain bound to opaque IDs from user-selected projects.
 
 This package is licensed under [Apache License 2.0](https://github.com/DZXH-TX/LocaleSmith/blob/main/LICENSE).

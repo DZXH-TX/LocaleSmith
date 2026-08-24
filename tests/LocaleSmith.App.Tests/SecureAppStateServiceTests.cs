@@ -121,8 +121,41 @@ public sealed class SecureAppStateServiceTests
         Assert.Equal(1, events.Count(static entry => entry == "configuration:save"));
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(5)]
+    public async Task InitializationRejectsUnknownSchemaBeforeNormalizationWithoutSaving(
+        int schemaVersion)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(
+            new AppConfiguration
+            {
+                SchemaVersion = schemaVersion,
+                ModelSources = null!
+            },
+            events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var registry = new ModelServiceRegistry();
+        using var httpClient = new HttpClient(new RejectingHttpHandler());
+        using var service = new SecureAppStateService(
+            configurationStore,
+            secretStore,
+            registry,
+            httpClient,
+            new StubSandboxRootManager());
+
+        var exception = await Assert.ThrowsAsync<InvalidDataException>(
+            () => service.InitializeAsync(cancellationToken));
+
+        Assert.Contains($"schema {schemaVersion}", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("configuration:save", events);
+    }
+
     [Fact]
-    public async Task InitializationDemotesLegacyMismatchedPresetWithoutChangingConnectionFields()
+    public async Task InitializationMigratesSchemaThreeAndDemotesMismatchedPreset()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var events = new ConcurrentQueue<string>();
@@ -140,7 +173,7 @@ public sealed class SecureAppStateServiceTests
         var configurationStore = new RecordingConfigurationStore(
             CreateConfiguration(legacyProfile) with
             {
-                SchemaVersion = 2,
+                SchemaVersion = 3,
                 LogDirectoryPath = existingLogDirectory
             },
             events);
@@ -665,7 +698,9 @@ public sealed class SecureAppStateServiceTests
             new Uri("https://api.deepseek.com/v1/chat/completions"),
             "deepseek-chat",
             null,
-            ModelProviderPresets.DeepSeekId);
+            ModelProviderPresets.DeepSeekId,
+            MaxOutputTokens: 16_384,
+            MaxSourceCharactersPerRequest: 32_000);
 
         var saved = await harness.Service.SaveAsync(
             draft,
@@ -676,7 +711,12 @@ public sealed class SecureAppStateServiceTests
         Assert.DoesNotContain(apiKey, persistedJson, StringComparison.Ordinal);
         Assert.Equal("model-sources/deepseek/api-key", saved.CredentialReference);
         Assert.Equal(OpenAiTokenLimitParameter.MaxTokens, saved.TokenLimitParameter);
+        Assert.Equal(16_384, saved.MaxOutputTokens);
+        Assert.Equal(32_000, saved.MaxSourceCharactersPerRequest);
         Assert.Equal(apiKey, secretStore.GetSecretForTest(saved.CredentialReference!));
+        ModelSource runtime = Assert.Single(harness.Registry.Sources);
+        Assert.Equal(16_384, runtime.MaxOutputTokens);
+        Assert.Equal(32_000, runtime.MaxSourceCharactersPerRequest);
         events.Clear();
 
         var result = await harness.Service.TestConnectionAsync(
@@ -688,6 +728,41 @@ public sealed class SecureAppStateServiceTests
         Assert.Equal(
             [$"secret:resolve:{saved.CredentialReference}", "http:send"],
             events.ToArray());
+    }
+
+    [Fact]
+    public async Task DeepSeekCatalogRefreshUsesEphemeralKeyWithoutSavingIt()
+    {
+        const string apiKey = "deepseek-ephemeral-catalog-secret";
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var handler = new DelegateHttpHandler((request, _) =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal("https://api.deepseek.com/models", request.RequestUri?.AbsoluteUri);
+            Assert.Equal($"Bearer {apiKey}", request.Headers.Authorization?.ToString());
+            return Task.FromResult(JsonResponse(
+                """{"object":"list","data":[{"id":"deepseek-chat"},{"id":"deepseek-reasoner"}]}"""));
+        });
+        using var harness = await CreateHarnessAsync(configurationStore, secretStore, handler);
+        var draft = new ModelSourceDraft(
+            null,
+            "DeepSeek",
+            ModelProviderKind.OpenAiCompatible,
+            new Uri("https://api.deepseek.com/"),
+            "manual-model",
+            null,
+            ModelProviderPresets.DeepSeekId);
+
+        IReadOnlyList<AvailableModelInfo> models = await harness.Service.ListAvailableModelsAsync(
+            draft,
+            apiKey.AsMemory(),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(["deepseek-chat", "deepseek-reasoner"], models.Select(static model => model.Name));
+        Assert.Empty(configurationStore.Persisted.ModelSources);
+        Assert.DoesNotContain(events, entry => entry.StartsWith("secret:set:", StringComparison.Ordinal));
     }
 
     [Fact]

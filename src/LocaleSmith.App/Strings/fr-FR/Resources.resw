@@ -82,7 +82,7 @@
   <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>Style de traduction des nouvelles demandes</value></data>
   <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>Configuré</value></data>
   <data name="AddPackageButtonText.Text" xml:space="preserve"><value>Ajouter un paquet</value></data>
-  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>Ajouter un dossier</value></data>
+  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>Ajouter un pack extrait</value></data>
   <data name="DashboardError.Title" xml:space="preserve"><value>Impossible de continuer</value></data>
   <data name="DashboardStatus.Title" xml:space="preserve"><value>État de la file</value></data>
   <data name="QueueEmptyTitle.Text" xml:space="preserve"><value>Aucune tâche dans la file</value></data>
@@ -145,10 +145,15 @@
   <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>Valeur par défaut du fournisseur (ne pas envoyer)</value></data>
   <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>Adresse du service</value></data>
   <data name="ModelSourceModelName.Header" xml:space="preserve"><value>Nom du modèle (saisie manuelle disponible)</value></data>
-  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Modèles locaux téléchargés</value></data>
+  <data name="ModelSourceMaxOutputTokens.Header" xml:space="preserve"><value>Tokens maximum par réponse</value></data>
+  <data name="ModelSourceMaxOutputTokens.AutomationProperties.Name" xml:space="preserve"><value>Nombre maximal de tokens par réponse</value></data>
+  <data name="ModelSourceBatchCharacters.Header" xml:space="preserve"><value>Caractères source par lot</value></data>
+  <data name="ModelSourceBatchCharacters.AutomationProperties.Name" xml:space="preserve"><value>Objectif de caractères source par lot de traduction</value></data>
+  <data name="ModelSourceRequestBudgetHelp.Text" xml:space="preserve"><value>Les Tokens de réponse s’appliquent aux traductions et à chaque tour de l’assistant. La cible de caractères ne règle que le découpage des gros paquets et ne tronque jamais une valeur. Des valeurs élevées peuvent accroître le coût ou le risque de troncature. La limite de sécurité fixe de 16 Mio ne peut pas être désactivée ; l’option Omettre n’envoie aucune valeur Token aux sources compatibles OpenAI.</value></data>
+  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Modèles signalés par le fournisseur</value></data>
   <data name="RefreshModelsButtonText.Text" xml:space="preserve"><value>Actualiser</value></data>
   <data name="DownloadedModelsSelector.Header" xml:space="preserve"><value>Sélectionner depuis Ollama</value></data>
-  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>L’actualisation appelle /api/tags en local. Un service indisponible ne remplace jamais le nom de modèle saisi manuellement.</value></data>
+  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>L’actualisation interroge le catalogue du fournisseur actuel. La saisie manuelle reste disponible ; utilisez le test de connexion pour valider le modèle.</value></data>
   <data name="ModelSourceApiKey.Header" xml:space="preserve"><value>Clé API (laisser vide pour conserver celle qui est stockée)</value></data>
   <data name="CredentialAliasPrefix.Text" xml:space="preserve"><value>Alias des informations d’identification :</value></data>
   <data name="ConnectionStatus.Title" xml:space="preserve"><value>État de la connexion</value></data>
@@ -257,6 +262,9 @@
   <data name="QueueModelRequired" xml:space="preserve"><value>Configurez et sélectionnez une source de modèle avant d’ajouter des paquets.</value></data>
   <data name="QueueNoModelSources" xml:space="preserve"><value>Aucune source de modèle n’est disponible. Configurez-en une dans Sources de modèles avant d’ajouter des paquets.</value></data>
   <data name="QueuePackageNotFound" xml:space="preserve"><value>Paquet introuvable : {0}</value></data>
+  <data name="QueueFolderContainsArchives" xml:space="preserve"><value>Le dossier sélectionné contient {0} fichier(s) JAR/ZIP de premier niveau. L’ajout d’un pack extrait accepte un seul pack ; utilisez « Ajouter un paquet » pour sélectionner ces archives.</value></data>
+  <data name="QueueFolderUnsupportedLayout" xml:space="preserve"><value>Le dossier sélectionné n’est pas la racine reconnue d’un mod, pack de ressources ou pack de shaders extrait.</value></data>
+  <data name="QueueFolderInspectFailed" xml:space="preserve"><value>Le dossier sélectionné n’a pas pu être inspecté en toute sécurité : {0}</value></data>
   <data name="QueueEnqueueFailed" xml:space="preserve"><value>Impossible de placer {0} dans la file. Vérifiez les paramètres de sécurité de l’espace de travail de sortie et réessayez.</value></data>
   <data name="QueueModelUnavailable" xml:space="preserve"><value>La source de modèle sélectionnée n’est plus disponible.</value></data>
   <data name="QueueModelChanged" xml:space="preserve"><value>La source de modèle a changé. Les demandes existantes conservent leur source d’origine.</value></data>
@@ -321,6 +329,13 @@
   <data name="OllamaModelsEmpty" xml:space="preserve"><value>Ollama est accessible, mais aucun modèle téléchargé n’a été signalé. La saisie manuelle reste disponible.</value></data>
   <data name="OllamaModelsFound" xml:space="preserve"><value>Nombre de modèles téléchargés trouvés : {0}.</value></data>
   <data name="OllamaModelsRefreshFailed" xml:space="preserve"><value>Impossible d’actualiser les modèles locaux : {0}. Vous pouvez conserver le nom de modèle saisi manuellement.</value></data>
+  <data name="ModelCatalogLoading" xml:space="preserve"><value>Actualisation des modèles signalés par le fournisseur…</value></data>
+  <data name="ModelCatalogEmpty" xml:space="preserve"><value>Le fournisseur n’a signalé aucun modèle. La saisie manuelle reste disponible.</value></data>
+  <data name="ModelCatalogFound" xml:space="preserve"><value>{0} modèle(s) signalé(s) par le fournisseur trouvé(s).</value></data>
+  <data name="ModelCatalogUnsupported" xml:space="preserve"><value>Ce point de terminaison n’expose pas de liste de modèles compatible. Vous pouvez conserver le nom saisi manuellement.</value></data>
+  <data name="ModelCatalogRefreshFailed" xml:space="preserve"><value>Impossible d’actualiser les modèles : {0}. Vous pouvez conserver le nom saisi manuellement.</value></data>
+  <data name="ModelSourceMaxOutputTokensInvalid" xml:space="preserve"><value>Le maximum de Tokens par réponse doit être compris entre {0} et {1}.</value></data>
+  <data name="ModelSourceBatchCharactersInvalid" xml:space="preserve"><value>Les caractères source par lot doivent être compris entre {0} et {1}.</value></data>
   <data name="ModelSourceDeleted" xml:space="preserve"><value>La source de modèle et ses informations d’identification stockées ont été supprimées.</value></data>
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>Impossible de supprimer la source de modèle : {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>Le nom d’affichage et le nom du modèle sont requis.</value></data>
@@ -625,8 +640,7 @@
   <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>Aucun droit actif</value></data>
   <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>Abonnez-vous ou restaurez un achat Microsoft Store existant pour vérification par le serveur.</value></data>
   <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>Les nouveaux abonnés éligibles peuvent bénéficier d’un essai gratuit de 7 jours ; l’éligibilité et les conditions finales sont affichées par Microsoft lors de l’achat.</value></data>
-  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>Après un essai éligible, l’abonnement est renouvelé au prix mensuel alors affiché par Microsoft Store jusqu’à résiliation. La Chine est configurée à 30,00 CNY/mois ; l’interface d’achat fait foi.</value></data>
-  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>Le palier de prix mondial de base est de 4,99 US$/mois. Microsoft Store affiche le prix local ; les autres marchés ne sont pas garantis à un prix fixe de 5 US$.</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>Après un essai éligible, l’abonnement est renouvelé au prix mensuel local alors affiché par Microsoft Store jusqu’à résiliation ; le prix régional de l’interface d’achat fait foi.</value></data>
   <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>Facturé par Microsoft. Gérez ou résiliez l’abonnement dans Services et abonnements de votre compte Microsoft.</value></data>
   <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Prix de renouvellement mensuel actuel affiché par Microsoft Store</value></data>
   <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>S’abonner avec Microsoft</value></data>

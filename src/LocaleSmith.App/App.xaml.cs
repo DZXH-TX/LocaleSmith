@@ -27,15 +27,17 @@ namespace LocaleSmith.App;
 public partial class App : Microsoft.UI.Xaml.Application
 {
     private IHost? _host;
+    private readonly ApplicationStorageScope _storageScope;
     private readonly string _bootstrapLanguage;
 
     public App()
     {
+        _storageScope = ApplicationStorageScope.Detect();
         // The unpackaged app cannot rely on PrimaryLanguageOverride persisting between processes.
         // Read the non-sensitive bootstrap preference synchronously so MRT Core sees it before
         // App.xaml loads any XAML or ResourceLoader-backed content.
         _bootstrapLanguage = AppLanguageBootstrapper.Initialize(
-            LoadBootstrapLanguageOrDefault(),
+            LoadBootstrapLanguageOrDefault(_storageScope.AppDataRoot),
             ApplyDisplayLanguage,
             InitializeComponent);
     }
@@ -50,15 +52,21 @@ public partial class App : Microsoft.UI.Xaml.Application
     {
         try
         {
-            var currentAppDataRoot = GetCurrentAppDataRoot();
-            var currentCredentialStore = new WindowsCredentialSecretStore("LocaleSmith");
-            var legacyCredentialStore = new WindowsCredentialSecretStore("JaxI18n");
-            var legacyAppDataRoots = await LegacyAppDataMigrationCoordinator
-                .MigrateAsync(
-                    currentAppDataRoot,
-                    legacyCredentialStore,
-                    currentCredentialStore)
-                .ConfigureAwait(true);
+            var currentAppDataRoot = _storageScope.AppDataRoot;
+            var currentCredentialStore = new WindowsCredentialSecretStore(
+                _storageScope.CredentialTargetPrefix);
+            WindowsCredentialSecretStore? legacyCredentialStore = null;
+            IReadOnlyList<string> legacyAppDataRoots = [];
+            if (_storageScope.IsProduction)
+            {
+                legacyCredentialStore = new WindowsCredentialSecretStore("JaxI18n");
+                legacyAppDataRoots = await LegacyAppDataMigrationCoordinator
+                    .MigrateAsync(
+                        currentAppDataRoot,
+                        legacyCredentialStore,
+                        currentCredentialStore)
+                    .ConfigureAwait(true);
+            }
             var legacyTranslationMemoryPaths = legacyAppDataRoots
                 .Select(static root => Path.Combine(root, "translation-memory"))
                 .ToArray();
@@ -99,7 +107,7 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     public static string RestartWithDisplayLanguage(string language)
     {
-        AppLanguagePreferenceStore.Save(GetCurrentAppDataRoot(), language);
+        AppLanguagePreferenceStore.Save(ApplicationStorageScope.Detect().AppDataRoot, language);
         return AppInstance.Restart(string.Empty).ToString();
     }
 
@@ -111,11 +119,11 @@ public partial class App : Microsoft.UI.Xaml.Application
         CultureInfo.DefaultThreadCurrentUICulture = uiCulture;
     }
 
-    private static string LoadBootstrapLanguageOrDefault()
+    private static string LoadBootstrapLanguageOrDefault(string appDataRoot)
     {
         try
         {
-            return AppLanguagePreferenceStore.LoadOrDefault(GetCurrentAppDataRoot());
+            return AppLanguagePreferenceStore.LoadOrDefault(appDataRoot);
         }
         catch (InvalidOperationException)
         {
@@ -148,22 +156,10 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
     }
 
-    private static string GetCurrentAppDataRoot()
-    {
-        var currentLocalAppData = System.Environment.GetFolderPath(
-            System.Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(currentLocalAppData))
-        {
-            throw new InvalidOperationException("The per-user application-data directory is unavailable.");
-        }
-
-        return Path.Combine(Path.GetFullPath(currentLocalAppData), "LocaleSmith");
-    }
-
     private static IHost BuildHost(
         string appDataRoot,
         WindowsCredentialSecretStore currentCredentialStore,
-        WindowsCredentialSecretStore legacyCredentialStore,
+        WindowsCredentialSecretStore? legacyCredentialStore,
         IReadOnlyList<string> legacyTranslationMemoryPaths)
     {
         var builder = Host.CreateApplicationBuilder();
@@ -172,14 +168,22 @@ public partial class App : Microsoft.UI.Xaml.Application
             LegacyAppDataMigrator.CurrentConfigurationFileName);
         var translationMemoryPath = Path.Combine(appDataRoot, "translation-memory");
         var auditPath = Path.Combine(appDataRoot, "logs", "cli-audit.jsonl");
+        var securityLockRoot = Path.Combine(appDataRoot, "SecurityLocks");
         var defaultSandbox = CliSandboxDirectory.CreateUnderAppDataRoot(appDataRoot);
 
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddSingleton<AppMotionService>();
         builder.Services.AddSingleton(currentCredentialStore);
-        builder.Services.AddSingleton<ISecretStore>(_ =>
-            new MigratingSecretStore(currentCredentialStore, legacyCredentialStore));
-        builder.Services.AddSingleton<IMasterKeyStore, CredentialManagerMasterKeyStore>();
+        builder.Services.AddSingleton<ISecretStore>(_ => legacyCredentialStore is null
+            ? currentCredentialStore
+            : new MigratingSecretStore(
+                currentCredentialStore,
+                legacyCredentialStore,
+                securityLockRoot));
+        builder.Services.AddSingleton<IMasterKeyStore>(services =>
+            new CredentialManagerMasterKeyStore(
+                services.GetRequiredService<ISecretStore>(),
+                securityLockRoot));
         builder.Services.AddSingleton(static services =>
             ModPlatformClient.CreateForApplication(services.GetRequiredService<ISecretStore>()));
         builder.Services.AddSingleton<IModPlatformClient>(static services =>
@@ -211,7 +215,14 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<ModelServiceRegistry>();
         builder.Services.AddSingleton<IModelServiceRegistry>(static services =>
             services.GetRequiredService<ModelServiceRegistry>());
-        builder.Services.AddSingleton<SecureAppStateService>();
+        builder.Services.AddSingleton(services => new SecureAppStateService(
+            services.GetRequiredService<IConfigurationStore<AppConfiguration>>(),
+            services.GetRequiredService<ISecretStore>(),
+            services.GetRequiredService<ModelServiceRegistry>(),
+            services.GetRequiredService<HttpClient>(),
+            services.GetRequiredService<ICliSandboxRootManager>(),
+            services.GetRequiredService<IAppLanguagePreferenceWriter>(),
+            appDataRoot));
         builder.Services.AddSingleton<IAppConfigurationService>(static services =>
             services.GetRequiredService<SecureAppStateService>());
         builder.Services.AddSingleton<IAppDisplayLanguageService>(static services =>
@@ -283,7 +294,12 @@ public partial class App : Microsoft.UI.Xaml.Application
             auditPath,
             _.GetRequiredService<IUiTextProvider>()));
         builder.Services.AddSingleton<ShellViewModel>();
-        builder.Services.AddSingleton<OnboardingViewModel>();
+        builder.Services.AddSingleton(services => new OnboardingViewModel(
+            services.GetRequiredService<IOnboardingService>(),
+            services.GetRequiredService<IUiTextProvider>(),
+            services.GetRequiredService<IAppDisplayLanguageService>(),
+            Path.Combine(appDataRoot, "CliSandbox"),
+            Path.Combine(appDataRoot, "logs", "translations")));
         builder.Services.AddSingleton<DashboardViewModel>();
         builder.Services.AddSingleton<AssistantViewModel>();
         builder.Services.AddSingleton<CommunityViewModel>();

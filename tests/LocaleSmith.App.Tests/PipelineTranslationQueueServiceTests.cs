@@ -52,7 +52,13 @@ public sealed class PipelineTranslationQueueServiceTests
         Assert.False(Directory.Exists(outputDirectory));
 
         var handle = await service.EnqueueAsync(
-            new TranslationQueueRequest("input.jar", outputPath, "saved-source", style),
+            new TranslationQueueRequest(
+                "input.jar",
+                outputPath,
+                "saved-source",
+                style,
+                MaxOutputTokens: 16_384,
+                MaxSourceCharactersPerRequest: 32_000),
             TestContext.Current.CancellationToken);
         var result = await handle.Completion.WaitAsync(TestContext.Current.CancellationToken);
 
@@ -62,6 +68,8 @@ public sealed class PipelineTranslationQueueServiceTests
         Assert.Equal(style, Assert.Single(scheduler.Request.Styles));
         Assert.Equal("saved-source", scheduler.Request.ModelSourceId);
         Assert.Equal("zh_CN", scheduler.Request.TargetLanguage);
+        Assert.Equal(16_384, scheduler.Request.MaxOutputTokens);
+        Assert.Equal(32_000, scheduler.Request.MaxSourceCharactersPerRequest);
         Assert.Equal(SignedArchiveHandling.CreateUnsignedCopy, scheduler.Request.SignedArchiveHandling);
         Assert.Equal(
             HardcodedStringMode.ExternalizeRecognizedSafePatterns,

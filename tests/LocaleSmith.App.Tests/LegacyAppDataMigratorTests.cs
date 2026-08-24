@@ -173,6 +173,25 @@ public sealed class LegacyAppDataMigratorTests
     }
 
     [Fact]
+    public void DevelopmentRootRelocatesProductionSandboxAndLogDefaults()
+    {
+        var developmentRoot = Path.Combine(
+            Path.GetTempPath(),
+            "LocaleSmith.Dev-" + Guid.NewGuid().ToString("N"));
+
+        var normalized = LegacyDefaultPathNormalizer.Normalize(
+            new AppConfiguration(),
+            out var changed,
+            developmentRoot);
+
+        Assert.True(changed);
+        Assert.Equal(Path.Combine(developmentRoot, "CliSandbox"), normalized.SandboxPath);
+        Assert.Equal(
+            Path.Combine(developmentRoot, "logs", "translations"),
+            normalized.LogDirectoryPath);
+    }
+
+    [Fact]
     public async Task InvalidLegacyConfigurationDoesNotPreventFreshStartupState()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

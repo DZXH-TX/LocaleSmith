@@ -17,6 +17,18 @@ public sealed class MicrosoftStoreBillingModelsTests
             "domestic_download_acceleration",
             MicrosoftStoreBillingContract.AccelerationEntitlementKey);
         Assert.Equal(
+            "8ae5095a-006a-4561-a7ab-8ee6dc5728ba",
+            MicrosoftStoreBillingContract.EntraClientId);
+        Assert.Equal(
+            "03143e3a-2be2-4b6a-829c-1b548beb8a9d",
+            MicrosoftStoreBillingContract.EntraTenantId);
+        Assert.NotEqual(
+            MicrosoftStoreBillingContract.SubscriptionStoreId,
+            MicrosoftStoreBillingContract.SubscriptionProductId);
+        Assert.NotEqual(
+            MicrosoftStoreBillingContract.SubscriptionProductId,
+            MicrosoftStoreBillingContract.AccelerationEntitlementKey);
+        Assert.Equal(
             "https://account.microsoft.com/services",
             MicrosoftStoreBillingContract.ManageSubscriptionsUri.AbsoluteUri.TrimEnd('/'));
         Assert.Equal(

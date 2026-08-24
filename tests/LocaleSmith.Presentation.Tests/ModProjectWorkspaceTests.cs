@@ -44,6 +44,7 @@ public sealed class ModProjectWorkspaceTests
             () => cancelled = true);
         Assert.Equal(ModProjectTaskStatus.Queued, queued.Status);
         Assert.Equal(jobId, queued.JobId);
+        Assert.True(queued.Revision > registered.Revision);
 
         Assert.True(workspace.TryReportProgress(
             jobId,
@@ -52,12 +53,15 @@ public sealed class ModProjectWorkspaceTests
         Assert.Equal(ModProjectTaskStatus.Running, running?.Status);
         Assert.Equal(PipelineStage.Translating, running?.Stage);
         Assert.Equal(0.45, running?.Progress);
+        Assert.True(running?.Revision > queued.Revision);
 
         Assert.True(workspace.TryRequestCancellation(registered.TaskId, out ModProjectTaskSnapshot? cancelling));
         Assert.True(cancelled);
         Assert.Equal(ModProjectTaskStatus.CancellationRequested, cancelling?.Status);
+        Assert.True(cancelling?.Revision > running?.Revision);
         Assert.True(workspace.TryMarkCancelled(registered.TaskId, out ModProjectTaskSnapshot? cancelledTask));
         Assert.Equal(ModProjectTaskStatus.Cancelled, cancelledTask?.Status);
+        Assert.True(cancelledTask?.Revision > cancelling?.Revision);
         Assert.False(workspace.TryRequestCancellation(registered.TaskId, out _));
     }
 
@@ -94,6 +98,9 @@ public sealed class ModProjectWorkspaceTests
         Assert.Equal("Fabric", workspace.ActiveProject?.Loader);
         Assert.EndsWith("translated.jar", Assert.Single(completed!.ArtifactPaths), StringComparison.Ordinal);
         Assert.Same(usage, completed.ModelUsage);
+        Assert.False(workspace.TryFailTask(task.TaskId, "late failure", out ModProjectTaskSnapshot? unchanged));
+        Assert.Equal(ModProjectTaskStatus.Completed, unchanged?.Status);
+        Assert.Equal(completed.Revision, unchanged?.Revision);
         Assert.False(workspace.TryReportProgress(
             jobId,
             new TranslationQueueProgress(jobId, PipelineStage.Translating, 0.1),

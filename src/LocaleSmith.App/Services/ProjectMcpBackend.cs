@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using LocaleSmith.Application.Abstractions;
+using LocaleSmith.Application.Models;
 using LocaleSmith.Archive;
 using LocaleSmith.Core.Models;
 using LocaleSmith.Core.Services;
@@ -15,6 +17,7 @@ public sealed class ProjectMcpBackend : IProjectMcpBackend, IDisposable
     private const int MaximumWarningCharacters = 1024;
     private readonly IModProjectWorkspace _workspace;
     private readonly IArchiveScanner _archiveScanner;
+    private readonly IArchiveWorkspaceBackend _archiveWorkspaceBackend;
     private readonly ITranslationQueueService _translationQueue;
     private readonly IOutputPathStrategy _outputPathStrategy;
     private readonly IModelSelectionService _modelSelection;
@@ -27,10 +30,12 @@ public sealed class ProjectMcpBackend : IProjectMcpBackend, IDisposable
         IArchiveScanner archiveScanner,
         ITranslationQueueService translationQueue,
         IOutputPathStrategy outputPathStrategy,
-        IModelSelectionService modelSelection)
+        IModelSelectionService modelSelection,
+        IArchiveWorkspaceBackend? archiveWorkspaceBackend = null)
     {
         _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
         _archiveScanner = archiveScanner ?? throw new ArgumentNullException(nameof(archiveScanner));
+        _archiveWorkspaceBackend = archiveWorkspaceBackend ?? new ArchiveWorkspaceBackend(_archiveScanner);
         _translationQueue = translationQueue ?? throw new ArgumentNullException(nameof(translationQueue));
         _outputPathStrategy = outputPathStrategy ?? throw new ArgumentNullException(nameof(outputPathStrategy));
         _modelSelection = modelSelection ?? throw new ArgumentNullException(nameof(modelSelection));
@@ -64,10 +69,17 @@ public sealed class ProjectMcpBackend : IProjectMcpBackend, IDisposable
     {
         ThrowIfDisposed();
         ModProjectSnapshot project = GetRequiredActiveProject(projectId);
-        if (!File.Exists(project.SourceArtifactPath) || Directory.Exists(project.SourceArtifactPath))
+        bool isFile = File.Exists(project.SourceArtifactPath) && !Directory.Exists(project.SourceArtifactPath);
+        bool isDirectory = Directory.Exists(project.SourceArtifactPath);
+        if (!isFile && !isDirectory)
         {
             throw new ProjectMcpBackendException(
-                "The active project does not reference an available JAR or ZIP file.");
+                "The active project does not reference an available package source.");
+        }
+
+        if (isDirectory)
+        {
+            return await InspectDirectoryAsync(project, cancellationToken).ConfigureAwait(false);
         }
 
         ArchiveScanManifest manifest;
@@ -112,6 +124,60 @@ public sealed class ProjectMcpBackend : IProjectMcpBackend, IDisposable
                 .Take(MaximumWarnings)
                 .Select(static warning => Bound(warning, MaximumWarningCharacters))
                 .ToArray());
+    }
+
+    private async ValueTask<ArchiveMcpInspection> InspectDirectoryAsync(
+        ModProjectSnapshot project,
+        CancellationToken cancellationToken)
+    {
+        string inspectionOutput = Path.Combine(
+            Path.GetTempPath(),
+            "LocaleSmith",
+            "mcp-inspection-output",
+            $"{Guid.NewGuid():N}.zip");
+        var request = new PipelineRequest(
+            project.SourceArtifactPath,
+            inspectionOutput,
+            hardcodedStringMode: HardcodedStringMode.ScanOnly);
+        try
+        {
+            await using IArchiveWorkspace workspace = await _archiveWorkspaceBackend
+                .BeginAsync(Guid.NewGuid(), request, cancellationToken)
+                .ConfigureAwait(false);
+            ArchiveInspection inspection = await workspace
+                .InspectAsync(cancellationToken)
+                .ConfigureAwait(false);
+            _workspace.TryUpdateInspection(
+                project.ProjectId,
+                inspection.ModId,
+                inspection.Loader,
+                out _);
+            return new ArchiveMcpInspection(
+                project.ProjectId,
+                GetSourceName(project.SourceArtifactPath),
+                Bound(inspection.ModId, 256),
+                Bound(inspection.Loader, 128),
+                inspection.EntryCount,
+                inspection.ResourceCount,
+                Bound(inspection.SignatureStatus, 128),
+                inspection.UsedFileNameFallback,
+                inspection.Warnings
+                    .Take(MaximumWarnings)
+                    .Select(static warning => Bound(warning, MaximumWarningCharacters))
+                    .ToArray());
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (
+            exception is not OutOfMemoryException and
+            not AccessViolationException)
+        {
+            throw new ProjectMcpBackendException(
+                "The active project directory could not be inspected through a safe snapshot.",
+                exception);
+        }
     }
 
     public async ValueTask<TaskMcpSnapshot> StartTranslationAsync(
@@ -206,7 +272,10 @@ public sealed class ProjectMcpBackend : IProjectMcpBackend, IDisposable
                             outputPath,
                             modelSource.Id,
                             style,
-                            targetLanguage),
+                            targetLanguage,
+                            modelSource.MaxOutputTokens ?? ModelSource.DefaultMaxOutputTokens,
+                            modelSource.MaxSourceCharactersPerRequest ??
+                                ModelSource.DefaultMaxSourceCharactersPerRequest),
                         cancellationToken)
                     .ConfigureAwait(false);
                 task = _workspace.AttachJob(task.TaskId, handle.JobId, handle.Cancel);

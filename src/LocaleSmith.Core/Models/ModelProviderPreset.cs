@@ -31,6 +31,8 @@ public sealed record ModelProviderPreset(
     OpenAiTokenLimitParameter DefaultTokenLimitParameter,
     bool SupportsCustomTemperature = true,
     bool RequiresReasoningContentReplay = false,
+    bool UsesReasoningDetailsReplay = false,
+    bool RequiresNonNullToolCallContent = false,
     bool IsCustom = false);
 
 public static class ModelProviderPresets
@@ -76,7 +78,9 @@ public static class ModelProviderPresets
         new Uri("https://api.deepseek.com"),
         "deepseek-v4-pro",
         new Uri("https://api-docs.deepseek.com/api/create-chat-completion"),
-        OpenAiTokenLimitParameter.MaxTokens);
+        OpenAiTokenLimitParameter.MaxTokens,
+        RequiresReasoningContentReplay: true,
+        RequiresNonNullToolCallContent: true);
 
     public static ModelProviderPreset Qwen { get; } = new(
         QwenId,
@@ -95,7 +99,9 @@ public static class ModelProviderPresets
         "mimo-v2.5-pro",
         new Uri("https://mimo.mi.com/docs/api/chat/openai-api"),
         OpenAiTokenLimitParameter.MaxCompletionTokens,
-        SupportsCustomTemperature: false);
+        SupportsCustomTemperature: false,
+        RequiresReasoningContentReplay: true,
+        RequiresNonNullToolCallContent: true);
 
     public static ModelProviderPreset MiniMax { get; } = new(
         MiniMaxId,
@@ -104,7 +110,9 @@ public static class ModelProviderPresets
         new Uri("https://api.minimax.io/v1"),
         "MiniMax-M2.7",
         new Uri("https://platform.minimax.io/docs/api-reference/text-openai-api"),
-        OpenAiTokenLimitParameter.MaxCompletionTokens);
+        OpenAiTokenLimitParameter.MaxCompletionTokens,
+        RequiresReasoningContentReplay: true,
+        UsesReasoningDetailsReplay: true);
 
     public static ModelProviderPreset Doubao { get; } = new(
         DoubaoId,
@@ -122,7 +130,8 @@ public static class ModelProviderPresets
         new Uri("https://open.bigmodel.cn/api/paas/v4"),
         "glm-5.2",
         new Uri("https://docs.bigmodel.cn/cn/guide/develop/openai/introduction"),
-        OpenAiTokenLimitParameter.MaxTokens);
+        OpenAiTokenLimitParameter.MaxTokens,
+        RequiresReasoningContentReplay: true);
 
     public static ModelProviderPreset Kimi { get; } = new(
         KimiId,

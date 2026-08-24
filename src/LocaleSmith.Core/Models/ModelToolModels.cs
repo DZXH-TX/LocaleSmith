@@ -84,7 +84,12 @@ public sealed record ModelToolCall
     public JsonElement Arguments { get; }
 }
 
-public sealed record ModelToolResult(string ToolCallId, string ToolName, string Content, bool IsError = false)
+public sealed record ModelToolResult(
+    string ToolCallId,
+    string ToolName,
+    string Content,
+    bool IsError = false,
+    Guid? PublicTaskId = null)
 {
     public ModelToolResult Normalize()
     {

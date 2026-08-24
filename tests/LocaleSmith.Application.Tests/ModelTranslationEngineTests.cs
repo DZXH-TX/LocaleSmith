@@ -36,6 +36,39 @@ public sealed class ModelTranslationEngineTests
         Assert.Contains("untrusted data", service.LastRequest.Messages[0].Content, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task CapturedRequestBudgetsControlChunkingAndOutputTokens()
+    {
+        var service = new StubModelService(
+            """
+            {"translations":[{"id":"e000001","formal":"译文"}]}
+            """);
+        using var registry = CreateRegistry(service);
+        var engine = new ModelTranslationEngine(registry);
+        TranslationEntry[] entries =
+        [
+            new("pack.txt", "one", new string('a', 600)),
+            new("pack.txt", "two", new string('b', 600)),
+            new("pack.txt", "three", new string('c', 600))
+        ];
+
+        TranslationBatchResult result = await engine.TranslateAsync(
+            new TranslationBatchRequest(
+                entries,
+                maxOutputTokens: 1024,
+                maxSourceCharactersPerRequest: 1000),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, result.Entries.Count);
+        Assert.Equal(3, service.RequestCount);
+        Assert.All(service.Requests, request => Assert.Equal(1024, request.MaxTokens));
+        Assert.All(service.Requests, request =>
+        {
+            using var envelope = JsonDocument.Parse(request.Messages[1].Content);
+            Assert.Single(envelope.RootElement.GetProperty("entries").EnumerateArray());
+        });
+    }
+
     [Theory]
     [InlineData(
         MinecraftContentKind.Mod,

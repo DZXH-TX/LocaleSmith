@@ -47,8 +47,60 @@ public sealed class XamlThemeContractTests
         Assert.Contains(
             page.Descendants(presentationNamespace + "TextBlock"),
             element => (string?)element.Attribute(xamlNamespace + "Uid") == "AssistantProcessLabel");
+        Assert.Contains(
+            page.Descendants(presentationNamespace + "StackPanel"),
+            element => ((string?)element.Attribute("DataContext"))?.Contains(
+                "TaskStatus",
+                StringComparison.Ordinal) is true);
+        Assert.Contains(
+            page.Descendants(presentationNamespace + "Border"),
+            element => ((string?)element.Attribute("Visibility"))?.Contains(
+                "HasTaskStatus",
+                StringComparison.Ordinal) is true);
         Assert.DoesNotContain("ReasoningContent", page.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("reasoning_content", page.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ModelSourcesPageKeepsManualEntryAndPassesCredentialToProviderCatalogRefresh()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        var page = XDocument.Load(Path.Combine(
+            repositoryRoot,
+            "src",
+            "LocaleSmith.App",
+            "Pages",
+            "ModelSourcesPage.xaml"));
+        XNamespace presentationNamespace = page.Root!.Name.Namespace;
+        XNamespace xamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
+
+        Assert.Contains(
+            page.Descendants(presentationNamespace + "TextBox"),
+            element => (string?)element.Attribute(xamlNamespace + "Uid") == "ModelSourceModelName");
+        Assert.Contains(
+            page.Descendants(presentationNamespace + "Border"),
+            element => ((string?)element.Attribute("Visibility"))?.Contains(
+                "CanDiscoverModels",
+                StringComparison.Ordinal) is true);
+        Assert.Contains(
+            page.Descendants(presentationNamespace + "Button"),
+            element => ((string?)element.Attribute("Command"))?.Contains(
+                    "RefreshModelsCommand",
+                    StringComparison.Ordinal) is true &&
+                ((string?)element.Attribute("CommandParameter"))?.Contains(
+                    "ApiKeyInput",
+                    StringComparison.Ordinal) is true);
+        XElement outputTokens = Assert.Single(
+            page.Descendants(presentationNamespace + "NumberBox"),
+            element => (string?)element.Attribute(xamlNamespace + "Uid") == "ModelSourceMaxOutputTokens");
+        Assert.Equal("256", (string?)outputTokens.Attribute("Minimum"));
+        Assert.Equal("65536", (string?)outputTokens.Attribute("Maximum"));
+        Assert.Contains("SendsOutputTokenBudget", (string?)outputTokens.Attribute("IsEnabled") ?? string.Empty);
+        XElement batchCharacters = Assert.Single(
+            page.Descendants(presentationNamespace + "NumberBox"),
+            element => (string?)element.Attribute(xamlNamespace + "Uid") == "ModelSourceBatchCharacters");
+        Assert.Equal("1000", (string?)batchCharacters.Attribute("Minimum"));
+        Assert.Equal("100000", (string?)batchCharacters.Attribute("Maximum"));
     }
 
     [Fact]

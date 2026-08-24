@@ -11,6 +11,7 @@ public static class MicrosoftStoreBillingContract
     public const string SubscriptionProductId = "localesmith_domestic_acceleration_monthly";
     public const string AccelerationEntitlementKey = "domestic_download_acceleration";
     public const string EntraClientId = "8ae5095a-006a-4561-a7ab-8ee6dc5728ba";
+    public const string EntraTenantId = "03143e3a-2be2-4b6a-829c-1b548beb8a9d";
     public const string ProductKind = "Durable";
 
     public static Uri ManageSubscriptionsUri { get; } = new("https://account.microsoft.com/services");

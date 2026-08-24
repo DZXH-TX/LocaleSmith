@@ -96,7 +96,13 @@ public sealed record ModProjectTaskSnapshot(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc,
     DateTimeOffset? FinishedAtUtc,
-    ModelTokenUsage? ModelUsage = null)
+    ModelTokenUsage? ModelUsage = null,
+    IReadOnlyList<HardcodedStringCandidate>? HardcodedCandidates = null,
+    int ExternalizedCount = 0,
+    PipelineStage? NextStage = null,
+    IReadOnlyList<PipelineStageProgress>? Stages = null,
+    PipelineStageStatus? RollbackStatus = null,
+    long Revision = 0)
 {
     public bool IsActive => Status is
         ModProjectTaskStatus.Registered or

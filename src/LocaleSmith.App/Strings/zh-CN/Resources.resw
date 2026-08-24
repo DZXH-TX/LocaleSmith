@@ -82,7 +82,7 @@
   <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>新请求的翻译风格</value></data>
   <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>已配置</value></data>
   <data name="AddPackageButtonText.Text" xml:space="preserve"><value>添加包</value></data>
-  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>添加文件夹</value></data>
+  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>添加已展开的包</value></data>
   <data name="DashboardError.Title" xml:space="preserve"><value>无法继续</value></data>
   <data name="DashboardStatus.Title" xml:space="preserve"><value>队列状态</value></data>
   <data name="QueueEmptyTitle.Text" xml:space="preserve"><value>队列中还没有任务</value></data>
@@ -145,10 +145,15 @@
   <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>由服务端决定（不发送）</value></data>
   <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>服务地址</value></data>
   <data name="ModelSourceModelName.Header" xml:space="preserve"><value>模型名称（可手动输入）</value></data>
-  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>本机已下载模型</value></data>
+  <data name="ModelSourceMaxOutputTokens.Header" xml:space="preserve"><value>单次响应最大 Tokens</value></data>
+  <data name="ModelSourceMaxOutputTokens.AutomationProperties.Name" xml:space="preserve"><value>单次响应最大 Token 数</value></data>
+  <data name="ModelSourceBatchCharacters.Header" xml:space="preserve"><value>每批原文字符目标</value></data>
+  <data name="ModelSourceBatchCharacters.AutomationProperties.Name" xml:space="preserve"><value>每批翻译原文字符目标</value></data>
+  <data name="ModelSourceRequestBudgetHelp.Text" xml:space="preserve"><value>响应 Tokens 用于翻译请求和助手每一轮；字符目标只决定大型包如何分批，不会截断单条文本。提高数值可能增加费用或截断风险。固定 16 MiB 响应安全上限不可关闭；若上方选择“不发送”，OpenAI 兼容端不会收到 Token 数值。</value></data>
+  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>提供方报告的模型</value></data>
   <data name="RefreshModelsButtonText.Text" xml:space="preserve"><value>刷新</value></data>
   <data name="DownloadedModelsSelector.Header" xml:space="preserve"><value>从 Ollama 选择</value></data>
-  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>刷新调用本机 /api/tags；服务不可达时不会覆盖手动输入。</value></data>
+  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>刷新会查询当前提供方的模型目录；目录不可用时仍可手动输入，最终请用“测试连接”验证模型。</value></data>
   <data name="ModelSourceApiKey.Header" xml:space="preserve"><value>API Key（留空则保留已有凭据）</value></data>
   <data name="CredentialAliasPrefix.Text" xml:space="preserve"><value>凭据别名：</value></data>
   <data name="ConnectionStatus.Title" xml:space="preserve"><value>连接状态</value></data>
@@ -257,6 +262,9 @@
   <data name="QueueModelRequired" xml:space="preserve"><value>添加包之前，请先配置并选择模型源。</value></data>
   <data name="QueueNoModelSources" xml:space="preserve"><value>当前没有可用模型源。请先在“模型源”中完成配置，再添加包。</value></data>
   <data name="QueuePackageNotFound" xml:space="preserve"><value>找不到包：{0}</value></data>
+  <data name="QueueFolderContainsArchives" xml:space="preserve"><value>所选文件夹包含 {0} 个顶层 JAR/ZIP。“添加已展开的包”仅用于单个已展开包；请使用“添加包”多选这些归档。</value></data>
+  <data name="QueueFolderUnsupportedLayout" xml:space="preserve"><value>所选文件夹不是可识别的已展开模组、资源包或光影包根目录。</value></data>
+  <data name="QueueFolderInspectFailed" xml:space="preserve"><value>无法安全检查所选文件夹：{0}</value></data>
   <data name="QueueEnqueueFailed" xml:space="preserve"><value>无法将 {0} 加入队列；请检查输出工作区安全设置后重试。</value></data>
   <data name="QueueModelUnavailable" xml:space="preserve"><value>所选模型源已不可用。</value></data>
   <data name="QueueModelChanged" xml:space="preserve"><value>模型源已切换；已有请求继续使用原模型源。</value></data>
@@ -321,6 +329,13 @@
   <data name="OllamaModelsEmpty" xml:space="preserve"><value>Ollama 可访问，但未报告已下载模型；仍可手动输入。</value></data>
   <data name="OllamaModelsFound" xml:space="preserve"><value>找到 {0} 个已下载模型。</value></data>
   <data name="OllamaModelsRefreshFailed" xml:space="preserve"><value>无法刷新本地模型：{0}。可继续使用手动模型名称。</value></data>
+  <data name="ModelCatalogLoading" xml:space="preserve"><value>正在刷新提供方报告的模型…</value></data>
+  <data name="ModelCatalogEmpty" xml:space="preserve"><value>提供方未报告任何模型；仍可手动输入。</value></data>
+  <data name="ModelCatalogFound" xml:space="preserve"><value>找到 {0} 个提供方报告的模型。</value></data>
+  <data name="ModelCatalogUnsupported" xml:space="preserve"><value>该端点未提供兼容的模型列表；可继续使用手动模型名称。</value></data>
+  <data name="ModelCatalogRefreshFailed" xml:space="preserve"><value>无法刷新模型：{0}。可继续使用手动模型名称。</value></data>
+  <data name="ModelSourceMaxOutputTokensInvalid" xml:space="preserve"><value>单次响应 Tokens 必须在 {0} 到 {1} 之间。</value></data>
+  <data name="ModelSourceBatchCharactersInvalid" xml:space="preserve"><value>每批原文字符目标必须在 {0} 到 {1} 之间。</value></data>
   <data name="ModelSourceDeleted" xml:space="preserve"><value>模型源及其已存凭据已删除。</value></data>
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>无法删除模型源：{0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>显示名称和模型名称均为必填项。</value></data>
@@ -625,8 +640,7 @@
   <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>尚无有效权益</value></data>
   <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>可以购买订阅，或恢复已有 Microsoft Store 购买并交由后端重新验证。</value></data>
   <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>符合资格的新订阅用户可享 7 天免费试用；资格与最终条款以 Microsoft 购买界面为准。</value></data>
-  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>试用结束后按 Microsoft Store 当时显示的月费自动续费，直至取消；中国市场配置价为 CNY 30.00/月，最终以购买界面为准。</value></data>
-  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>全球基础价格档位为 US$4.99/月；Microsoft Store 会按市场显示本地价格，其他市场并非固定 5 美元。</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>符合资格的试用结束后，按 Microsoft Store 当时显示的本地月费自动续费，直至取消；购买界面中的区域价格为准。</value></data>
   <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>由 Microsoft 计费；可在 Microsoft 账户的“服务和订阅”中取消或管理。</value></data>
   <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Microsoft Store 当前显示的月度续费价格</value></data>
   <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>通过 Microsoft 订阅</value></data>

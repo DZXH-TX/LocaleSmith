@@ -166,6 +166,73 @@ jobs:
             -PackageVersion $env:PACKAGE_VALIDATION_VERSION `
             -InstallDirectory artifacts/package-validation-install
 
+      - name: Restore WAP publish inputs
+        run: |
+          dotnet restore src/LocaleSmith.App/LocaleSmith.App.csproj -r win-x64
+          dotnet restore src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj -r win-x64
+
+      - name: Rebuild unsigned MSIX
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere `
+            -latest `
+            -products * `
+            -requires Microsoft.Component.MSBuild `
+            -find "MSBuild\**\Bin\MSBuild.exe" |
+            Select-Object -First 1
+          if (-not $msbuild) {
+            throw "Visual Studio MSBuild was not found."
+          }
+
+          & $msbuild `
+            packaging/LocaleSmith.Package/LocaleSmith.Package.wapproj `
+            /t:Rebuild `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:PackageFlavor=Development `
+            /p:AppxBundle=Never `
+            /p:AppxPackageSigningEnabled=false
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unsigned WAP rebuild failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Audit unsigned MSIX payload
+        run: |
+          $packages = @(Get-ChildItem `
+            -LiteralPath packaging/LocaleSmith.Package `
+            -Recurse `
+            -File `
+            -Filter "*.msix")
+          if ($packages.Count -ne 1) {
+            throw "Expected exactly one rebuilt MSIX, found $($packages.Count)."
+          }
+
+          $appPublish = Get-ChildItem `
+            -LiteralPath src/LocaleSmith.App/bin/x64/Release `
+            -Recurse `
+            -Directory `
+            -Filter publish |
+            Select-Object -First 1
+          $mcpPublish = Get-ChildItem `
+            -LiteralPath src/LocaleSmith.McpHost/bin/x64/Release `
+            -Recurse `
+            -Directory `
+            -Filter publish |
+            Select-Object -First 1
+          if ($null -eq $appPublish -or $null -eq $mcpPublish) {
+            throw "WAP publish input directories were not generated."
+          }
+
+          ./.github/scripts/Test-MsixPackage.ps1 `
+            -PackagePath $packages[0].FullName `
+            -ExpectedAppPublishDirectory $appPublish.FullName `
+            -ExpectedMcpPublishDirectory $mcpPublish.FullName
+
+          New-Item -ItemType Directory -Path artifacts/msix -Force | Out-Null
+          Copy-Item `
+            -LiteralPath $packages[0].FullName `
+            -Destination artifacts/msix/CRTech.LocaleSmith.Dev_1.2.0.0_x64_unsigned.msix
+
       - name: Upload .NET test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -173,4 +240,12 @@ jobs:
           name: dotnet-test-results
           path: artifacts/test-results/**/*.trx
           if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload unsigned development MSIX
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: unsigned-development-msix
+          path: artifacts/msix/*.msix
+          if-no-files-found: error
           retention-days: 14

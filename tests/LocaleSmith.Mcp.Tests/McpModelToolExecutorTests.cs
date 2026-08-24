@@ -99,6 +99,7 @@ public sealed class McpModelToolExecutorTests
         Assert.Equal(backend.ProjectId, backend.LastStartRequest?.ProjectId);
         Assert.Equal("Translate the selected mod.", backend.LastStartRequest?.Objective);
         Assert.Equal("ja_JP", backend.LastStartRequest?.TargetLanguage);
+        Assert.Equal(backend.LastStartedTaskId, result.PublicTaskId);
         Assert.DoesNotContain("sourcePath", result.Content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("\"taskId\"", result.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("\"TaskId\"", result.Content, StringComparison.Ordinal);
@@ -158,6 +159,8 @@ public sealed class McpModelToolExecutorTests
 
         public TranslationMcpStartRequest? LastStartRequest { get; private set; }
 
+        public Guid? LastStartedTaskId { get; private set; }
+
         public ValueTask<ProjectMcpSnapshot?> GetActiveProjectAsync(
             CancellationToken cancellationToken = default) =>
             ValueTask.FromResult<ProjectMcpSnapshot?>(
@@ -190,7 +193,9 @@ public sealed class McpModelToolExecutorTests
             CancellationToken cancellationToken = default)
         {
             LastStartRequest = request;
-            return ValueTask.FromResult(CreateTask(request.ProjectId, request.Objective));
+            TaskMcpSnapshot task = CreateTask(request.ProjectId, request.Objective);
+            LastStartedTaskId = task.TaskId;
+            return ValueTask.FromResult(task);
         }
 
         public ValueTask<TaskMcpSnapshot?> GetTaskAsync(

@@ -81,8 +81,17 @@ public sealed class McpModelToolExecutor : IModelToolExecutor
         using var document = JsonDocument.Parse(serialized);
         bool isError = document.RootElement.TryGetProperty("isError", out JsonElement errorValue) &&
             errorValue.ValueKind == JsonValueKind.True;
+        Guid? publicTaskId = !isError &&
+            string.Equals(toolCall.Name, TranslationStartModelName, StringComparison.Ordinal) &&
+            document.RootElement.TryGetProperty("structuredContent", out JsonElement structuredContent) &&
+            structuredContent.ValueKind == JsonValueKind.Object &&
+            structuredContent.TryGetProperty("taskId", out JsonElement taskIdValue) &&
+            taskIdValue.ValueKind == JsonValueKind.String &&
+            Guid.TryParse(taskIdValue.GetString(), out Guid taskId)
+                ? taskId
+                : null;
         string bounded = OutputSanitizer.Sanitize(serialized, _options.MaximumOutputCharacters);
-        return new ModelToolResult(toolCall.Id, toolCall.Name, bounded, isError);
+        return new ModelToolResult(toolCall.Id, toolCall.Name, bounded, isError, publicTaskId);
     }
 
     private string ResolveMcpName(string modelToolName) => modelToolName switch

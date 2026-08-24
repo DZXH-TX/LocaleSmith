@@ -5,13 +5,13 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap">
   <Identity
-    Name="CRTech.LocaleSmith"
-    Publisher="CN=33E83C71-5BAE-4CB2-A70A-1F0545DACFB1"
+    Name="CRTech.LocaleSmith.Dev"
+    Publisher="CN=LocaleSmith Development"
     Version="1.2.0.0"
     ProcessorArchitecture="x64" />
   <Properties>
-    <DisplayName>ms-resource:PackageDisplayName</DisplayName>
-    <PublisherDisplayName>DZXH CR Tech</PublisherDisplayName>
+    <DisplayName>LocaleSmith Dev</DisplayName>
+    <PublisherDisplayName>DZXH CR Tech Development</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Resources>
@@ -35,7 +35,7 @@
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="ms-resource:AppDisplayName"
+        DisplayName="LocaleSmith Dev"
         Description="ms-resource:AppDescription"
         BackgroundColor="transparent"
         Square44x44Logo="Assets\Square44x44Logo.png"

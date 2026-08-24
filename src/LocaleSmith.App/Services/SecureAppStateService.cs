@@ -26,6 +26,7 @@ public sealed partial class SecureAppStateService :
     private readonly HttpClient _modelHttpClient;
     private readonly ICliSandboxRootManager _sandboxRootManager;
     private readonly IAppLanguagePreferenceWriter? _languagePreferenceWriter;
+    private readonly string? _appDataRoot;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private AppConfiguration _configuration = new();
     private bool _initialized;
@@ -37,7 +38,8 @@ public sealed partial class SecureAppStateService :
         ModelServiceRegistry registry,
         HttpClient modelHttpClient,
         ICliSandboxRootManager sandboxRootManager,
-        IAppLanguagePreferenceWriter? languagePreferenceWriter = null)
+        IAppLanguagePreferenceWriter? languagePreferenceWriter = null,
+        string? appDataRoot = null)
     {
         _configurationStore = configurationStore ?? throw new ArgumentNullException(nameof(configurationStore));
         _secretStore = secretStore ?? throw new ArgumentNullException(nameof(secretStore));
@@ -45,6 +47,9 @@ public sealed partial class SecureAppStateService :
         _modelHttpClient = modelHttpClient ?? throw new ArgumentNullException(nameof(modelHttpClient));
         _sandboxRootManager = sandboxRootManager ?? throw new ArgumentNullException(nameof(sandboxRootManager));
         _languagePreferenceWriter = languagePreferenceWriter;
+        _appDataRoot = string.IsNullOrWhiteSpace(appDataRoot)
+            ? null
+            : Path.GetFullPath(appDataRoot);
     }
 
     public IReadOnlyList<ModelSource> Sources => _registry.Sources;
@@ -67,7 +72,10 @@ public sealed partial class SecureAppStateService :
 
             var loaded = await _configurationStore.LoadAsync(cancellationToken).ConfigureAwait(false)
                 ?? new AppConfiguration();
-            var normalized = LegacyDefaultPathNormalizer.Normalize(loaded, out var defaultsChanged);
+            var normalized = LegacyDefaultPathNormalizer.Normalize(
+                loaded,
+                out var defaultsChanged,
+                _appDataRoot);
             var normalizedLanguage = AppDisplayLanguages.ResolveOrDefault(normalized.Language);
             if (!string.Equals(normalized.Language, normalizedLanguage, StringComparison.Ordinal))
             {
@@ -254,7 +262,7 @@ public sealed partial class SecureAppStateService :
         var workspace = EnsureUserDirectoryAllowed(submission.WorkspacePath, nameof(submission));
         var sandbox = EnsureUserDirectoryAllowed(submission.SandboxPath, nameof(submission));
         var logDirectory = EnsureLogDirectoryAllowed(
-            submission.LogDirectoryPath ?? AppConfiguration.GetDefaultLogDirectoryPath(),
+            submission.LogDirectoryPath ?? GetDefaultLogDirectoryPath(),
             nameof(submission));
         Directory.CreateDirectory(workspace);
         Directory.CreateDirectory(sandbox);
@@ -487,6 +495,8 @@ public sealed partial class SecureAppStateService :
                     TokenLimitParameter = normalizedTokenLimitParameter,
                     Endpoint = source.Endpoint.AbsoluteUri,
                     ModelName = source.ModelName,
+                    MaxOutputTokens = source.MaxOutputTokens,
+                    MaxSourceCharactersPerRequest = source.MaxSourceCharactersPerRequest,
                     CredentialReference = credentialReference,
                     CredentialFingerprint = source.Provider == ModelProviderKind.Ollama
                     ? null
@@ -725,6 +735,8 @@ public sealed partial class SecureAppStateService :
                 source.TokenLimitParameter),
             Endpoint = source.Endpoint.AbsoluteUri,
             ModelName = source.ModelName,
+            MaxOutputTokens = source.MaxOutputTokens,
+            MaxSourceCharactersPerRequest = source.MaxSourceCharactersPerRequest,
             CredentialReference = source.Provider == ModelProviderKind.Ollama
                 ? null
                 : apiKey.IsEmpty ? source.CredentialReference : "connection-test/key"
@@ -765,24 +777,51 @@ public sealed partial class SecureAppStateService :
 
     public async Task<IReadOnlyList<AvailableModelInfo>> ListAvailableModelsAsync(
         ModelSourceDraft source,
+        CancellationToken cancellationToken = default) =>
+        await ListAvailableModelsAsync(source, ReadOnlyMemory<char>.Empty, cancellationToken)
+            .ConfigureAwait(false);
+
+    public async Task<IReadOnlyList<AvailableModelInfo>> ListAvailableModelsAsync(
+        ModelSourceDraft source,
+        ReadOnlyMemory<char> apiKey,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
-        if (source.Provider != ModelProviderKind.Ollama)
+        if (source.Provider is not (ModelProviderKind.Ollama or ModelProviderKind.OpenAiCompatible))
         {
             return [];
         }
 
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        string normalizedPresetId = NormalizePresetId(source.Provider, source.PresetId, source.Endpoint);
+        ValidateWritableModelEndpoint(
+            source.Provider,
+            normalizedPresetId,
+            source.Endpoint,
+            nameof(source));
         var profile = new ModelSourceProfile
         {
             Id = source.Id ?? $"catalog-{Guid.NewGuid():N}",
             DisplayName = source.DisplayName,
-            Provider = ModelProviderKind.Ollama,
+            Provider = source.Provider,
+            PresetId = normalizedPresetId,
+            TokenLimitParameter = NormalizeTokenLimitParameter(
+                source.Provider,
+                source.PresetId,
+                source.TokenLimitParameter),
             Endpoint = source.Endpoint.AbsoluteUri,
-            ModelName = source.ModelName
+            ModelName = string.IsNullOrWhiteSpace(source.ModelName)
+                ? "catalog-discovery"
+                : source.ModelName,
+            MaxOutputTokens = source.MaxOutputTokens,
+            MaxSourceCharactersPerRequest = source.MaxSourceCharactersPerRequest,
+            CredentialReference = source.Provider == ModelProviderKind.Ollama
+                ? null
+                : apiKey.IsEmpty ? source.CredentialReference : "catalog-discovery/key"
         };
-        var service = CreateModelService(profile, _secretStore);
+        using var ephemeral = apiKey.IsEmpty ? null : new EphemeralSecretResolver(apiKey.Span);
+        var resolver = (ISecretResolver?)ephemeral ?? _secretStore;
+        var service = CreateModelService(profile, resolver);
         if (service is not IModelCatalogService catalog)
         {
             return [];
@@ -907,7 +946,9 @@ public sealed partial class SecureAppStateService :
             profile.ModelName,
             profile.CredentialReference,
             profile.PresetId,
-            profile.TokenLimitParameter);
+            profile.TokenLimitParameter,
+            profile.MaxOutputTokens ?? ModelSource.DefaultMaxOutputTokens,
+            profile.MaxSourceCharactersPerRequest ?? ModelSource.DefaultMaxSourceCharactersPerRequest);
         return profile.Provider switch
         {
             ModelProviderKind.Ollama => new OllamaModelService(_modelHttpClient, source, secretResolver),
@@ -952,7 +993,9 @@ public sealed partial class SecureAppStateService :
                 profile.ModelName,
                 profile.CredentialReference,
                 profile.PresetId,
-                profile.TokenLimitParameter);
+                profile.TokenLimitParameter,
+                profile.MaxOutputTokens ?? ModelSource.DefaultMaxOutputTokens,
+                profile.MaxSourceCharactersPerRequest ?? ModelSource.DefaultMaxSourceCharactersPerRequest);
         }
 
         if (configuration.SelectedModelSourceId is not null && !ids.Contains(configuration.SelectedModelSourceId))
@@ -976,7 +1019,7 @@ public sealed partial class SecureAppStateService :
         }
     }
 
-    private static AppConfiguration NormalizeConfiguration(AppConfiguration configuration) => configuration with
+    private AppConfiguration NormalizeConfiguration(AppConfiguration configuration) => configuration with
     {
         WorkspacePath = string.IsNullOrWhiteSpace(configuration.WorkspacePath)
             ? string.Empty
@@ -985,12 +1028,16 @@ public sealed partial class SecureAppStateService :
             ? string.Empty
             : EnsureUserDirectoryAllowed(configuration.SandboxPath, nameof(configuration)),
         LogDirectoryPath = string.IsNullOrWhiteSpace(configuration.LogDirectoryPath)
-            ? AppConfiguration.GetDefaultLogDirectoryPath()
+            ? GetDefaultLogDirectoryPath()
             : EnsureLogDirectoryAllowed(configuration.LogDirectoryPath, nameof(configuration)),
         ModelSources = configuration.ModelSources
             .Select(LegacyDefaultPathNormalizer.NormalizeModelSourcePreset)
             .ToArray()
     };
+
+    private string GetDefaultLogDirectoryPath() => _appDataRoot is null
+        ? AppConfiguration.GetDefaultLogDirectoryPath()
+        : Path.Combine(_appDataRoot, "logs", "translations");
 
     private static string NormalizePresetId(
         ModelProviderKind provider,

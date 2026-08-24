@@ -67,7 +67,7 @@
 | **专业提示与术语** | 自动区分模组、资源包与光影包，使用独立领域提示；简体中文任务附带各自的专业术语对照表。 |
 | **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
 | **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
-| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；也可明确选择不发送该参数。 |
+| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；Ollama 与支持 `/models` 的 OpenAI-compatible 服务可显式刷新模型列表，始终保留手填回退。每个模型源还可设置单次响应 Tokens 与翻译分批字符目标。 |
 | **联机模组社区** | 可搜索和分页浏览公开模组与讨论；使用保存在 Windows Credential Manager 中的 PAT 发帖、回复和举报，并可直接查看服务条款与社区规范。 |
 | **Microsoft 订阅与安全加速** | 使用 Windows 原生 Microsoft Store 购买界面、MCTX 后端权威权益核验与一次性下载 grant；加速不可用时始终保留并回退默认下载源。 |
 | **持久化诊断日志** | 日志目录可写时，每次翻译都会尝试通过有界后台写入器持久化一对 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
@@ -80,7 +80,7 @@
 
 | 类别 | 当前支持 |
 | --- | --- |
-| 输入 | JAR、ZIP、展开后的资源包或光影包目录 |
+| 输入 | JAR、ZIP、展开后的单个模组/资源包/光影包目录；含多个 JAR/ZIP 的容器目录需通过“添加包”多选归档 |
 | Loader 元数据 | Fabric、Forge、NeoForge、Quilt、Legacy Forge |
 | 文本资源 | Minecraft 语言 JSON、Legacy `.lang`、光影包 `shaders/lang/*.lang`、`pack.txt`、受支持的 `pack.mcmeta` 显示文本 |
 | 字节码 | 经结构证明的 `Component.literal(String)` 精确模式；其他候选仅报告、不改写 |
@@ -101,7 +101,7 @@ flowchart LR
     E --> F["输出<br/>LocaleSmith.Output"]
 ```
 
-每个作业会在入队时冻结用户选择的目标语言、模型源和一种翻译风格。语言资源优先使用非目标语言的 `en_us`、`en_gb` 或其他现有 locale 作为源文；例如目标为英语但包内只有日语时，会从日语生成 `en_us`。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
+每个作业会在入队时冻结用户选择的目标语言、模型源、一种翻译风格、单次响应 Token 预算和每批原文字符目标。字符目标只控制大型包分批，不截断单条文本；HTTP 响应体仍受不可关闭的固定 16 MiB 安全上限保护。语言资源优先使用非目标语言的 `en_us`、`en_gb` 或其他现有 locale 作为源文；例如目标为英语但包内只有日语时，会从日语生成 `en_us`。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
 
 Dashboard 添加源 artifact 时，会按规范化源路径在当前进程内注册或复用一个模组项目，并把活动项目及其翻译任务同步到助手。助手为每个 `ProjectId + ModelSourceId` 组合保存独立会话和草稿；切换项目或模型源只恢复对应会话，不会把一个模组的历史混入另一个模组，也不会把上一 Provider 的历史发送给新 Provider。项目工作区当前仅驻留内存，应用重启后不会恢复。
 
@@ -109,13 +109,13 @@ Dashboard 添加源 artifact 时，会按规范化源路径在当前进程内注
 
 ## Microsoft Store 订阅与国内加速
 
-LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应用内订阅、显示 Microsoft 购买界面，并通过主窗口 HWND 绑定桌面模态 UI。已保存的 Partner Center 草稿为月度自动续费、符合资格的新订阅用户 7 天免费试用、全球 US$4.99/月基础价格档位并由 Store 本地化、中国市场配置 CNY 30.00/月；最终价格与试用资格以 Microsoft 购买界面为准。订阅由 Microsoft 计费，可在 [Microsoft 服务和订阅](https://account.microsoft.com/services) 中管理或取消；[隐私政策](https://dow.dzxh-tx.cn/privacy) 保持可发现。Microsoft Store 不支持“首月 CNY 24、以后 CNY 30”的原生 introductory price，客户端不会伪造该优惠。
+LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应用内订阅、显示 Microsoft 购买界面，并通过主窗口 HWND 绑定桌面模态 UI。Partner Center 配置为月度自动续费、符合资格的新订阅用户 7 天免费试用、全球 US$4.99/月基础价格档位并由 Store 本地化、中国市场配置 CNY 30.00/月；客户端界面只显示 Store 为当前区域返回的实际续费价，不向中国用户硬编码展示美元基础档位。订阅由 Microsoft 计费，可在 [Microsoft 服务和订阅](https://account.microsoft.com/services) 中管理或取消；[隐私政策](https://dow.dzxh-tx.cn/privacy) 保持可发现。Microsoft Store 不支持“首月 CNY 24、以后 CNY 30”的原生 introductory price，客户端不会伪造该优惠。
 
 购买、恢复与刷新都要求先用现有 LocaleSmith/MCTX 账号和含 `downloads:accelerated` scope 的 PAT 登录。`Succeeded` 或 `AlreadyPurchased` 只会启动 `service-ticket → Store ID key → backend verify → entitlements`，不会直接解锁；只有后端返回精确的 `domestic_download_acceleration` 有效权益才可进入下一步。缺少 `microsoft_store_billing_v1` / `accelerated_downloads_v1`、PAT、scope、有效权益或后端新鲜核验时，购买或加速入口失败关闭。
 
 下载源发现只接受后端返回的相对默认源和 `additional_source` 判定；客户端不硬编码对象存储主机、bucket、对象 key 或长期 URL。一次性 GET/HEAD 签名 URL 只在内存和对应 HTTPS 请求中短暂存在，不进入日志、配置、诊断、剪贴板、toast、遥测或断点 sidecar；对象存储请求不携带 PAT、Cookie、Authorization、Referer 或代理凭据，也不跟随重定向。传输使用独立 HEAD 取得强 ETag，最多四路 Range + If-Range 下载，grant 过期时重新完成全套后端门控并续签，最终按 API 的 size 与 SHA-256 验证；任何授权、对象存储或完整性异常都会安全回退原有同源默认下载器。
 
-本地自动化已覆盖 capability/PAT/scope/权益拒绝矩阵、购买状态机、秘密请求正文、GET/HEAD 分离、精确 HTTPS origin、四路 Range、续签续传、无秘密断点元数据、SHA-256 与默认源回退。尚未验证真实 Partner Center 商品、购买/续费/退款/跨设备恢复、Microsoft recurrence/service ticket、PostgreSQL/Redis 权益联调或 RainS3 E2E；网站工作树目前仍把权益键写作 `domestic_acceleration`，且尚无把制品复制并验证为 ready replica 的 worker，因此客户端会坚持目标键并保持失败关闭。本次变更没有提交 Partner Center、修改网站仓库或执行生产部署。
+本地自动化已覆盖 capability/PAT/scope/权益拒绝矩阵、购买状态机、过期/取消/退款/试用结束、跨设备恢复、账号暂停、核验陈旧、秘密请求正文、GET/HEAD 分离、精确 HTTPS origin、四路 Range、续签续传、无秘密断点元数据、SHA-256 与默认源回退。网站源码契约和 replica worker 已统一使用唯一权益 `domestic_download_acceleration`，但尚未验证真实 Partner Center 商品、购买/续费/退款/跨设备恢复、Microsoft recurrence/service ticket、真实 PostgreSQL/Redis 权益联调或 RainS3 私有桶 E2E，也未在本次工作中启用或部署生产加速。
 
 ## 翻译日志与持久化设置
 
@@ -133,6 +133,8 @@ LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应�
 | [GitHub Release v1.1.0](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) | 提供 Microsoft Marketplace 签名的 `CRTech.LocaleSmith_1.1.0.0_x64.Msix`，适用于需要直接下载安装包的场景。 |
 
 GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C50B96FBBA84F64`。正式版支持 Windows x64，最低系统版本为 Windows 10 1809（Build 17763）。
+
+独立 stdio MCP Host 以 .NET 工具包 `CRTech.LocaleSmith.McpHost` 维护；当前源码包版本为 `0.1.1`。它仍只暴露 `system.context` 与 `cli.propose`，不包含 App 专属项目/文件工具。安装、GitHub Packages 鉴权与客户端配置见[包 README](./.github/package-readmes/LocaleSmith.McpHost.md)。
 
 ### 开发环境要求
 
@@ -239,9 +241,9 @@ App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模�
 
 | 检查项 | 基线 |
 | --- | --- |
-| .NET Release | `800 / 800` tests，`0` warnings，`0` errors |
-| Rust | `27 / 27` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
-| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `662` 个 key，完全对齐 |
+| .NET Release | `807 / 807` tests，`0` warnings，`0` errors |
+| Rust | `28 / 28` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
+| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `661` 个 key，完全对齐 |
 | 源码安全审计 | 本地路径、归档、CLI、凭据和迁移回归门通过；GitHub CodeQL 结果以当前提交的远端重扫为准，不在 README 中宣称零告警 |
 
 这些结果证明当前自动化覆盖的源码行为，不替代外部渗透测试、真实 Provider 验证或 Minecraft / Loader 运行时兼容测试。

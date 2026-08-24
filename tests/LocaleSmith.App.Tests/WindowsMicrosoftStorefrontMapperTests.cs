@@ -6,6 +6,20 @@ namespace LocaleSmith.App.Tests;
 
 public sealed class WindowsMicrosoftStorefrontMapperTests
 {
+    [Fact]
+    public void StorefrontUsesPurchaseIdKeyApiForPurchaseAudienceTicket()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "LocaleSmith.App",
+            "Services",
+            "WindowsMicrosoftStorefront.cs"));
+
+        Assert.Contains("GetCustomerPurchaseIdAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetCustomerCollectionsIdAsync", source, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(1u, "Week", true)]
     [InlineData(7u, "Day", true)]
@@ -98,4 +112,19 @@ public sealed class WindowsMicrosoftStorefrontMapperTests
         StorePurchaseStatus storeStatus,
         MicrosoftStorePurchaseStatus expected) =>
         Assert.Equal(expected, WindowsMicrosoftStorefront.MapPurchaseStatus(storeStatus));
+
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "LocaleSmith.slnx")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        throw new DirectoryNotFoundException("Could not locate the LocaleSmith repository root.");
+    }
 }

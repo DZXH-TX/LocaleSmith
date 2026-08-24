@@ -73,6 +73,13 @@ jobs:
             throw "Invalid NuGet SemVer: $packageVersion"
           }
 
+          [xml]$packageProject = Get-Content -Raw -LiteralPath "src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj"
+          $declaredVersion = @($packageProject.Project.PropertyGroup | ForEach-Object { $_.Version } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1)
+          if ($declaredVersion.Count -ne 1 -or $packageVersion -cne [string]$declaredVersion[0]) {
+            throw "Requested package version '$packageVersion' must equal the MCP Host project version '$($declaredVersion -join ',')'."
+          }
+
           "package-version=$packageVersion" >> $env:GITHUB_OUTPUT
           Write-Output "Publishing CRTech.LocaleSmith.McpHost $packageVersion"
 

@@ -82,7 +82,7 @@
   <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>Стиль перевода для новых запросов</value></data>
   <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>Настроено</value></data>
   <data name="AddPackageButtonText.Text" xml:space="preserve"><value>Добавить пакет</value></data>
-  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>Добавить папку</value></data>
+  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>Добавить распакованный пакет</value></data>
   <data name="DashboardError.Title" xml:space="preserve"><value>Невозможно продолжить</value></data>
   <data name="DashboardStatus.Title" xml:space="preserve"><value>Состояние очереди</value></data>
   <data name="QueueEmptyTitle.Text" xml:space="preserve"><value>В очереди нет заданий</value></data>
@@ -145,10 +145,15 @@
   <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>По умолчанию у провайдера (не отправлять)</value></data>
   <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>Адрес сервиса</value></data>
   <data name="ModelSourceModelName.Header" xml:space="preserve"><value>Имя модели (можно ввести вручную)</value></data>
-  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Загруженные локальные модели</value></data>
+  <data name="ModelSourceMaxOutputTokens.Header" xml:space="preserve"><value>Максимум Tokens на ответ</value></data>
+  <data name="ModelSourceMaxOutputTokens.AutomationProperties.Name" xml:space="preserve"><value>Максимальное число токенов в ответе</value></data>
+  <data name="ModelSourceBatchCharacters.Header" xml:space="preserve"><value>Символов исходного текста на пакет</value></data>
+  <data name="ModelSourceBatchCharacters.AutomationProperties.Name" xml:space="preserve"><value>Целевое число символов исходного текста на пакет перевода</value></data>
+  <data name="ModelSourceRequestBudgetHelp.Text" xml:space="preserve"><value>Tokens ответа применяются к переводу и каждому раунду помощника. Цель по символам управляет только разбиением больших пакетов и не обрезает отдельное значение. Высокие значения могут увеличить стоимость или риск усечения. Фиксированный предел безопасности ответа 16 МиБ нельзя отключить; при выборе «не отправлять» источник OpenAI-compatible не получает значение Token.</value></data>
+  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Модели, сообщённые поставщиком</value></data>
   <data name="RefreshModelsButtonText.Text" xml:space="preserve"><value>Обновить</value></data>
   <data name="DownloadedModelsSelector.Header" xml:space="preserve"><value>Выбрать из Ollama</value></data>
-  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>При обновлении вызывается локальный /api/tags. Недоступный сервис никогда не перезаписывает имя модели, введённое вручную.</value></data>
+  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>Обновление запрашивает каталог текущего поставщика. Ручной ввод остаётся доступен; выбранную модель проверяйте тестом подключения.</value></data>
   <data name="ModelSourceApiKey.Header" xml:space="preserve"><value>Ключ API (оставьте поле пустым, чтобы сохранить текущие учётные данные)</value></data>
   <data name="CredentialAliasPrefix.Text" xml:space="preserve"><value>Псевдоним учётных данных:</value></data>
   <data name="ConnectionStatus.Title" xml:space="preserve"><value>Состояние подключения</value></data>
@@ -257,6 +262,9 @@
   <data name="QueueModelRequired" xml:space="preserve"><value>Настройте и выберите источник модели перед добавлением пакетов.</value></data>
   <data name="QueueNoModelSources" xml:space="preserve"><value>Нет доступных источников моделей. Настройте источник в разделе «Источники моделей» перед добавлением пакетов.</value></data>
   <data name="QueuePackageNotFound" xml:space="preserve"><value>Пакет не найден: {0}</value></data>
+  <data name="QueueFolderContainsArchives" xml:space="preserve"><value>Выбранная папка содержит {0} файл(ов) JAR/ZIP верхнего уровня. Добавление распакованного пакета принимает один пакет; выберите эти архивы через «Добавить пакет».</value></data>
+  <data name="QueueFolderUnsupportedLayout" xml:space="preserve"><value>Выбранная папка не распознана как корень распакованного мода, пакета ресурсов или шейдеров.</value></data>
+  <data name="QueueFolderInspectFailed" xml:space="preserve"><value>Не удалось безопасно проверить выбранную папку: {0}</value></data>
   <data name="QueueEnqueueFailed" xml:space="preserve"><value>Не удалось добавить {0} в очередь. Проверьте параметры безопасности рабочей области вывода и повторите попытку.</value></data>
   <data name="QueueModelUnavailable" xml:space="preserve"><value>Выбранный источник модели больше недоступен.</value></data>
   <data name="QueueModelChanged" xml:space="preserve"><value>Источник модели изменён. Существующие запросы сохранят исходный источник.</value></data>
@@ -321,6 +329,13 @@
   <data name="OllamaModelsEmpty" xml:space="preserve"><value>Сервис Ollama доступен, но не сообщил о загруженных моделях. Ручной ввод по-прежнему доступен.</value></data>
   <data name="OllamaModelsFound" xml:space="preserve"><value>Загруженных моделей найдено: {0}.</value></data>
   <data name="OllamaModelsRefreshFailed" xml:space="preserve"><value>Не удалось обновить локальные модели: {0}. Можно оставить имя модели, введённое вручную.</value></data>
+  <data name="ModelCatalogLoading" xml:space="preserve"><value>Обновление моделей, сообщённых поставщиком…</value></data>
+  <data name="ModelCatalogEmpty" xml:space="preserve"><value>Поставщик не сообщил ни одной модели. Ручной ввод остаётся доступен.</value></data>
+  <data name="ModelCatalogFound" xml:space="preserve"><value>Найдено моделей, сообщённых поставщиком: {0}.</value></data>
+  <data name="ModelCatalogUnsupported" xml:space="preserve"><value>Эта конечная точка не предоставляет совместимый список моделей. Можно оставить имя, введённое вручную.</value></data>
+  <data name="ModelCatalogRefreshFailed" xml:space="preserve"><value>Не удалось обновить модели: {0}. Можно оставить имя, введённое вручную.</value></data>
+  <data name="ModelSourceMaxOutputTokensInvalid" xml:space="preserve"><value>Максимум Tokens на ответ должен быть от {0} до {1}.</value></data>
+  <data name="ModelSourceBatchCharactersInvalid" xml:space="preserve"><value>Число символов исходного текста на пакет должно быть от {0} до {1}.</value></data>
   <data name="ModelSourceDeleted" xml:space="preserve"><value>Источник модели и сохранённые для него учётные данные удалены.</value></data>
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>Не удалось удалить источник модели: {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>Необходимо указать отображаемое имя и имя модели.</value></data>
@@ -625,8 +640,7 @@
   <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>Нет активного права</value></data>
   <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>Оформите подписку или восстановите существующую покупку Microsoft Store для серверной проверки.</value></data>
   <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>Новые подписчики, соответствующие условиям, могут получить 7-дневный бесплатный период; право и окончательные условия показывает Microsoft при покупке.</value></data>
-  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>После доступного пробного периода подписка автоматически продлевается по месячной цене, которую тогда показывает Microsoft Store, до отмены. Для Китая настроено 30,00 CNY в месяц; окончательные условия указаны на экране покупки.</value></data>
-  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>Глобальный базовый ценовой уровень — 4,99 US$ в месяц. Microsoft Store показывает местную цену; для других рынков цена не фиксирована на уровне 5 US$.</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>После доступного пробного периода подписка автоматически продлевается по местной месячной цене, которую тогда показывает Microsoft Store, до отмены; окончательной считается региональная цена на экране покупки.</value></data>
   <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>Оплату обрабатывает Microsoft. Управление и отмена доступны в разделе «Службы и подписки» учётной записи Microsoft.</value></data>
   <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Текущая ежемесячная цена продления в Microsoft Store</value></data>
   <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>Подписаться через Microsoft</value></data>

@@ -35,7 +35,9 @@ public sealed record TranslationBatchRequest
         string targetLanguage = TranslationLanguageCatalog.DefaultLocale,
         IReadOnlySet<TranslationStyle>? styles = null,
         string? modelSourceId = null,
-        MinecraftContentKind contentKind = MinecraftContentKind.Unknown)
+        MinecraftContentKind contentKind = MinecraftContentKind.Unknown,
+        int? maxOutputTokens = null,
+        int? maxSourceCharactersPerRequest = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetLanguage);
@@ -53,6 +55,22 @@ public sealed record TranslationBatchRequest
         }
 
         ContentKind = contentKind;
+        if (maxOutputTokens is { } outputTokens &&
+            (outputTokens < ModelSource.MinimumMaxOutputTokens ||
+             outputTokens > ModelSource.MaximumMaxOutputTokens))
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxOutputTokens));
+        }
+
+        if (maxSourceCharactersPerRequest is { } sourceCharacters &&
+            (sourceCharacters < ModelSource.MinimumMaxSourceCharactersPerRequest ||
+             sourceCharacters > ModelSource.MaximumMaxSourceCharactersPerRequest))
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxSourceCharactersPerRequest));
+        }
+
+        MaxOutputTokens = maxOutputTokens;
+        MaxSourceCharactersPerRequest = maxSourceCharactersPerRequest;
         Styles = styles is null
             ? new HashSet<TranslationStyle> { TranslationStyle.Formal }
             : new HashSet<TranslationStyle>(styles);
@@ -80,6 +98,10 @@ public sealed record TranslationBatchRequest
     /// specialist prompt and terminology profile for the entire batch.
     /// </summary>
     public MinecraftContentKind ContentKind { get; }
+
+    public int? MaxOutputTokens { get; }
+
+    public int? MaxSourceCharactersPerRequest { get; }
 }
 
 public sealed record TranslationVariant(TranslationStyle Style, string Text);

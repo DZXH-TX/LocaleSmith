@@ -82,7 +82,7 @@
   <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>新しいリクエストの翻訳スタイル</value></data>
   <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>設定済み</value></data>
   <data name="AddPackageButtonText.Text" xml:space="preserve"><value>パッケージを追加</value></data>
-  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>フォルダーを追加</value></data>
+  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>展開済みパックを追加</value></data>
   <data name="DashboardError.Title" xml:space="preserve"><value>続行できません</value></data>
   <data name="DashboardStatus.Title" xml:space="preserve"><value>キューの状態</value></data>
   <data name="QueueEmptyTitle.Text" xml:space="preserve"><value>キューにジョブがありません</value></data>
@@ -145,10 +145,15 @@
   <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>プロバイダーの既定値（送信しない）</value></data>
   <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>サービスアドレス</value></data>
   <data name="ModelSourceModelName.Header" xml:space="preserve"><value>モデル名（手動入力可能）</value></data>
-  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>ダウンロード済みのローカルモデル</value></data>
+  <data name="ModelSourceMaxOutputTokens.Header" xml:space="preserve"><value>応答あたりの最大 Tokens</value></data>
+  <data name="ModelSourceMaxOutputTokens.AutomationProperties.Name" xml:space="preserve"><value>応答あたりの最大トークン数</value></data>
+  <data name="ModelSourceBatchCharacters.Header" xml:space="preserve"><value>バッチあたりの原文文字数</value></data>
+  <data name="ModelSourceBatchCharacters.AutomationProperties.Name" xml:space="preserve"><value>翻訳バッチあたりの原文文字数目標</value></data>
+  <data name="ModelSourceRequestBudgetHelp.Text" xml:space="preserve"><value>応答 Tokens は翻訳リクエストとアシスタントの各ラウンドに適用されます。文字数目標は大規模パッケージの分割だけを制御し、単一の値を切り捨てません。値を増やすと費用や打ち切りのリスクが高まります。固定 16 MiB 応答安全上限は無効化できず、上の項目で「送信しない」を選ぶと OpenAI 互換ソースへ Token 値を送りません。</value></data>
+  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>プロバイダーが報告したモデル</value></data>
   <data name="RefreshModelsButtonText.Text" xml:space="preserve"><value>更新</value></data>
   <data name="DownloadedModelsSelector.Header" xml:space="preserve"><value>Ollama から選択</value></data>
-  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>更新するとローカルの /api/tags を呼び出します。サービスを利用できない場合でも、手動入力したモデル名は上書きされません。</value></data>
+  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>更新すると現在のプロバイダーカタログを照会します。手動入力は引き続き利用でき、選択したモデルは接続テストで確認できます。</value></data>
   <data name="ModelSourceApiKey.Header" xml:space="preserve"><value>API キー（保存済みの資格情報を保持する場合は空欄）</value></data>
   <data name="CredentialAliasPrefix.Text" xml:space="preserve"><value>資格情報の別名:</value></data>
   <data name="ConnectionStatus.Title" xml:space="preserve"><value>接続状態</value></data>
@@ -257,6 +262,9 @@
   <data name="QueueModelRequired" xml:space="preserve"><value>パッケージを追加する前に、モデルソースを設定して選択してください。</value></data>
   <data name="QueueNoModelSources" xml:space="preserve"><value>利用できるモデルソースがありません。パッケージを追加する前に「モデルソース」で設定してください。</value></data>
   <data name="QueuePackageNotFound" xml:space="preserve"><value>パッケージが見つかりません: {0}</value></data>
+  <data name="QueueFolderContainsArchives" xml:space="preserve"><value>選択したフォルダーには最上位の JAR/ZIP が {0} 個あります。「展開済みパックを追加」は単一の展開済みパック用です。これらのアーカイブは「パッケージを追加」で複数選択してください。</value></data>
+  <data name="QueueFolderUnsupportedLayout" xml:space="preserve"><value>選択したフォルダーは、展開済み Mod、リソースパック、シェーダーパックのルートとして認識できません。</value></data>
+  <data name="QueueFolderInspectFailed" xml:space="preserve"><value>選択したフォルダーを安全に検査できませんでした: {0}</value></data>
   <data name="QueueEnqueueFailed" xml:space="preserve"><value>{0} をキューに追加できませんでした。出力ワークスペースのセキュリティ設定を確認して、再試行してください。</value></data>
   <data name="QueueModelUnavailable" xml:space="preserve"><value>選択したモデルソースは利用できなくなりました。</value></data>
   <data name="QueueModelChanged" xml:space="preserve"><value>モデルソースが変更されました。既存のリクエストでは元のソースが引き続き使用されます。</value></data>
@@ -321,6 +329,13 @@
   <data name="OllamaModelsEmpty" xml:space="preserve"><value>Ollama には接続できましたが、ダウンロード済みモデルは報告されませんでした。引き続き手動で入力できます。</value></data>
   <data name="OllamaModelsFound" xml:space="preserve"><value>ダウンロード済みモデルが {0} 件見つかりました。</value></data>
   <data name="OllamaModelsRefreshFailed" xml:space="preserve"><value>ローカルモデルを更新できませんでした: {0}。手動入力したモデル名はそのまま使用できます。</value></data>
+  <data name="ModelCatalogLoading" xml:space="preserve"><value>プロバイダーが報告したモデルを更新しています…</value></data>
+  <data name="ModelCatalogEmpty" xml:space="preserve"><value>プロバイダーからモデルが報告されませんでした。手動入力は引き続き利用できます。</value></data>
+  <data name="ModelCatalogFound" xml:space="preserve"><value>プロバイダーが報告したモデルが {0} 件見つかりました。</value></data>
+  <data name="ModelCatalogUnsupported" xml:space="preserve"><value>このエンドポイントは互換性のあるモデル一覧を公開していません。手動入力したモデル名を使用できます。</value></data>
+  <data name="ModelCatalogRefreshFailed" xml:space="preserve"><value>モデルを更新できませんでした: {0}。手動入力したモデル名を使用できます。</value></data>
+  <data name="ModelSourceMaxOutputTokensInvalid" xml:space="preserve"><value>応答あたりの最大 Tokens は {0}～{1} にしてください。</value></data>
+  <data name="ModelSourceBatchCharactersInvalid" xml:space="preserve"><value>バッチあたりの原文文字数は {0}～{1} にしてください。</value></data>
   <data name="ModelSourceDeleted" xml:space="preserve"><value>モデルソースと保存済みの資格情報を削除しました。</value></data>
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>モデルソースを削除できませんでした: {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>表示名とモデル名は必須です。</value></data>
@@ -625,8 +640,7 @@
   <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>有効な権利はありません</value></data>
   <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>購読するか、既存の Microsoft Store 購入を復元してバックエンドで確認してください。</value></data>
   <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>対象となる新規購読者は 7 日間の無料試用を利用できます。資格と最終条件は Microsoft の購入画面に表示されます。</value></data>
-  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>対象の試用後は Microsoft Store がその時点で表示する月額で、キャンセルするまで自動更新されます。中国市場の設定価格は月額 CNY 30.00 で、購入画面が最終条件です。</value></data>
-  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>世界共通の基本価格帯は月額 US$4.99 です。Microsoft Store が各市場の現地価格を表示し、他市場で一律 US$5 とは限りません。</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>対象の試用後は Microsoft Store がその時点で表示する地域の月額で、キャンセルするまで自動更新されます。購入画面の地域価格が最終条件です。</value></data>
   <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>請求は Microsoft が行います。Microsoft アカウントの「サービスとサブスクリプション」で管理またはキャンセルできます。</value></data>
   <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Microsoft Store が表示する現在の月額更新価格</value></data>
   <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>Microsoft で購読</value></data>

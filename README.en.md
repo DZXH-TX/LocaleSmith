@@ -67,7 +67,7 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 | **Specialized prompts and terminology** | Automatically distinguishes mods, resource packs, and shader packs and applies dedicated domain prompts; Simplified Chinese jobs include a specialized terminology glossary for each content type. |
 | **Multiple target languages** | Initially supports Simplified Chinese, English, Japanese, French, and Russian; the language catalog is centrally defined and can be extended. |
 | **Multiple model integrations** | Provides unified support for Ollama, OpenAI-compatible Chat Completions, and Anthropic Messages. |
-| **Provider presets** | Presets for DeepSeek, Qwen, Xiaomi MiMo, MiniMax, OpenAI, Doubao, Zhipu GLM, Kimi, and others fill in the service endpoint and model name and select the recommended completion-token parameter; you can also explicitly omit that parameter. |
+| **Provider presets** | Presets for DeepSeek, Qwen, Xiaomi MiMo, MiniMax, OpenAI, Doubao, Zhipu GLM, Kimi, and others fill in the endpoint, model name, and completion-token parameter. Ollama and OpenAI-compatible services that expose `/models` support explicit catalog refresh with manual fallback. Each source can also set response Tokens and the translation batch character target. |
 | **Online mod community** | Searches and paginates public mods and discussions; a PAT stored in Windows Credential Manager enables posting, replies, and reports, with direct access to the terms and community guidelines. |
 | **Microsoft subscription and safe acceleration** | Uses native Microsoft Store purchase UI, authoritative MCTX backend entitlements, and one-time download grants; the default source always remains available and is used as a safe fallback. |
 | **Persistent diagnostic logs** | When the log directory is writable, each translation attempts to persist a pair of Debug and All levels `.log` files through a bounded background writer; logs can be viewed from the left-hand “Logs” page, and the directory can be changed during onboarding or in Settings. |
@@ -80,7 +80,7 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 
 | Category | Current Support |
 | --- | --- |
-| Input | JAR, ZIP, or an extracted resource-pack or shader-pack directory |
+| Input | JAR, ZIP, or one extracted mod/resource-pack/shader-pack directory; container folders with multiple JAR/ZIP files must be selected through Add package |
 | Loader metadata | Fabric, Forge, NeoForge, Quilt, Legacy Forge |
 | Text resources | Minecraft language JSON, Legacy `.lang`, shader-pack `shaders/lang/*.lang`, `pack.txt`, and supported display text in `pack.mcmeta` |
 | Bytecode | Exact `Component.literal(String)` patterns proven by structural analysis; other candidates are reported but not rewritten |
@@ -101,7 +101,7 @@ flowchart LR
     E --> F["Output<br/>LocaleSmith.Output"]
 ```
 
-Each job captures the user's selected target language, model source, and one translation style when it is queued. Language resources prefer `en_us`, `en_gb`, or another existing locale that differs from the target language as source text; for example, if English is the target but the package contains only Japanese, LocaleSmith generates `en_us` from the Japanese source. The other style can be queued separately and can reuse corresponding translations already cached under the same source-text hash.
+Each job captures the user's selected target language, model source, one translation style, response Token budget, and source-character batch target when it is queued. The character target controls batching for large packages and never truncates one value; HTTP responses remain protected by a fixed, non-configurable 16 MiB safety limit. Language resources prefer `en_us`, `en_gb`, or another existing locale that differs from the target language as source text; for example, if English is the target but the package contains only Japanese, LocaleSmith generates `en_us` from the Japanese source. The other style can be queued separately and can reuse corresponding translations already cached under the same source-text hash.
 
 When a source artifact is added from the Dashboard, LocaleSmith registers or reuses a process-local mod project by normalized source path and synchronizes the active project and its translation tasks with the assistant. The assistant keeps a separate conversation and draft for every `ProjectId + ModelSourceId` pair. Switching projects or model sources restores only the matching session: one mod's history is not mixed into another mod, and history from one provider is not sent to a different provider. The project workspace is currently memory-only and is not restored after the application restarts.
 
@@ -109,13 +109,13 @@ The assistant's processing view contains only deterministic lifecycle events for
 
 ## Microsoft Store Subscription and Domestic Acceleration
 
-LocaleSmith uses `Windows.Services.Store.StoreContext` to read the hidden parent-app-only subscription, display Microsoft purchase UI, and bind desktop modal UI to the main-window HWND. The saved Partner Center draft is monthly auto-renewing, offers an eligible new subscriber a seven-day free trial, uses a US$4.99/month global base tier localized by the Store, and configures China at CNY 30.00/month; the Microsoft purchase UI is authoritative for actual price and trial eligibility. Microsoft handles billing, and the subscription can be managed or cancelled under [Microsoft Services & subscriptions](https://account.microsoft.com/services); the [privacy policy](https://dow.dzxh-tx.cn/privacy) remains discoverable. Microsoft Store does not support a native “CNY 24 first month, then CNY 30” introductory price, and the client does not simulate one.
+LocaleSmith uses `Windows.Services.Store.StoreContext` to read the hidden parent-app-only subscription, display Microsoft purchase UI, and bind desktop modal UI to the main-window HWND. Partner Center is configured for monthly auto-renewal, an eligible new subscriber's seven-day free trial, a US$4.99/month global base tier localized by the Store, and CNY 30.00/month in China. The client UI displays only the actual renewal price returned by the Store for the current region; it does not hard-code the USD base tier for Chinese customers. Microsoft handles billing, and the subscription can be managed or cancelled under [Microsoft Services & subscriptions](https://account.microsoft.com/services); the [privacy policy](https://dow.dzxh-tx.cn/privacy) remains discoverable. Microsoft Store does not support a native “CNY 24 first month, then CNY 30” introductory price, and the client does not simulate one.
 
 Purchase, restore, and refresh first require the existing LocaleSmith/MCTX account and a PAT with the `downloads:accelerated` scope. `Succeeded` and `AlreadyPurchased` only start `service-ticket → Store ID key → backend verify → entitlements`; they never unlock locally. Only an exact, usable `domestic_download_acceleration` backend entitlement can proceed. Missing `microsoft_store_billing_v1` / `accelerated_downloads_v1`, PAT, scope, entitlement, or fresh backend verification fails closed and hides or disables the paid entry.
 
 Source discovery accepts only the relative default source and `additional_source` decision returned by the API. The client never hard-codes an object-storage host, bucket, object key, or long-lived URL. One-time signed GET/HEAD URLs exist briefly only in memory and their HTTPS requests; they are not written to logs, configuration, diagnostics, clipboard, toasts, telemetry, or resume sidecars. Object-storage requests carry no PAT, Cookie, Authorization, Referer, or proxy credential and do not follow redirects. The transport uses a separate HEAD request for a strong ETag, up to four Range + If-Range requests, complete re-authorization and re-signing on grant expiry, and final API size/SHA-256 verification. Authorization, storage, or integrity failure falls back safely to the existing same-origin downloader.
 
-Local automation covers the capability/PAT/scope/entitlement refusal matrix, purchase state machine, secret request body, separate GET/HEAD signatures, exact HTTPS origin, four-way ranges, re-sign/resume, credential-free sidecars, SHA-256, and default-source fallback. Real Partner Center products, purchase/renewal/refund/cross-device restore, Microsoft recurrence/service tickets, PostgreSQL/Redis entitlement integration, and RainS3 E2E remain unverified. The website worktree still uses `domestic_acceleration` instead of the required entitlement key and has no worker that copies and verifies an artifact into a ready replica, so the client keeps the target key and fails closed. This change did not submit Partner Center changes, modify the website repository, or deploy production.
+Local automation covers the capability/PAT/scope/entitlement refusal matrix, purchase state machine, expiry/cancellation/refund/trial end, cross-device restore, suspended accounts, stale verification, secret request bodies, separate GET/HEAD signatures, exact HTTPS origin, four-way ranges, re-sign/resume, credential-free sidecars, SHA-256, and default-source fallback. The website source contract and replica worker now use the single `domestic_download_acceleration` entitlement. Real Partner Center products, purchase/renewal/refund/cross-device restore, Microsoft recurrence/service tickets, live PostgreSQL/Redis entitlement integration, and private RainS3 E2E remain unverified, and this work did not enable or deploy production acceleration.
 
 ## Translation Logs and Persistent Settings
 
@@ -133,6 +133,8 @@ The default directory is `%LOCALAPPDATA%\LocaleSmith\logs\translations`. During 
 | [GitHub Release v1.1.0](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) | Provides the Microsoft Marketplace-signed `CRTech.LocaleSmith_1.1.0.0_x64.Msix` for users who need a direct installer download. |
 
 The GitHub MSIX SHA-256 is `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C50B96FBBA84F64`. The production release supports Windows x64 and requires Windows 10 1809 (build 17763) or later.
+
+The standalone stdio MCP Host is maintained as the `CRTech.LocaleSmith.McpHost` .NET tool; the current source package version is `0.1.1`. It still exposes only `system.context` and `cli.propose`, with no App-only project or file tools. See the [package README](./.github/package-readmes/LocaleSmith.McpHost.md) for GitHub Packages authentication, installation, and client configuration.
 
 ### Development prerequisites
 
@@ -239,9 +241,9 @@ The following figures are the validation baseline recorded in the current source
 
 | Check | Baseline |
 | --- | --- |
-| .NET Release | `800 / 800` tests, `0` warnings, `0` errors |
-| Rust | `27 / 27` tests; `rustfmt` and `clippy -D warnings` passed |
-| Five-language resources | `662` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
+| .NET Release | `807 / 807` tests, `0` warnings, `0` errors |
+| Rust | `28 / 28` tests; `rustfmt` and `clippy -D warnings` passed |
+| Five-language resources | `661` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
 | Source security audit | Regression gates for local paths, archives, CLI, credentials, and migrations passed; GitHub CodeQL results depend on a fresh remote scan of the current commit, and the README does not claim zero alerts |
 
 These results demonstrate the source behavior covered by the current automation. They do not replace external penetration testing, real provider validation, or Minecraft / Loader runtime compatibility testing.

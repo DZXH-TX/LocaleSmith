@@ -74,6 +74,42 @@ public sealed class MojangComponentLiteralClassFileRewriterTests
         Assert.True(staged[1].IsSafe, staged[1].UnsafeReason);
     }
 
+    [Fact]
+    public void CapacityPlanKeepsSafeNarrowLdcSubsetWithoutWideningBytecode()
+    {
+        byte[] original = ClassFileFixtureBuilder.Create(
+            ClassFileFixtureKind.SharedConstantPoolNearLdcLimit,
+            "Capacity-limited text");
+
+        IReadOnlyList<ClassFileLiteralCandidate> candidates =
+            MojangComponentLiteralClassFileRewriter.Analyze(original, "samplemod");
+
+        Assert.Equal(2, candidates.Count);
+        Assert.True(candidates[0].IsSafe, candidates[0].UnsafeReason);
+        Assert.False(candidates[1].IsSafe);
+        Assert.Contains("without widening", candidates[1].UnsafeReason, StringComparison.Ordinal);
+        ClassFileRewriteSelection safeSelection = Select(
+            candidates[0],
+            "samplemod.capacity.first");
+        ClassFileRewriteResult rewritten = MojangComponentLiteralClassFileRewriter.Rewrite(
+            original,
+            [safeSelection]);
+
+        Assert.Single(rewritten.AppliedCandidates);
+        MojangComponentLiteralClassFileRewriter.VerifyApplied(rewritten.Bytes, [safeSelection]);
+        IReadOnlyList<ClassFileLiteralCandidate> staged =
+            MojangComponentLiteralClassFileRewriter.Analyze(rewritten.Bytes, "samplemod");
+        Assert.Equal("samplemod.capacity.first", staged[0].Value);
+        Assert.Equal("Capacity-limited text", staged[1].Value);
+        Assert.Throws<InvalidDataException>(() =>
+            MojangComponentLiteralClassFileRewriter.Rewrite(
+                original,
+                candidates.Select((candidate, index) => Select(
+                    candidate,
+                    $"samplemod.capacity.{index}"))
+                    .ToArray()));
+    }
+
     [Theory]
     [InlineData((int)ClassFileFixtureKind.NonAdjacent)]
     [InlineData((int)ClassFileFixtureKind.WrongMethod)]

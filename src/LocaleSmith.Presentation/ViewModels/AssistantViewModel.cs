@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
+using LocaleSmith.Core.Services;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
 
@@ -15,6 +16,7 @@ public sealed class AssistantChatMessageViewModel : ObservableObject
     private bool _isRunning;
     private ModelTokenUsage? _modelUsage;
     private string? _modelName;
+    private AssistantTaskStatusViewModel? _taskStatus;
 
     public AssistantChatMessageViewModel(
         ModelMessageRole role,
@@ -105,6 +107,20 @@ public sealed class AssistantChatMessageViewModel : ObservableObject
 
     public bool HasUsage => ModelUsage is { ProviderCallCount: > 0 };
 
+    public AssistantTaskStatusViewModel? TaskStatus
+    {
+        get => _taskStatus;
+        private set
+        {
+            if (SetProperty(ref _taskStatus, value))
+            {
+                OnPropertyChanged(nameof(HasTaskStatus));
+            }
+        }
+    }
+
+    public bool HasTaskStatus => TaskStatus is not null;
+
     public string UsageSummary
     {
         get
@@ -165,6 +181,130 @@ public sealed class AssistantChatMessageViewModel : ObservableObject
         ModelName = modelName;
         IsRunning = false;
     }
+
+    public void UpdateTaskStatus(ModProjectTaskSnapshot task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        if (TaskStatus is { } current && current.TaskId == task.TaskId)
+        {
+            bool currentIsTerminal = !current.IsActive;
+            bool incomingIsTerminal = !task.IsActive;
+            bool isOlder = current.Revision > 0 && task.Revision > 0
+                ? task.Revision < current.Revision
+                : task.UpdatedAtUtc < current.UpdatedAtUtc;
+            if ((currentIsTerminal && !incomingIsTerminal) ||
+                (currentIsTerminal == incomingIsTerminal && isOlder))
+            {
+                return;
+            }
+        }
+
+        TaskStatus = new AssistantTaskStatusViewModel(task, _text);
+    }
+}
+
+public sealed class AssistantTaskStatusViewModel
+{
+    public AssistantTaskStatusViewModel(ModProjectTaskSnapshot task, IUiTextProvider text)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(text);
+        TaskId = task.TaskId;
+        Status = task.Status;
+        Stage = task.Stage;
+        Progress = Math.Clamp(task.Progress, 0, 1);
+        UpdatedAtUtc = task.UpdatedAtUtc;
+        Revision = task.Revision;
+        Title = text.GetText("AssistantToolTaskStatus", "Task status");
+        Objective = task.Objective;
+        TaskIdText = $"{Title} · {task.TaskId:D}";
+        ConfigurationSummary = CreateConfigurationSummary(task, text);
+        string status = StatusLabel(task, text);
+        Summary = string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            "{0} · {1:P0}",
+            status,
+            Progress);
+    }
+
+    public Guid TaskId { get; }
+
+    public ModProjectTaskStatus Status { get; }
+
+    public PipelineStage Stage { get; }
+
+    public double Progress { get; }
+
+    public DateTimeOffset UpdatedAtUtc { get; }
+
+    public long Revision { get; }
+
+    public string Title { get; }
+
+    public string Objective { get; }
+
+    public string TaskIdText { get; }
+
+    public string ConfigurationSummary { get; }
+
+    public string Summary { get; }
+
+    public bool IsActive => Status is
+        ModProjectTaskStatus.Registered or
+        ModProjectTaskStatus.Queued or
+        ModProjectTaskStatus.Running or
+        ModProjectTaskStatus.CancellationRequested;
+
+    internal static string CreateConfigurationSummary(
+        ModProjectTaskSnapshot task,
+        IUiTextProvider text)
+    {
+        string sourceName = Path.GetFileName(Path.TrimEndingDirectorySeparator(task.SourcePath));
+        string targetLanguage = TargetLanguageDisplay.GetName(
+            text,
+            TranslationLanguageCatalog.GetRequired(task.TargetLanguage));
+        string style = task.Style switch
+        {
+            TranslationStyle.Formal => text.GetText("QueueStyleFormal", "Formal translation"),
+            TranslationStyle.Informal => text.GetText("QueueStyleInformal", "Tone translation"),
+            _ => task.Style.ToString()
+        };
+        return $"{sourceName} · {targetLanguage} ({task.TargetLanguage}) · {style}";
+    }
+
+    private static string StatusLabel(ModProjectTaskSnapshot task, IUiTextProvider text) => task.Status switch
+    {
+        ModProjectTaskStatus.Registered or ModProjectTaskStatus.Queued =>
+            text.GetText("QueueStatusQueued", "Queued"),
+        ModProjectTaskStatus.Running => StageLabel(task.Stage, text),
+        ModProjectTaskStatus.CancellationRequested => text.GetText(
+            "QueueStatusCancellationRequested",
+            "Cancellation requested. Waiting for a safe rollback point…"),
+        ModProjectTaskStatus.Completed => text.GetText("QueueStatusCompleted", "Completed"),
+        ModProjectTaskStatus.Failed => text.GetText(
+            "QueueStatusFailed",
+            "Failed — review details and retry."),
+        ModProjectTaskStatus.Cancelled => text.GetText("QueueStatusCancelled", "Cancelled."),
+        _ => task.Status.ToString()
+    };
+
+    private static string StageLabel(PipelineStage stage, IUiTextProvider text) => stage switch
+    {
+        PipelineStage.Queued => text.GetText("QueueProgressQueued", "Queued"),
+        PipelineStage.Inspecting => text.GetText("QueueProgressInspecting", "Inspecting package metadata…"),
+        PipelineStage.Extracting => text.GetText("QueueProgressExtracting", "Creating a safe workspace…"),
+        PipelineStage.Analyzing => text.GetText("QueueProgressAnalyzing", "Analyzing translatable content…"),
+        PipelineStage.Translating => text.GetText("QueueProgressTranslating", "Translating changed entries…"),
+        PipelineStage.Writing => text.GetText("QueueProgressWriting", "Writing localized resources…"),
+        PipelineStage.Repacking => text.GetText("QueueProgressRepacking", "Rebuilding package artifacts…"),
+        PipelineStage.Verifying => text.GetText("QueueProgressVerifying", "Verifying package integrity…"),
+        PipelineStage.Committing => text.GetText("QueueProgressCommitting", "Committing verified output…"),
+        PipelineStage.RollingBack => text.GetText("QueueProgressRollingBack", "Rolling back safely…"),
+        PipelineStage.Completed => text.GetText("QueueStatusCompleted", "Completed"),
+        PipelineStage.Failed => text.GetText("QueueStatusFailed", "Failed — review details and retry."),
+        PipelineStage.Cancelled => text.GetText("QueueStatusCancelled", "Cancelled."),
+        _ => text.GetText("QueueProgressWorking", "Working…")
+    };
 }
 
 public sealed class AssistantActivityViewModel
@@ -296,6 +436,9 @@ public sealed class AssistantProjectOptionViewModel
             "No translation task has been created for this project yet.");
         TaskStatus = task?.Status.ToString() ?? text.GetText("AssistantProjectIdle", "Idle");
         Progress = task?.Progress ?? 0;
+        ConfigurationSummary = task is null
+            ? string.Empty
+            : AssistantTaskStatusViewModel.CreateConfigurationSummary(task, text);
         ModelUsageSummary = FormatModelUsage(task, text);
     }
 
@@ -314,6 +457,8 @@ public sealed class AssistantProjectOptionViewModel
     public string TaskStatus { get; } = string.Empty;
 
     public double Progress { get; }
+
+    public string ConfigurationSummary { get; } = string.Empty;
 
     public bool HasProject => Project is not null;
 
@@ -562,6 +707,8 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
 
     public string ActiveProjectObjective => SelectedProject?.Objective ?? string.Empty;
 
+    public string ActiveProjectConfiguration => SelectedProject?.ConfigurationSummary ?? string.Empty;
+
     public double ActiveProjectProgress => SelectedProject?.Progress ?? 0;
 
     public string ActiveProjectUsageSummary => SelectedProject?.ModelUsageSummary ?? string.Empty;
@@ -722,8 +869,34 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
         NotifyCommandStates();
         using var cancellation = new CancellationTokenSource();
         _sendCancellation = cancellation;
+        string? startedTaskIdText = null;
         var progress = new CallbackProgress<ModelRunEvent>(modelEvent =>
-            PostToUi(() => pendingItem.ApplyActivity(modelEvent)));
+        {
+            Guid? startedTaskId = null;
+            if (modelEvent.Kind == ModelRunEventKind.ToolCompleted &&
+                string.Equals(modelEvent.ToolName, "translation_start", StringComparison.Ordinal) &&
+                modelEvent.TaskId is { } taskId)
+            {
+                startedTaskId = taskId;
+                Interlocked.CompareExchange(
+                    ref startedTaskIdText,
+                    taskId.ToString("D"),
+                    comparand: null);
+            }
+
+            PostToUi(() =>
+            {
+                pendingItem.ApplyActivity(modelEvent);
+                if (startedTaskId is { } publicTaskId)
+                {
+                    TryAttachStartedTask(
+                        session,
+                        pendingItem,
+                        project?.ProjectId,
+                        publicTaskId);
+                }
+            });
+        });
         try
         {
             ModelAssistantCompletion completion = await _assistantService
@@ -744,6 +917,11 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
             var assistantMessage = new ModelMessage(ModelMessageRole.Assistant, completion.Content);
             session.Conversation.Add(assistantMessage);
             pendingItem.Complete(completion.Content, completion.ModelUsage, completion.Model);
+            TryAttachCapturedTask(
+                session,
+                pendingItem,
+                project?.ProjectId,
+                Volatile.Read(ref startedTaskIdText));
             RenderActiveSessionIf(sessionKey);
             if (IsActiveSession(sessionKey))
             {
@@ -762,7 +940,16 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
-            RollBackPendingTurn(sessionKey, session, userMessage, userItem, pendingItem, text);
+            PreserveStartedTaskOrRollBack(
+                sessionKey,
+                session,
+                userMessage,
+                userItem,
+                pendingItem,
+                text,
+                project?.ProjectId,
+                Volatile.Read(ref startedTaskIdText),
+                Text("AssistantCancelled", "The assistant request was cancelled."));
             if (IsActiveSession(sessionKey))
             {
                 StatusMessage = Text("AssistantCancelled", "The assistant request was cancelled.");
@@ -770,7 +957,18 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
         }
         catch (ModelServiceException exception)
         {
-            RollBackPendingTurn(sessionKey, session, userMessage, userItem, pendingItem, text);
+            PreserveStartedTaskOrRollBack(
+                sessionKey,
+                session,
+                userMessage,
+                userItem,
+                pendingItem,
+                text,
+                project?.ProjectId,
+                Volatile.Read(ref startedTaskIdText),
+                Text(
+                    "AssistantRequestFailed",
+                    "The assistant request failed. Check the selected model source and try again."));
             if (IsActiveSession(sessionKey))
             {
                 ErrorMessage = Text(
@@ -782,7 +980,18 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            RollBackPendingTurn(sessionKey, session, userMessage, userItem, pendingItem, text);
+            PreserveStartedTaskOrRollBack(
+                sessionKey,
+                session,
+                userMessage,
+                userItem,
+                pendingItem,
+                text,
+                project?.ProjectId,
+                Volatile.Read(ref startedTaskIdText),
+                Text(
+                    "AssistantRequestFailed",
+                    "The assistant request failed. Check the selected model source and try again."));
             if (IsActiveSession(sessionKey))
             {
                 ErrorMessage = Text(
@@ -816,6 +1025,7 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
         {
             session.Conversation.Clear();
             session.Messages.Clear();
+            session.TaskMessages.Clear();
             session.Draft = string.Empty;
         }
 
@@ -955,6 +1165,7 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
         {
             if (!_disposed)
             {
+                UpdateAttachedTaskStatus(args);
                 Guid? preferredProjectId = args.Kind is
                     ModProjectWorkspaceChangeKind.ProjectRegistered or
                     ModProjectWorkspaceChangeKind.ActiveProjectChanged or
@@ -965,12 +1176,99 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
             }
         });
 
+    private bool TryAttachCapturedTask(
+        AssistantConversationSession session,
+        AssistantChatMessageViewModel message,
+        Guid? projectId,
+        string? taskIdText)
+    {
+        return Guid.TryParse(taskIdText, out Guid taskId) &&
+            TryAttachStartedTask(session, message, projectId, taskId);
+    }
+
+    private bool TryAttachStartedTask(
+        AssistantConversationSession session,
+        AssistantChatMessageViewModel message,
+        Guid? projectId,
+        Guid taskId)
+    {
+        if (projectId is not { } expectedProjectId ||
+            !session.Messages.Contains(message) ||
+            (message.TaskStatus is { } existingTask && existingTask.TaskId != taskId) ||
+            _projectWorkspace?.TryGetTask(taskId, out ModProjectTaskSnapshot? task) != true ||
+            task is null ||
+            task.ProjectId != expectedProjectId)
+        {
+            return false;
+        }
+
+        session.TaskMessages[task.TaskId] = message;
+        message.UpdateTaskStatus(task);
+        return true;
+    }
+
+    private void PreserveStartedTaskOrRollBack(
+        AssistantSessionKey sessionKey,
+        AssistantConversationSession session,
+        ModelMessage userMessage,
+        AssistantChatMessageViewModel userItem,
+        AssistantChatMessageViewModel pendingItem,
+        string originalTextForDraft,
+        Guid? projectId,
+        string? taskIdText,
+        string interruptedResponse)
+    {
+        bool taskAttached = TryAttachCapturedTask(
+                session,
+                pendingItem,
+                projectId,
+                taskIdText) ||
+            pendingItem.HasTaskStatus;
+        if (!taskAttached)
+        {
+            RollBackPendingTurn(
+                sessionKey,
+                session,
+                userMessage,
+                userItem,
+                pendingItem,
+                originalTextForDraft);
+            return;
+        }
+
+        if (session.Conversation.Count > 0 && ReferenceEquals(session.Conversation[^1], userMessage))
+        {
+            session.Conversation.RemoveAt(session.Conversation.Count - 1);
+        }
+
+        pendingItem.Complete(interruptedResponse, usage: null, modelName: null);
+        RenderActiveSessionIf(sessionKey);
+    }
+
+    private void UpdateAttachedTaskStatus(ModProjectWorkspaceChangedEventArgs args)
+    {
+        if (args.Task is not { } task)
+        {
+            return;
+        }
+
+        foreach ((AssistantSessionKey key, AssistantConversationSession session) in _sessions)
+        {
+            if (key.ProjectId == args.Project.ProjectId &&
+                session.TaskMessages.TryGetValue(task.TaskId, out AssistantChatMessageViewModel? message))
+            {
+                message.UpdateTaskStatus(task);
+            }
+        }
+    }
+
     private void NotifyProjectProperties()
     {
         OnPropertyChanged(nameof(HasSelectedProject));
         OnPropertyChanged(nameof(ActiveProjectTitle));
         OnPropertyChanged(nameof(ActiveProjectSummary));
         OnPropertyChanged(nameof(ActiveProjectObjective));
+        OnPropertyChanged(nameof(ActiveProjectConfiguration));
         OnPropertyChanged(nameof(ActiveProjectProgress));
         OnPropertyChanged(nameof(ActiveProjectUsageSummary));
         OnPropertyChanged(nameof(HasActiveProjectUsage));
@@ -995,6 +1293,8 @@ public sealed class AssistantViewModel : ViewModelBase, IDisposable
         public List<ModelMessage> Conversation { get; } = [];
 
         public List<AssistantChatMessageViewModel> Messages { get; } = [];
+
+        public Dictionary<Guid, AssistantChatMessageViewModel> TaskMessages { get; } = [];
 
         public string Draft { get; set; } = string.Empty;
 

@@ -116,6 +116,52 @@ public sealed class ModelAdapterTests
     }
 
     [Theory]
+    [InlineData("https://api.deepseek.com", "https://api.deepseek.com/models")]
+    [InlineData("https://api.deepseek.com/v1", "https://api.deepseek.com/v1/models")]
+    [InlineData("https://models.example/v1/chat/completions", "https://models.example/v1/models")]
+    public async Task OpenAiCompatibleListsProviderModelsWithoutOverwritingManualChoice(
+        string configuredEndpoint,
+        string expectedCatalogEndpoint)
+    {
+        const string apiKey = "catalog-secret";
+        using var handler = new StubHttpMessageHandler((request, _) =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Null(request.Content);
+            Assert.Equal(expectedCatalogEndpoint, request.RequestUri?.AbsoluteUri);
+            Assert.Equal($"Bearer {apiKey}", request.Headers.Authorization?.ToString());
+            return Task.FromResult(JsonResponse(
+                """
+                {"object":"list","data":[
+                  {"id":"deepseek-chat","object":"model"},
+                  {"id":"deepseek-reasoner","object":"model"},
+                  {"id":"deepseek-chat","object":"model"},
+                  {"id":"\u0001invalid","object":"model"}
+                ]}
+                """));
+        });
+        using var client = new HttpClient(handler);
+        using var secrets = new InMemorySecretStore();
+        await secrets.SetAsync("providers/catalog", apiKey.AsMemory(), TestContext.Current.CancellationToken);
+        var service = new OpenAiCompatibleModelService(
+            client,
+            new ModelSource(
+                "catalog",
+                "Catalog",
+                ModelProviderKind.OpenAiCompatible,
+                new Uri(configuredEndpoint),
+                "manual-model",
+                "providers/catalog"),
+            secrets);
+
+        IReadOnlyList<AvailableModelInfo> models = await service.ListModelsAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(["deepseek-chat", "deepseek-reasoner"], models.Select(static model => model.Name));
+        Assert.Equal("manual-model", service.Source.ModelName);
+    }
+
+    [Theory]
     [InlineData("https://api.deepseek.com", "https://api.deepseek.com/chat/completions")]
     [InlineData("https://api.deepseek.com/", "https://api.deepseek.com/chat/completions")]
     [InlineData("https://api.deepseek.com/v1", "https://api.deepseek.com/v1/chat/completions")]
@@ -416,6 +462,141 @@ public sealed class ModelAdapterTests
         Assert.Contains("\"name\":\"system_context\"", requestJson, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(ModelProviderPresets.DeepSeekId, true)]
+    [InlineData(ModelProviderPresets.XiaomiMimoId, true)]
+    [InlineData(ModelProviderPresets.ZhipuGlmId, false)]
+    [InlineData(ModelProviderPresets.KimiId, false)]
+    public async Task ReasoningContentProvidersReplayPrivateStateAcrossToolTurns(
+        string presetId,
+        bool requiresNonNullContent)
+    {
+        var requestBodies = new List<string>();
+        var responseIndex = 0;
+        using var handler = new StubHttpMessageHandler(async (request, cancellationToken) =>
+        {
+            requestBodies.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
+            responseIndex++;
+            return responseIndex == 1
+                ? JsonResponse(
+                    """{"choices":[{"message":{"content":null,"reasoning_content":"private trace","tool_calls":[{"id":"call_1","type":"function","function":{"name":"system_context","arguments":"{}"}}]}}]}""")
+                : JsonResponse("""{"choices":[{"message":{"content":"final"}}]}""");
+        });
+        using var client = new HttpClient(handler);
+        using var secrets = new InMemorySecretStore();
+        await secrets.SetAsync("providers/reasoning", "secret".AsMemory(), TestContext.Current.CancellationToken);
+        var preset = ModelProviderPresets.ResolveOrCustom(presetId);
+        var service = new OpenAiCompatibleModelService(
+            client,
+            new ModelSource(
+                presetId,
+                preset.DisplayName,
+                ModelProviderKind.OpenAiCompatible,
+                preset.DefaultEndpoint!,
+                preset.DefaultModelName!,
+                "providers/reasoning",
+                presetId),
+            secrets);
+        var firstRequest = CreateToolRequest();
+
+        ModelResponse first = await service.CompleteAsync(
+            firstRequest,
+            TestContext.Current.CancellationToken);
+        ModelToolCall toolCall = Assert.Single(first.ToolCalls);
+        var replayedAssistant = new ModelMessage(
+            ModelMessageRole.Assistant,
+            first.Content,
+            first.ToolCalls,
+            reasoningContent: first.ReasoningContent);
+        var toolResult = new ModelMessage(
+            ModelMessageRole.Tool,
+            "safe context",
+            toolCallId: toolCall.Id,
+            toolName: toolCall.Name);
+        ModelResponse final = await service.CompleteAsync(
+            new ModelRequest(
+                [firstRequest.Messages[0], replayedAssistant, toolResult],
+                maxTokens: firstRequest.MaxTokens,
+                tools: firstRequest.Tools),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("private trace", first.ReasoningContent);
+        Assert.Equal("final", final.Content);
+        Assert.Equal(2, requestBodies.Count);
+        Assert.Contains("\"reasoning_content\":\"private trace\"", requestBodies[1], StringComparison.Ordinal);
+        Assert.Contains(
+            requiresNonNullContent ? "\"content\":\"\"" : "\"content\":null",
+            requestBodies[1],
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MiniMaxReasoningSplitKeepsThinkingPrivateAndReplaysStructuredDetails()
+    {
+        var requestBodies = new List<string>();
+        var responseIndex = 0;
+        using var handler = new StubHttpMessageHandler(async (request, cancellationToken) =>
+        {
+            requestBodies.Add(await request.Content!.ReadAsStringAsync(cancellationToken));
+            responseIndex++;
+            return responseIndex == 1
+                ? JsonResponse(
+                    """{"choices":[{"message":{"content":null,"reasoning_details":[{"type":"reasoning.text","text":"private trace"}],"tool_calls":[{"id":"call_1","type":"function","function":{"name":"system_context","arguments":"{}"}}]}}]}""")
+                : JsonResponse("""{"choices":[{"message":{"content":"final"}}]}""");
+        });
+        using var client = new HttpClient(handler);
+        using var secrets = new InMemorySecretStore();
+        await secrets.SetAsync("providers/minimax", "secret".AsMemory(), TestContext.Current.CancellationToken);
+        var service = new OpenAiCompatibleModelService(
+            client,
+            new ModelSource(
+                "minimax",
+                "MiniMax",
+                ModelProviderKind.OpenAiCompatible,
+                ModelProviderPresets.MiniMax.DefaultEndpoint!,
+                ModelProviderPresets.MiniMax.DefaultModelName!,
+                "providers/minimax",
+                ModelProviderPresets.MiniMaxId),
+            secrets);
+        var firstRequest = CreateToolRequest();
+
+        ModelResponse first = await service.CompleteAsync(
+            firstRequest,
+            TestContext.Current.CancellationToken);
+        ModelToolCall toolCall = Assert.Single(first.ToolCalls);
+        ModelResponse final = await service.CompleteAsync(
+            new ModelRequest(
+                [
+                    firstRequest.Messages[0],
+                    new ModelMessage(
+                        ModelMessageRole.Assistant,
+                        first.Content,
+                        first.ToolCalls,
+                        reasoningContent: first.ReasoningContent),
+                    new ModelMessage(
+                        ModelMessageRole.Tool,
+                        "safe context",
+                        toolCallId: toolCall.Id,
+                        toolName: toolCall.Name)
+                ],
+                maxTokens: firstRequest.MaxTokens,
+                tools: firstRequest.Tools),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(string.Empty, first.Content);
+        Assert.Equal(
+            """[{"type":"reasoning.text","text":"private trace"}]""",
+            first.ReasoningContent);
+        Assert.Equal("final", final.Content);
+        Assert.All(requestBodies, static body =>
+            Assert.Contains("\"reasoning_split\":true", body, StringComparison.Ordinal));
+        Assert.Contains(
+            "\"reasoning_details\":[{\"type\":\"reasoning.text\",\"text\":\"private trace\"}]",
+            requestBodies[1],
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("private trace", first.Content, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task OpenAiCompatibleOmitsPrivateReasoningForOtherProvidersOrMissingState()
     {
@@ -433,16 +614,16 @@ public sealed class ModelAdapterTests
         using var client = new HttpClient(handler);
         using var secrets = new InMemorySecretStore();
         await secrets.SetAsync("providers/reasoning", "secret".AsMemory(), TestContext.Current.CancellationToken);
-        var deepSeek = new OpenAiCompatibleModelService(
+        var custom = new OpenAiCompatibleModelService(
             client,
             new ModelSource(
-                "deepseek",
-                "DeepSeek",
+                "custom",
+                "Custom",
                 ModelProviderKind.OpenAiCompatible,
-                new Uri("https://api.deepseek.com"),
+                new Uri("https://models.example.test/v1"),
                 "editable-model",
                 "providers/reasoning",
-                ModelProviderPresets.DeepSeekId),
+                ModelProviderPresets.CustomId),
             secrets);
         var kimi = new OpenAiCompatibleModelService(
             client,
@@ -460,14 +641,14 @@ public sealed class ModelAdapterTests
             "prior visible answer",
             reasoningContent: "must not cross provider boundary");
 
-        ModelResponse deepSeekResponse = await deepSeek.CompleteAsync(
+        ModelResponse customResponse = await custom.CompleteAsync(
             new ModelRequest([messageWithPrivateState]),
             TestContext.Current.CancellationToken);
         ModelResponse kimiResponse = await kimi.CompleteAsync(
             new ModelRequest([new ModelMessage(ModelMessageRole.User, "no prior reasoning")]),
             TestContext.Current.CancellationToken);
 
-        Assert.Null(deepSeekResponse.ReasoningContent);
+        Assert.Null(customResponse.ReasoningContent);
         Assert.Null(kimiResponse.ReasoningContent);
         Assert.Equal(2, requestBodies.Count);
         Assert.All(requestBodies, static body =>

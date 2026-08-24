@@ -102,7 +102,9 @@ public sealed class TranslationPipeline
                             request.TargetLanguage,
                             request.Styles,
                             request.ModelSourceId,
-                            inspection.ContentKind),
+                            inspection.ContentKind,
+                            request.MaxOutputTokens,
+                            request.MaxSourceCharactersPerRequest),
                         new DirectModelUsageProgress(usage =>
                         {
                             modelUsage = usage;

@@ -61,7 +61,9 @@ public sealed record PipelineRequest
         SignedArchiveHandling signedArchiveHandling = SignedArchiveHandling.Block,
         HardcodedStringMode hardcodedStringMode = HardcodedStringMode.ScanOnly,
         string? modelSourceId = null,
-        Guid? requestedJobId = null)
+        Guid? requestedJobId = null,
+        int maxOutputTokens = ModelSource.DefaultMaxOutputTokens,
+        int maxSourceCharactersPerRequest = ModelSource.DefaultMaxSourceCharactersPerRequest)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
@@ -86,6 +88,20 @@ public sealed record PipelineRequest
         SignedArchiveHandling = signedArchiveHandling;
         HardcodedStringMode = hardcodedStringMode;
         ModelSourceId = string.IsNullOrWhiteSpace(modelSourceId) ? null : modelSourceId.Trim();
+        if (maxOutputTokens is < ModelSource.MinimumMaxOutputTokens or > ModelSource.MaximumMaxOutputTokens)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxOutputTokens));
+        }
+
+        if (maxSourceCharactersPerRequest is
+            < ModelSource.MinimumMaxSourceCharactersPerRequest or
+            > ModelSource.MaximumMaxSourceCharactersPerRequest)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxSourceCharactersPerRequest));
+        }
+
+        MaxOutputTokens = maxOutputTokens;
+        MaxSourceCharactersPerRequest = maxSourceCharactersPerRequest;
         if (requestedJobId == Guid.Empty)
         {
             throw new ArgumentException("A requested pipeline job identifier cannot be empty.", nameof(requestedJobId));
@@ -108,6 +124,10 @@ public sealed record PipelineRequest
 
     public string? ModelSourceId { get; }
 
+    public int MaxOutputTokens { get; }
+
+    public int MaxSourceCharactersPerRequest { get; }
+
     /// <summary>
     /// Optional caller-owned identity used when diagnostics must be established before a job is
     /// accepted by the scheduler. Direct pipeline callers can leave this unset.
@@ -123,7 +143,10 @@ public sealed record ArchiveInspection(
     ArchiveSignatureState SignatureState,
     bool CanResign,
     IReadOnlyList<string> Warnings,
-    MinecraftContentKind ContentKind = MinecraftContentKind.Unknown)
+    MinecraftContentKind ContentKind = MinecraftContentKind.Unknown,
+    ulong EntryCount = 0,
+    int ResourceCount = 0,
+    string SignatureStatus = "none")
 {
     public bool IsSigned => SignatureState != ArchiveSignatureState.None;
 }

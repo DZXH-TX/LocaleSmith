@@ -17,11 +17,18 @@ public sealed class MigratingSecretStore : ISecretStore
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.Ordinal);
     private readonly ISecretStore _currentStore;
     private readonly ISecretStore _legacyStore;
+    private readonly string? _securityLockRoot;
 
-    public MigratingSecretStore(ISecretStore currentStore, ISecretStore legacyStore)
+    public MigratingSecretStore(
+        ISecretStore currentStore,
+        ISecretStore legacyStore,
+        string? securityLockRoot = null)
     {
         _currentStore = currentStore ?? throw new ArgumentNullException(nameof(currentStore));
         _legacyStore = legacyStore ?? throw new ArgumentNullException(nameof(legacyStore));
+        _securityLockRoot = string.IsNullOrWhiteSpace(securityLockRoot)
+            ? null
+            : Path.GetFullPath(securityLockRoot);
     }
 
     public async ValueTask<SecretValue?> ResolveAsync(
@@ -37,7 +44,8 @@ public sealed class MigratingSecretStore : ISecretStore
             using var processGate = await SecurityOperationLock.AcquireAsync(
                 "migrating-secret",
                 reference,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                _securityLockRoot).ConfigureAwait(false);
             using var tombstone = await _currentStore
                 .ResolveAsync(GetTombstoneReference(reference), cancellationToken)
                 .ConfigureAwait(false);
@@ -103,7 +111,8 @@ public sealed class MigratingSecretStore : ISecretStore
             using var processGate = await SecurityOperationLock.AcquireAsync(
                 "migrating-secret",
                 reference,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                _securityLockRoot).ConfigureAwait(false);
             await _currentStore.SetAsync(reference, secret, cancellationToken).ConfigureAwait(false);
             await _currentStore
                 .DeleteAsync(GetTombstoneReference(reference), cancellationToken)
@@ -128,7 +137,8 @@ public sealed class MigratingSecretStore : ISecretStore
             using var processGate = await SecurityOperationLock.AcquireAsync(
                 "migrating-secret",
                 reference,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                _securityLockRoot).ConfigureAwait(false);
             await _currentStore
                 .SetAsync(GetTombstoneReference(reference), TombstoneValue.AsMemory(), cancellationToken)
                 .ConfigureAwait(false);

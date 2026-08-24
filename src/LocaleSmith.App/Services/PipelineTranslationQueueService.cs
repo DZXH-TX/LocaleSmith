@@ -43,7 +43,9 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             signedArchiveHandling: SignedArchiveHandling.CreateUnsignedCopy,
             hardcodedStringMode: HardcodedStringMode.ExternalizeRecognizedSafePatterns,
             modelSourceId: request.ModelSourceId,
-            requestedJobId: jobId);
+            requestedJobId: jobId,
+            maxOutputTokens: request.MaxOutputTokens,
+            maxSourceCharactersPerRequest: request.MaxSourceCharactersPerRequest);
 
         TryBeginTranslationLog(
             jobId,

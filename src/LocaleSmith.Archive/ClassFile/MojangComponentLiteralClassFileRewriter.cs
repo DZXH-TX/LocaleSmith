@@ -17,6 +17,7 @@ public static class MojangComponentLiteralClassFileRewriter
     private const string ComponentDescriptor =
         "(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;";
     private const int ConstantsPerRewrite = 8;
+    private const int TranslationKeyStringConstantOffset = 1;
     private const int MaxLiteralCharacters = 16_384;
     private const int MaxTranslationKeyLength = 240;
 
@@ -71,6 +72,7 @@ public static class MojangComponentLiteralClassFileRewriter
             }
         }
 
+        ApplyConstantPoolCapacityPlan(candidates, parsed.ConstantPool.Count);
         return candidates.AsReadOnly();
     }
 
@@ -98,7 +100,8 @@ public static class MojangComponentLiteralClassFileRewriter
             (ParsedMethod method, JavaInstruction load, JavaInstruction invocation) =
                 ResolveSafeSelection(parsed, selection);
 
-            int prospectiveStringIndex = checked(parsed.ConstantPool.Count + 1);
+            int prospectiveStringIndex = checked(
+                parsed.ConstantPool.Count + TranslationKeyStringConstantOffset);
             if (load.Opcode == 0x12 && prospectiveStringIndex > byte.MaxValue)
             {
                 throw new InvalidDataException(
@@ -254,12 +257,53 @@ public static class MojangComponentLiteralClassFileRewriter
             return "Constant pool has insufficient room for an independent rewrite chain.";
         }
 
-        if (load.Opcode == 0x12 && parsed.ConstantPool.Count + 1 > byte.MaxValue)
+        if (load.Opcode == 0x12 &&
+            parsed.ConstantPool.Count + TranslationKeyStringConstantOffset > byte.MaxValue)
         {
             return "ldc cannot address an appended constant without widening the instruction.";
         }
 
         return null;
+    }
+
+    private static void ApplyConstantPoolCapacityPlan(
+        List<ClassFileLiteralCandidate> candidates,
+        int initialPoolCount)
+    {
+        int plannedPoolCount = initialPoolCount;
+        foreach (int index in candidates
+                     .Select(static (candidate, index) => (Candidate: candidate, Index: index))
+                     .Where(static item => item.Candidate.IsSafe)
+                     .OrderBy(static item => item.Candidate.ClassName, StringComparer.Ordinal)
+                     .ThenBy(static item => item.Candidate.MethodName, StringComparer.Ordinal)
+                     .ThenBy(static item => item.Candidate.MethodDescriptor, StringComparer.Ordinal)
+                     .ThenBy(static item => item.Candidate.BytecodeOffset)
+                     .Select(static item => item.Index))
+        {
+            ClassFileLiteralCandidate candidate = candidates[index];
+            string? capacityReason = null;
+            if ((long)plannedPoolCount + ConstantsPerRewrite > ushort.MaxValue)
+            {
+                capacityReason = "Constant pool has insufficient room for an independent rewrite chain.";
+            }
+            else if (string.Equals(candidate.Opcode, "ldc", StringComparison.Ordinal) &&
+                     plannedPoolCount + TranslationKeyStringConstantOffset > byte.MaxValue)
+            {
+                capacityReason = "ldc cannot address an appended constant without widening the instruction.";
+            }
+
+            if (capacityReason is not null)
+            {
+                candidates[index] = candidate with
+                {
+                    IsSafe = false,
+                    UnsafeReason = capacityReason
+                };
+                continue;
+            }
+
+            plannedPoolCount = checked(plannedPoolCount + ConstantsPerRewrite);
+        }
     }
 
     private static (ParsedMethod Method, JavaInstruction Load, JavaInstruction Invocation)

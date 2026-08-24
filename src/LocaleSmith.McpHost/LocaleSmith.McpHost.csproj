@@ -6,8 +6,12 @@
     <AssemblyName>LocaleSmith.McpHost</AssemblyName>
     <AssemblyTitle>LocaleSmith MCP Host</AssemblyTitle>
     <Product>LocaleSmith</Product>
-    <Description>Windows x64 stdio MCP host for LocaleSmith safety-gated system context and CLI proposals.</Description>
-    <Version>0.1.0</Version>
+    <Description>Standalone Windows x64 stdio MCP host exposing only bounded system.context and non-executing cli.propose; no project/file tools or command execution.</Description>
+    <!-- Independent MCP package SemVer. Publish workflow inputs/tags must match this value. -->
+    <Version>0.1.1</Version>
+    <!-- Keep AssemblyVersion stable across compatible 0.1.x releases; FileVersion tracks the package release. -->
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.1.0</FileVersion>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -25,7 +29,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageTags>localesmith;minecraft;localization;mcp;model-context-protocol;dotnet-tool;windows</PackageTags>
-    <PackageReleaseNotes>https://github.com/DZXH-TX/LocaleSmith/tags</PackageReleaseNotes>
+    <PackageReleaseNotes>0.1.1 synchronizes the standalone host with LocaleSmith 1.2.0 protocol validation and shared safety hardening. The standalone tool catalog remains limited to system.context and cli.propose. See https://github.com/DZXH-TX/LocaleSmith/tags.</PackageReleaseNotes>
     <Copyright>Copyright © 2026 DZXH-TX（道泽星河-天仙）</Copyright>
   </PropertyGroup>
 

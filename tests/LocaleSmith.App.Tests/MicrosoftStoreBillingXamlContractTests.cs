@@ -104,10 +104,11 @@ public sealed class MicrosoftStoreBillingXamlContractTests
 
         Assert.Contains("7 天免费试用", combined, StringComparison.Ordinal);
         Assert.Contains("自动续费", combined, StringComparison.Ordinal);
-        Assert.Contains("US$4.99", combined, StringComparison.Ordinal);
-        Assert.Contains("CNY 30.00", combined, StringComparison.Ordinal);
         Assert.Contains("Microsoft", combined, StringComparison.Ordinal);
         Assert.Contains("取消", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("US$4.99", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("USD 4.99", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CNY 30", combined, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("首月", combined, StringComparison.Ordinal);
         Assert.DoesNotContain("CNY 24", combined, StringComparison.OrdinalIgnoreCase);
     }

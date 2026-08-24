@@ -5,6 +5,7 @@ namespace LocaleSmith.Application.Models;
 /// <summary>
 /// A public, content-free lifecycle event for a model run. These events intentionally exclude
 /// model reasoning, message content, tool arguments/results, paths, commands, context, and exception text.
+/// A task-start event may include only LocaleSmith's opaque application-owned task identifier.
 /// </summary>
 public enum ModelRunEventKind
 {
@@ -23,4 +24,5 @@ public sealed record ModelRunEvent(
     ModelRunEventKind Kind,
     int Round,
     string? ToolName = null,
-    ModelTokenUsage? Usage = null);
+    ModelTokenUsage? Usage = null,
+    Guid? TaskId = null);

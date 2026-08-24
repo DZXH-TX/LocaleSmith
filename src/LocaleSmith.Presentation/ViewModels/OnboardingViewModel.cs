@@ -22,8 +22,8 @@ public sealed class OnboardingViewModel : ViewModelBase
     private string _workspacePath = Path.Combine(
         System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments),
         "LocaleSmith");
-    private string _sandboxPath = AppConfiguration.GetDefaultSandboxPath();
-    private string _logDirectoryPath = AppConfiguration.GetDefaultLogDirectoryPath();
+    private string _sandboxPath;
+    private string _logDirectoryPath;
     private bool _configureOllama = true;
     private string _ollamaEndpoint = "http://127.0.0.1:11434";
     private string _ollamaModelName = "llama3";
@@ -40,11 +40,19 @@ public sealed class OnboardingViewModel : ViewModelBase
     public OnboardingViewModel(
         IOnboardingService onboardingService,
         IUiTextProvider? text = null,
-        IAppDisplayLanguageService? displayLanguageService = null)
+        IAppDisplayLanguageService? displayLanguageService = null,
+        string? defaultSandboxPath = null,
+        string? defaultLogDirectoryPath = null)
     {
         _onboardingService = onboardingService ?? throw new ArgumentNullException(nameof(onboardingService));
         _displayLanguageService = displayLanguageService;
         _text = text ?? FallbackUiTextProvider.Instance;
+        _sandboxPath = string.IsNullOrWhiteSpace(defaultSandboxPath)
+            ? AppConfiguration.GetDefaultSandboxPath()
+            : Path.GetFullPath(defaultSandboxPath);
+        _logDirectoryPath = string.IsNullOrWhiteSpace(defaultLogDirectoryPath)
+            ? AppConfiguration.GetDefaultLogDirectoryPath()
+            : AppConfiguration.NormalizeLogDirectoryPath(defaultLogDirectoryPath);
         _appliedLanguage = AppDisplayLanguages.ResolveOrDefault(CultureInfo.CurrentUICulture.Name);
         _selectedLanguage = _appliedLanguage;
         NetworkTokenLimitParameterOptions =

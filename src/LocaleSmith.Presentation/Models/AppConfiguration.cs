@@ -91,6 +91,12 @@ public sealed record ModelSourceProfile
     /// </summary>
     public OpenAiTokenLimitParameter? TokenLimitParameter { get; init; }
 
+    /// <summary>Optional per-request response budget; missing legacy values use the workflow default.</summary>
+    public int? MaxOutputTokens { get; init; }
+
+    /// <summary>Optional translation batching target; missing legacy values use the engine default.</summary>
+    public int? MaxSourceCharactersPerRequest { get; init; }
+
     public string Endpoint { get; init; } = string.Empty;
 
     public string ModelName { get; init; } = string.Empty;
@@ -218,7 +224,9 @@ public sealed record ModelSourceDraft(
     string ModelName,
     string? CredentialReference,
     string PresetId = ModelProviderPresets.CustomId,
-    OpenAiTokenLimitParameter? TokenLimitParameter = null);
+    OpenAiTokenLimitParameter? TokenLimitParameter = null,
+    int MaxOutputTokens = ModelSource.DefaultMaxOutputTokens,
+    int MaxSourceCharactersPerRequest = ModelSource.DefaultMaxSourceCharactersPerRequest);
 
 public sealed record ModelConnectionResult(bool IsSuccessful, string Message)
 {

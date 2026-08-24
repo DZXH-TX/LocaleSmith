@@ -5,6 +5,44 @@ namespace LocaleSmith.Core.Tests;
 public sealed class ModelProviderPresetTests
 {
     [Fact]
+    public void ModelSourceValidatesOptionalRequestBudgets()
+    {
+        var minimum = new ModelSource(
+            "minimum",
+            "Minimum",
+            ModelProviderKind.Ollama,
+            new Uri("http://127.0.0.1:11434"),
+            "model",
+            maxOutputTokens: ModelSource.MinimumMaxOutputTokens,
+            maxSourceCharactersPerRequest: ModelSource.MinimumMaxSourceCharactersPerRequest);
+        var maximum = new ModelSource(
+            "maximum",
+            "Maximum",
+            ModelProviderKind.Ollama,
+            new Uri("http://127.0.0.1:11434"),
+            "model",
+            maxOutputTokens: ModelSource.MaximumMaxOutputTokens,
+            maxSourceCharactersPerRequest: ModelSource.MaximumMaxSourceCharactersPerRequest);
+
+        Assert.Equal(ModelSource.MinimumMaxOutputTokens, minimum.MaxOutputTokens);
+        Assert.Equal(ModelSource.MaximumMaxSourceCharactersPerRequest, maximum.MaxSourceCharactersPerRequest);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ModelSource(
+            "too-small",
+            "Too small",
+            ModelProviderKind.Ollama,
+            new Uri("http://127.0.0.1:11434"),
+            "model",
+            maxOutputTokens: ModelSource.MinimumMaxOutputTokens - 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ModelSource(
+            "too-large",
+            "Too large",
+            ModelProviderKind.Ollama,
+            new Uri("http://127.0.0.1:11434"),
+            "model",
+            maxSourceCharactersPerRequest: ModelSource.MaximumMaxSourceCharactersPerRequest + 1));
+    }
+
+    [Fact]
     public void OmitTokenOptionIsAppendedWithoutChangingPersistedEnumValues()
     {
         Assert.Equal(0, (int)OpenAiTokenLimitParameter.MaxTokens);
@@ -48,10 +86,36 @@ public sealed class ModelProviderPresetTests
         Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, ModelProviderPresets.MiniMax.DefaultTokenLimitParameter);
         Assert.False(ModelProviderPresets.XiaomiMimo.SupportsCustomTemperature);
         Assert.False(ModelProviderPresets.Kimi.SupportsCustomTemperature);
-        Assert.True(ModelProviderPresets.Kimi.RequiresReasoningContentReplay);
         Assert.All(
-            ModelProviderPresets.All.Where(static preset => preset.Id is not ModelProviderPresets.KimiId),
+            new[]
+            {
+                ModelProviderPresets.DeepSeek,
+                ModelProviderPresets.XiaomiMimo,
+                ModelProviderPresets.MiniMax,
+                ModelProviderPresets.ZhipuGlm,
+                ModelProviderPresets.Kimi
+            },
+            static preset => Assert.True(preset.RequiresReasoningContentReplay));
+        Assert.All(
+            ModelProviderPresets.All.Where(static preset => preset.Id is
+                not ModelProviderPresets.DeepSeekId and
+                not ModelProviderPresets.XiaomiMimoId and
+                not ModelProviderPresets.MiniMaxId and
+                not ModelProviderPresets.ZhipuGlmId and
+                not ModelProviderPresets.KimiId),
             static preset => Assert.False(preset.RequiresReasoningContentReplay));
+        Assert.True(ModelProviderPresets.MiniMax.UsesReasoningDetailsReplay);
+        Assert.All(
+            ModelProviderPresets.All.Where(static preset => preset.Id is not ModelProviderPresets.MiniMaxId),
+            static preset => Assert.False(preset.UsesReasoningDetailsReplay));
+        Assert.All(
+            new[] { ModelProviderPresets.DeepSeek, ModelProviderPresets.XiaomiMimo },
+            static preset => Assert.True(preset.RequiresNonNullToolCallContent));
+        Assert.All(
+            ModelProviderPresets.All.Where(static preset => preset.Id is
+                not ModelProviderPresets.DeepSeekId and
+                not ModelProviderPresets.XiaomiMimoId),
+            static preset => Assert.False(preset.RequiresNonNullToolCallContent));
         Assert.All(
             ModelProviderPresets.All.Where(static preset =>
                 preset.Id is not ModelProviderPresets.XiaomiMimoId and not ModelProviderPresets.KimiId),

@@ -48,6 +48,12 @@ public interface IModelSourceCatalog
     Task<IReadOnlyList<AvailableModelInfo>> ListAvailableModelsAsync(
         ModelSourceDraft source,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<AvailableModelInfo>> ListAvailableModelsAsync(
+        ModelSourceDraft source,
+        ReadOnlyMemory<char> apiKey,
+        CancellationToken cancellationToken = default) =>
+        ListAvailableModelsAsync(source, cancellationToken);
 }
 
 public interface IModelSelectionService

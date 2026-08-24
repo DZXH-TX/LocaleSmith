@@ -15,6 +15,12 @@ internal static class LegacyDefaultPathNormalizer
         string? currentAppDataRoot = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
+        if (configuration.SchemaVersion < 1 ||
+            configuration.SchemaVersion > AppConfiguration.CurrentSchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"Unsupported settings schema {configuration.SchemaVersion}.");
+        }
 
         var documentsRoot = System.Environment.GetFolderPath(
             System.Environment.SpecialFolder.MyDocuments);
@@ -33,14 +39,22 @@ internal static class LegacyDefaultPathNormalizer
         var currentLogDirectory = currentAppDataRoot is null
             ? AppConfiguration.GetDefaultLogDirectoryPath()
             : Path.Combine(Path.GetFullPath(currentAppDataRoot), "logs", "translations");
+        var relocateCurrentSandboxDefault = currentAppDataRoot is not null
+            && !PathsEqual(AppConfiguration.GetDefaultSandboxPath(), currentSandbox)
+            && PathsEqual(configuration.SandboxPath, AppConfiguration.GetDefaultSandboxPath());
+        var relocateCurrentLogDefault = currentAppDataRoot is not null
+            && !PathsEqual(AppConfiguration.GetDefaultLogDirectoryPath(), currentLogDirectory)
+            && PathsEqual(configuration.LogDirectoryPath, AppConfiguration.GetDefaultLogDirectoryPath());
 
         var migrateWorkspace = legacyWorkspace is not null
             && PathsEqual(configuration.WorkspacePath, legacyWorkspace);
         var migrateSandbox = PathsEqual(configuration.SandboxPath, legacySandbox)
-            || PathsEqual(configuration.SandboxPath, previousCurrentSandbox);
+            || PathsEqual(configuration.SandboxPath, previousCurrentSandbox)
+            || relocateCurrentSandboxDefault;
         var upgradeSchema = configuration.SchemaVersion < AppConfiguration.CurrentSchemaVersion;
         var initializeLogDirectory = configuration.SchemaVersion < LogDirectorySchemaVersion
-            || string.IsNullOrWhiteSpace(configuration.LogDirectoryPath);
+            || string.IsNullOrWhiteSpace(configuration.LogDirectoryPath)
+            || relocateCurrentLogDefault;
         var normalizedModelSources = configuration.ModelSources
             .Select(NormalizeModelSourcePreset)
             .ToArray();

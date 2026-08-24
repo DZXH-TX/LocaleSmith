@@ -42,6 +42,12 @@
                                 <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="{Binding Loader}" />
                                 <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="{Binding ModId}" />
                             </StackPanel>
+                            <TextBlock
+                                FontFamily="Consolas"
+                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                Text="{Binding ProjectTaskReference}"
+                                TextTrimming="CharacterEllipsis"
+                                Visibility="{Binding HasProjectTaskId, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </StackPanel>
                         <Button
                             x:Uid="CancelQueueItemButton"

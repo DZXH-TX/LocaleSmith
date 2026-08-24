@@ -10,10 +10,16 @@ public sealed class CredentialManagerMasterKeyStore : IMasterKeyStore
     private const int MasterKeyLength = 32;
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.Ordinal);
     private readonly ISecretStore _credentialStore;
+    private readonly string? _securityLockRoot;
 
-    public CredentialManagerMasterKeyStore(ISecretStore credentialStore)
+    public CredentialManagerMasterKeyStore(
+        ISecretStore credentialStore,
+        string? securityLockRoot = null)
     {
         _credentialStore = credentialStore ?? throw new ArgumentNullException(nameof(credentialStore));
+        _securityLockRoot = string.IsNullOrWhiteSpace(securityLockRoot)
+            ? null
+            : Path.GetFullPath(securityLockRoot);
     }
 
     public async ValueTask<byte[]> GetOrCreateKeyAsync(
@@ -28,7 +34,8 @@ public sealed class CredentialManagerMasterKeyStore : IMasterKeyStore
             using var processGate = await SecurityOperationLock.AcquireAsync(
                 "master-key",
                 reference,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                _securityLockRoot).ConfigureAwait(false);
             using var existing = await _credentialStore.ResolveAsync(reference, cancellationToken).ConfigureAwait(false);
             if (existing is not null)
             {

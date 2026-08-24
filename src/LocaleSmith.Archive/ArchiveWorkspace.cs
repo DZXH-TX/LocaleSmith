@@ -130,7 +130,10 @@ internal sealed class ArchiveWorkspace : IArchiveWorkspace
                 signatureState,
                 CanResign: false,
                 _warningsView,
-                contentKind);
+                contentKind,
+                _manifest.Archive.EntryCount,
+                _manifest.Resources.Count,
+                signatures.Status);
             _journal.Write(
                 "inspect",
                 "ok",

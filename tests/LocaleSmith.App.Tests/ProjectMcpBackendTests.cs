@@ -7,6 +7,7 @@ using LocaleSmith.NativeInterop;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
 using LocaleSmith.Presentation.Services;
+using LocaleSmith.Presentation.ViewModels;
 
 namespace LocaleSmith.App.Tests;
 
@@ -67,6 +68,8 @@ public sealed class ProjectMcpBackendTests
             Assert.Equal("Queued", started.Status);
             Assert.Equal("ja_JP", queue.Request?.TargetLanguage);
             Assert.Equal(TranslationStyle.Informal, queue.Request?.Style);
+            Assert.Equal(16_384, queue.Request?.MaxOutputTokens);
+            Assert.Equal(32_000, queue.Request?.MaxSourceCharactersPerRequest);
             await Assert.ThrowsAsync<ProjectMcpBackendException>(() =>
                 backend.StartTranslationAsync(request, TestContext.Current.CancellationToken).AsTask());
 
@@ -138,6 +141,108 @@ public sealed class ProjectMcpBackendTests
         }
     }
 
+    [Fact]
+    public async Task InspectRegisteredDirectoryUsesSafeSnapshotWithoutExposingAPathArgument()
+    {
+        DirectoryInfo source = Directory.CreateTempSubdirectory("localesmith-mcp-directory-");
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(source.FullName, "pack.mcmeta"),
+                "{\"pack\":{\"pack_format\":34,\"description\":\"Directory\"}}",
+                TestContext.Current.CancellationToken);
+            var workspace = new InMemoryModProjectWorkspace();
+            ModProjectSnapshot project = workspace.RegisterProject(source.FullName);
+            var scanner = new RecordingScanner(CreateManifest(source.FullName));
+            using var backend = CreateBackend(workspace, scanner, out _, out _);
+
+            ArchiveMcpInspection inspection = await backend.InspectArchiveAsync(
+                project.ProjectId,
+                TestContext.Current.CancellationToken);
+
+            Assert.NotNull(scanner.LastPath);
+            Assert.NotEqual(Path.GetFullPath(source.FullName), scanner.LastPath);
+            Assert.EndsWith(".zip", scanner.LastPath, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("examplemod", inspection.ModId);
+            Assert.Equal((ulong)3, inspection.EntryCount);
+            Assert.Equal(1, inspection.ResourceCount);
+            Assert.Equal("examplemod", workspace.ActiveProject?.ModId);
+        }
+        finally
+        {
+            source.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task BackendStartedTaskProjectsIntoDashboardWithSameIdentifiers()
+    {
+        string sourcePath = Path.GetTempFileName();
+        try
+        {
+            var workspace = new InMemoryModProjectWorkspace();
+            ModProjectSnapshot project = workspace.RegisterProject(sourcePath);
+            var queue = new ControllableQueue();
+            string outputPath = Path.Combine(
+                Path.GetTempPath(),
+                "LocaleSmith",
+                "project-mcp-tests",
+                "dashboard-translated.jar");
+            var modelSource = new ModelSource(
+                "model-source",
+                "Model source",
+                ModelProviderKind.Ollama,
+                new Uri("http://127.0.0.1:11434"),
+                "llama3");
+            var selection = new FixedModelSelection(modelSource);
+            var output = new FixedOutputPath(outputPath);
+            using var backend = new ProjectMcpBackend(
+                workspace,
+                new RecordingScanner(CreateManifest(sourcePath)),
+                queue,
+                output,
+                selection);
+            using var dashboard = new DashboardViewModel(
+                selection,
+                queue,
+                output,
+                new InlineUiDispatcher(),
+                projectWorkspace: workspace);
+
+            TaskMcpSnapshot started = await backend.StartTranslationAsync(
+                new TranslationMcpStartRequest(project.ProjectId, "Retry the translation."),
+                TestContext.Current.CancellationToken);
+
+            QueueItemViewModel item = Assert.Single(dashboard.QueueItems);
+            Assert.Equal(started.TaskId, item.ProjectTaskId);
+            Assert.Equal(started.JobId, item.JobId);
+            queue.Report(PipelineStage.Translating, 0.5);
+            Assert.Equal(PipelineStage.Translating, item.Stage);
+            Assert.Equal(50, item.ProgressPercent);
+            queue.Complete(new TranslationQueueResult(
+                started.JobId!.Value,
+                outputPath,
+                "examplemod",
+                "fabric",
+                [outputPath],
+                [],
+                0));
+            await WaitUntilAsync(
+                async () =>
+                    (await backend.GetTaskAsync(started.TaskId))?.Status == "Completed" &&
+                    item.ArtifactReady,
+                TestContext.Current.CancellationToken);
+
+            Assert.Single(dashboard.QueueItems);
+            Assert.Equal(PipelineStage.Completed, item.Stage);
+            Assert.True(item.ArtifactReady);
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+        }
+    }
+
     private static ProjectMcpBackend CreateBackend(
         IModProjectWorkspace workspace,
         IArchiveScanner scanner,
@@ -151,7 +256,9 @@ public sealed class ProjectMcpBackendTests
             "Model source",
             ModelProviderKind.Ollama,
             new Uri("http://127.0.0.1:11434"),
-            "llama3");
+            "llama3",
+            maxOutputTokens: 16_384,
+            maxSourceCharactersPerRequest: 32_000);
         return new ProjectMcpBackend(
             workspace,
             scanner,

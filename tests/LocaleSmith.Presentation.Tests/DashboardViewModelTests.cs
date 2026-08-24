@@ -30,6 +30,7 @@ public sealed class DashboardViewModelTests
             await viewModel.EnqueuePackagesAsync([input], TestContext.Current.CancellationToken);
 
             PendingJob pending = Assert.Single(queue.Pending);
+            Assert.Single(viewModel.QueueItems);
             ModProjectSnapshot project = Assert.IsType<ModProjectSnapshot>(workspace.ActiveProject);
             ModProjectTaskSnapshot task = Assert.IsType<ModProjectTaskSnapshot>(project.ActiveTask);
             Assert.Equal(pending.JobId, task.JobId);
@@ -57,11 +58,398 @@ public sealed class DashboardViewModelTests
         }
     }
 
+    [Theory]
+    [InlineData(ModProjectTaskStatus.Completed)]
+    [InlineData(ModProjectTaskStatus.Failed)]
+    [InlineData(ModProjectTaskStatus.Cancelled)]
+    public void WorkspaceTaskAppearsOnceAndTracksTerminalState(
+        ModProjectTaskStatus terminalStatus)
+    {
+        var source = CreateSource("one", "Saved model source");
+        var workspace = new InMemoryModProjectWorkspace();
+        using var viewModel = new DashboardViewModel(
+            new RecordingSelectionService(source),
+            new ControllableQueueService(),
+            new FixedOutputPathStrategy(),
+            new InlineUiDispatcher(),
+            projectWorkspace: workspace);
+        ModProjectSnapshot project = workspace.RegisterProject(
+            Path.Combine(Path.GetTempPath(), "assistant-retry.jar"));
+        ModProjectTaskSnapshot task = workspace.RegisterTask(
+            project.ProjectId,
+            new ModProjectTaskRegistration(
+                project.SourceArtifactPath,
+                Path.Combine(Path.GetTempPath(), "assistant-retry-output.jar"),
+                source.Id,
+                "zh_CN",
+                TranslationStyle.Formal,
+                "Retry the failed translation."));
+        var jobId = Guid.NewGuid();
+        task = workspace.AttachJob(task.TaskId, jobId, static () => { });
+
+        QueueItemViewModel item = Assert.Single(viewModel.QueueItems);
+        Assert.Equal(task.TaskId, item.ProjectTaskId);
+        Assert.Equal(jobId, item.JobId);
+        workspace.TryReportProgress(
+            jobId,
+            new TranslationQueueProgress(jobId, PipelineStage.Translating, 0.6),
+            out ModProjectTaskSnapshot? runningTask);
+        Assert.Equal(PipelineStage.Translating, item.Stage);
+        Assert.Equal(60, item.ProgressPercent);
+        ModProjectTaskSnapshot clockRollbackTerminal = Assert.IsType<ModProjectTaskSnapshot>(runningTask) with
+        {
+            Status = terminalStatus,
+            Stage = terminalStatus switch
+            {
+                ModProjectTaskStatus.Completed => PipelineStage.Completed,
+                ModProjectTaskStatus.Failed => PipelineStage.Failed,
+                ModProjectTaskStatus.Cancelled => PipelineStage.Cancelled,
+                _ => throw new ArgumentOutOfRangeException(nameof(terminalStatus))
+            },
+            UpdatedAtUtc = runningTask!.UpdatedAtUtc - TimeSpan.FromMinutes(1),
+            Revision = runningTask.Revision + 1
+        };
+        item.Update(clockRollbackTerminal);
+        Assert.Equal(clockRollbackTerminal.Stage, item.Stage);
+        item.Update(runningTask);
+        Assert.Equal(clockRollbackTerminal.Stage, item.Stage);
+        var hardcodedCandidate = new HardcodedStringCandidate(
+            1,
+            "example.class",
+            "Example",
+            "render",
+            "()V",
+            12,
+            "ldc",
+            3,
+            "Hello",
+            "example.hello",
+            true);
+
+        switch (terminalStatus)
+        {
+            case ModProjectTaskStatus.Completed:
+                workspace.TryCompleteTask(
+                    task.TaskId,
+                    new TranslationQueueResult(
+                        jobId,
+                        task.OutputPath,
+                        "examplemod",
+                        "NeoForge",
+                        [task.OutputPath],
+                        [hardcodedCandidate],
+                        1,
+                        task.Style,
+                        task.TargetLanguage),
+                    out _);
+                break;
+            case ModProjectTaskStatus.Failed:
+                workspace.TryFailTask(task.TaskId, "PipelineException", out _);
+                break;
+            case ModProjectTaskStatus.Cancelled:
+                workspace.TryMarkCancelled(task.TaskId, out _);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(terminalStatus));
+        }
+
+        Assert.Single(viewModel.QueueItems);
+        Assert.Equal(
+            terminalStatus switch
+            {
+                ModProjectTaskStatus.Completed => PipelineStage.Completed,
+                ModProjectTaskStatus.Failed => PipelineStage.Failed,
+                ModProjectTaskStatus.Cancelled => PipelineStage.Cancelled,
+                _ => throw new ArgumentOutOfRangeException(nameof(terminalStatus))
+            },
+            item.Stage);
+        item.Update(Assert.IsType<ModProjectTaskSnapshot>(runningTask));
+        Assert.Equal(
+            terminalStatus switch
+            {
+                ModProjectTaskStatus.Completed => PipelineStage.Completed,
+                ModProjectTaskStatus.Failed => PipelineStage.Failed,
+                ModProjectTaskStatus.Cancelled => PipelineStage.Cancelled,
+                _ => throw new ArgumentOutOfRangeException(nameof(terminalStatus))
+            },
+            item.Stage);
+        if (terminalStatus == ModProjectTaskStatus.Completed)
+        {
+            Assert.Equal(1, item.HardcodedCandidateCount);
+            Assert.Equal(1, item.ExternalizedCount);
+        }
+
+        Assert.False(item.CanCancel);
+    }
+
+    [Fact]
+    public void ExistingWorkspaceTaskIsHydratedAndCanBeCancelledThroughSharedHandle()
+    {
+        var source = CreateSource("one", "Saved model source");
+        var workspace = new InMemoryModProjectWorkspace();
+        ModProjectSnapshot project = workspace.RegisterProject(
+            Path.Combine(Path.GetTempPath(), "existing-assistant-task.jar"));
+        ModProjectTaskSnapshot task = workspace.RegisterTask(
+            project.ProjectId,
+            new ModProjectTaskRegistration(
+                project.SourceArtifactPath,
+                Path.Combine(Path.GetTempPath(), "existing-assistant-task-output.jar"),
+                source.Id,
+                "zh_CN",
+                TranslationStyle.Formal,
+                "Continue the existing translation."));
+        bool cancelled = false;
+        task = workspace.AttachJob(task.TaskId, Guid.NewGuid(), () => cancelled = true);
+        using var viewModel = new DashboardViewModel(
+            new RecordingSelectionService(source),
+            new ControllableQueueService(),
+            new FixedOutputPathStrategy(),
+            new InlineUiDispatcher(),
+            projectWorkspace: workspace);
+
+        QueueItemViewModel item = Assert.Single(viewModel.QueueItems);
+        viewModel.CancelCommand.Execute(item);
+
+        Assert.True(cancelled);
+        Assert.True(item.IsCancellationRequested);
+        Assert.Equal(
+            ModProjectTaskStatus.CancellationRequested,
+            workspace.ActiveProject?.LatestTask?.Status);
+        string cancellationStatus = item.Status;
+
+        item.Update(new TranslationQueueProgress(item.JobId, PipelineStage.Translating, 0.8));
+
+        Assert.True(item.IsCancellationRequested);
+        Assert.Equal(cancellationStatus, item.Status);
+    }
+
+    [Fact]
+    public void RetryAddsNewQueueItemWithoutReplacingFailedTask()
+    {
+        var source = CreateSource("one", "Saved model source");
+        var workspace = new InMemoryModProjectWorkspace();
+        ModProjectSnapshot project = workspace.RegisterProject(
+            Path.Combine(Path.GetTempPath(), "retry-history.jar"));
+        ModProjectTaskSnapshot failed = workspace.RegisterTask(
+            project.ProjectId,
+            new ModProjectTaskRegistration(
+                project.SourceArtifactPath,
+                Path.Combine(Path.GetTempPath(), "retry-history-failed.jar"),
+                source.Id,
+                "zh_CN",
+                TranslationStyle.Formal,
+                "Initial translation."));
+        failed = workspace.AttachJob(failed.TaskId, Guid.NewGuid(), static () => { });
+        workspace.TryFailTask(failed.TaskId, "PipelineException", out _);
+        using var viewModel = new DashboardViewModel(
+            new RecordingSelectionService(source),
+            new ControllableQueueService(),
+            new FixedOutputPathStrategy(),
+            new InlineUiDispatcher(),
+            projectWorkspace: workspace);
+
+        ModProjectTaskSnapshot retry = workspace.RegisterTask(
+            project.ProjectId,
+            new ModProjectTaskRegistration(
+                project.SourceArtifactPath,
+                Path.Combine(Path.GetTempPath(), "retry-history-new.jar"),
+                source.Id,
+                "zh_CN",
+                TranslationStyle.Formal,
+                "Retry the translation."));
+        retry = workspace.AttachJob(retry.TaskId, Guid.NewGuid(), static () => { });
+
+        Assert.Collection(
+            viewModel.QueueItems,
+            item =>
+            {
+                Assert.Equal(failed.TaskId, item.ProjectTaskId);
+                Assert.Equal(PipelineStage.Failed, item.Stage);
+            },
+            item =>
+            {
+                Assert.Equal(retry.TaskId, item.ProjectTaskId);
+                Assert.Equal(PipelineStage.Queued, item.Stage);
+            });
+    }
+
+    [Fact]
+    public void DisposeStopsWorkspaceProjection()
+    {
+        var source = CreateSource("one", "Saved model source");
+        var workspace = new InMemoryModProjectWorkspace();
+        var viewModel = new DashboardViewModel(
+            new RecordingSelectionService(source),
+            new ControllableQueueService(),
+            new FixedOutputPathStrategy(),
+            new InlineUiDispatcher(),
+            projectWorkspace: workspace);
+        viewModel.Dispose();
+        ModProjectSnapshot project = workspace.RegisterProject(
+            Path.Combine(Path.GetTempPath(), "disposed-dashboard.jar"));
+        ModProjectTaskSnapshot task = workspace.RegisterTask(
+            project.ProjectId,
+            new ModProjectTaskRegistration(
+                project.SourceArtifactPath,
+                Path.Combine(Path.GetTempPath(), "disposed-dashboard-output.jar"),
+                source.Id,
+                "zh_CN",
+                TranslationStyle.Formal,
+                "Do not project after disposal."));
+        workspace.AttachJob(task.TaskId, Guid.NewGuid(), static () => { });
+
+        Assert.Empty(viewModel.QueueItems);
+    }
+
+    [Fact]
+    public void HydratedFailedTaskRestoresRecordedRollbackAndStageDetails()
+    {
+        var source = CreateSource("one", "Saved model source");
+        var workspace = new InMemoryModProjectWorkspace();
+        ModProjectSnapshot project = workspace.RegisterProject(
+            Path.Combine(Path.GetTempPath(), "hydrated-failure.jar"));
+        ModProjectTaskSnapshot task = workspace.RegisterTask(
+            project.ProjectId,
+            new ModProjectTaskRegistration(
+                project.SourceArtifactPath,
+                Path.Combine(Path.GetTempPath(), "hydrated-failure-output.jar"),
+                source.Id,
+                "zh_CN",
+                TranslationStyle.Formal,
+                "Hydrate the failed task accurately."));
+        var jobId = Guid.NewGuid();
+        task = workspace.AttachJob(task.TaskId, jobId, static () => { });
+        var now = DateTimeOffset.UtcNow;
+        workspace.TryReportProgress(
+            jobId,
+            new TranslationQueueProgress(
+                jobId,
+                PipelineStage.Failed,
+                0.8,
+                NextStage: null,
+                Stages:
+                [
+                    new PipelineStageProgress(
+                        PipelineStage.Translating,
+                        PipelineStageStatus.Failed,
+                        now,
+                        now),
+                    new PipelineStageProgress(
+                        PipelineStage.RollingBack,
+                        PipelineStageStatus.Completed,
+                        now,
+                        now)
+                ],
+                RollbackStatus: PipelineStageStatus.Completed),
+            out _);
+        workspace.TryFailTask(task.TaskId, "PipelineException", out _);
+
+        using var viewModel = new DashboardViewModel(
+            new RecordingSelectionService(source),
+            new ControllableQueueService(),
+            new FixedOutputPathStrategy(),
+            new InlineUiDispatcher(),
+            projectWorkspace: workspace);
+
+        QueueItemViewModel item = Assert.Single(viewModel.QueueItems);
+        Assert.Equal(PipelineStageStatus.Completed, item.RollbackStatus);
+        Assert.True(item.HasStageDetails);
+        Assert.Contains(item.StageDetails, detail =>
+            detail.Stage == PipelineStage.RollingBack && detail.IsCompleted);
+        Assert.Contains("rolled back safely", item.ErrorDetails, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ExpandedPackageRootDirectoryEnqueuesOneTask()
+    {
+        DirectoryInfo directory = Directory.CreateTempSubdirectory("localesmith-expanded-pack-");
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(directory.FullName, "pack.mcmeta"),
+                "{\"pack\":{\"pack_format\":34,\"description\":\"Expanded\"}}",
+                TestContext.Current.CancellationToken);
+            var source = CreateSource("one", "Saved model source");
+            var queue = new ControllableQueueService();
+            var workspace = new InMemoryModProjectWorkspace();
+            using var viewModel = new DashboardViewModel(
+                new RecordingSelectionService(source),
+                queue,
+                new FixedOutputPathStrategy(),
+                new InlineUiDispatcher(),
+                projectWorkspace: workspace);
+
+            await viewModel.EnqueuePackagesAsync(
+                [directory.FullName],
+                TestContext.Current.CancellationToken);
+
+            Assert.Single(queue.Pending);
+            Assert.Single(viewModel.QueueItems);
+            Assert.Single(workspace.Projects);
+            Assert.Equal(
+                Path.GetFullPath(directory.FullName),
+                workspace.ActiveProject?.SourceArtifactPath);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ArchiveContainerDirectoryIsRejectedBeforeQueueOrWorkspaceMutation()
+    {
+        DirectoryInfo directory = Directory.CreateTempSubdirectory("localesmith-archive-container-");
+        try
+        {
+            await File.WriteAllBytesAsync(
+                Path.Combine(directory.FullName, "first.jar"),
+                [1],
+                TestContext.Current.CancellationToken);
+            await File.WriteAllBytesAsync(
+                Path.Combine(directory.FullName, "second.ZIP"),
+                [2],
+                TestContext.Current.CancellationToken);
+            string nested = Directory.CreateDirectory(Path.Combine(directory.FullName, "nested")).FullName;
+            await File.WriteAllBytesAsync(
+                Path.Combine(nested, "not-counted.jar"),
+                [3],
+                TestContext.Current.CancellationToken);
+            var source = CreateSource("one", "Saved model source");
+            var queue = new ControllableQueueService();
+            var workspace = new InMemoryModProjectWorkspace();
+            using var viewModel = new DashboardViewModel(
+                new RecordingSelectionService(source),
+                queue,
+                new FixedOutputPathStrategy(),
+                new InlineUiDispatcher(),
+                projectWorkspace: workspace);
+
+            await viewModel.EnqueuePackagesAsync(
+                [directory.FullName],
+                TestContext.Current.CancellationToken);
+
+            Assert.Empty(queue.Pending);
+            Assert.Empty(viewModel.QueueItems);
+            Assert.Empty(workspace.Projects);
+            Assert.Contains("2", viewModel.ErrorMessage, StringComparison.Ordinal);
+            Assert.Contains("Add package", viewModel.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
     [Fact]
     public async Task SelectionIsImmediateAndQueueReportsCompletion()
     {
         var sourceOne = CreateSource("one", "First");
-        var sourceTwo = CreateSource("two", "Second");
+        var sourceTwo = CreateSource(
+            "two",
+            "Second",
+            maxOutputTokens: 16_384,
+            maxSourceCharactersPerRequest: 32_000);
         var selection = new RecordingSelectionService(sourceOne, sourceTwo);
         var queue = new ControllableQueueService();
         var output = new FixedOutputPathStrategy();
@@ -85,6 +473,8 @@ public sealed class DashboardViewModelTests
             Assert.Equal("two", pending.Request.ModelSourceId);
             Assert.Equal(TranslationStyle.Informal, pending.Request.Style);
             Assert.Equal("ja_JP", pending.Request.TargetLanguage);
+            Assert.Equal(16_384, pending.Request.MaxOutputTokens);
+            Assert.Equal(32_000, pending.Request.MaxSourceCharactersPerRequest);
             Assert.Equal("ja_JP", output.LastTargetLanguage);
             queue.Report(pending.JobId, PipelineStage.Translating, 0.5);
             pending.Completion.SetResult(new TranslationQueueResult(
@@ -113,6 +503,34 @@ public sealed class DashboardViewModelTests
         {
             File.Delete(input);
         }
+    }
+
+    [Fact]
+    public async Task RapidSelectionChangesCommitTheLatestRequestedSource()
+    {
+        var sourceOne = CreateSource("one", "First");
+        var sourceTwo = CreateSource("two", "Second");
+        var sourceThree = CreateSource("three", "Third");
+        var selection = new DelayedSelectionService(sourceOne, sourceTwo, sourceThree);
+        using var viewModel = new DashboardViewModel(
+            selection,
+            new ControllableQueueService(),
+            new FixedOutputPathStrategy(),
+            new InlineUiDispatcher());
+
+        viewModel.SelectedModelSource = viewModel.ModelSources.Single(source => source.Id == "two");
+        await selection.WaitUntilRequestedAsync("two", TestContext.Current.CancellationToken);
+        viewModel.SelectedModelSource = viewModel.ModelSources.Single(source => source.Id == "three");
+
+        selection.Release("two");
+        await selection.WaitUntilRequestedAsync("three", TestContext.Current.CancellationToken);
+        selection.Release("three");
+        await WaitUntilAsync(
+            () => !viewModel.IsModelSelectionPending,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("three", selection.SelectedSource?.Id);
+        Assert.Equal("three", viewModel.SelectedModelSourceId);
     }
 
     [Fact]
@@ -556,12 +974,19 @@ public sealed class DashboardViewModelTests
         }
     }
 
-    private static ModelSource CreateSource(string id, string name, string modelName = "llama3") => new(
+    private static ModelSource CreateSource(
+        string id,
+        string name,
+        string modelName = "llama3",
+        int? maxOutputTokens = null,
+        int? maxSourceCharactersPerRequest = null) => new(
         id,
         name,
         ModelProviderKind.Ollama,
         new Uri("http://127.0.0.1:11434"),
-        modelName);
+        modelName,
+        maxOutputTokens: maxOutputTokens,
+        maxSourceCharactersPerRequest: maxSourceCharactersPerRequest);
 
     private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken cancellationToken)
     {
@@ -625,6 +1050,53 @@ public sealed class DashboardViewModelTests
                 : _sources.FirstOrDefault(source => source.Id == selectedId);
             StateChanged?.Invoke(this, new ModelSelectionStateChangedEventArgs(Sources, _selected));
         }
+    }
+
+    private sealed class DelayedSelectionService : IModelSelectionService, IModelSelectionStateNotifier
+    {
+        private readonly IReadOnlyList<ModelSource> _sources;
+        private readonly Dictionary<string, TaskCompletionSource> _requested = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, TaskCompletionSource> _released = new(StringComparer.Ordinal);
+        private ModelSource? _selected;
+
+        public DelayedSelectionService(params ModelSource[] sources)
+        {
+            _sources = sources;
+            _selected = sources.FirstOrDefault();
+            foreach (var source in sources)
+            {
+                _requested[source.Id] = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                _released[source.Id] = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+
+        public IReadOnlyList<ModelSource> Sources => _sources;
+
+        public ModelSource? SelectedSource => _selected;
+
+        public event EventHandler<ModelSelectionStateChangedEventArgs>? StateChanged;
+
+        public async Task<bool> SelectSourceAsync(
+            string sourceId,
+            CancellationToken cancellationToken = default)
+        {
+            var source = _sources.FirstOrDefault(source => source.Id == sourceId);
+            if (source is null)
+            {
+                return false;
+            }
+
+            _requested[sourceId].TrySetResult();
+            await _released[sourceId].Task.WaitAsync(cancellationToken);
+            _selected = source;
+            StateChanged?.Invoke(this, new ModelSelectionStateChangedEventArgs(Sources, _selected));
+            return true;
+        }
+
+        public Task WaitUntilRequestedAsync(string sourceId, CancellationToken cancellationToken) =>
+            _requested[sourceId].Task.WaitAsync(cancellationToken);
+
+        public void Release(string sourceId) => _released[sourceId].TrySetResult();
     }
 
     private sealed class ControllableQueueService : ITranslationQueueService

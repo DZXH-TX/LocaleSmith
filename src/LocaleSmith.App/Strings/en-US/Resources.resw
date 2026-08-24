@@ -82,7 +82,7 @@
   <data name="DashboardStyleSelector.Header" xml:space="preserve"><value>Translation style for new requests</value></data>
   <data name="ConfiguredStatusRun.Text" xml:space="preserve"><value>Configured</value></data>
   <data name="AddPackageButtonText.Text" xml:space="preserve"><value>Add package</value></data>
-  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>Add folder</value></data>
+  <data name="AddFolderButtonText.Text" xml:space="preserve"><value>Add expanded package</value></data>
   <data name="DashboardError.Title" xml:space="preserve"><value>Cannot continue</value></data>
   <data name="DashboardStatus.Title" xml:space="preserve"><value>Queue status</value></data>
   <data name="QueueEmptyTitle.Text" xml:space="preserve"><value>No jobs in the queue</value></data>
@@ -145,10 +145,15 @@
   <data name="ModelSourceTokenLimitParameterOmitOption" xml:space="preserve"><value>Provider default (do not send)</value></data>
   <data name="ModelSourceEndpoint.Header" xml:space="preserve"><value>Service address</value></data>
   <data name="ModelSourceModelName.Header" xml:space="preserve"><value>Model name (manual entry available)</value></data>
-  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Downloaded local models</value></data>
+  <data name="ModelSourceMaxOutputTokens.Header" xml:space="preserve"><value>Maximum response Tokens</value></data>
+  <data name="ModelSourceMaxOutputTokens.AutomationProperties.Name" xml:space="preserve"><value>Maximum response token count</value></data>
+  <data name="ModelSourceBatchCharacters.Header" xml:space="preserve"><value>Source characters per batch</value></data>
+  <data name="ModelSourceBatchCharacters.AutomationProperties.Name" xml:space="preserve"><value>Translation source-character target per batch</value></data>
+  <data name="ModelSourceRequestBudgetHelp.Text" xml:space="preserve"><value>Response Tokens apply to translation requests and each assistant round. The character target only controls batching for large packages and never truncates one value. Higher values may increase cost or truncation risk. The fixed 16 MiB response safety limit cannot be disabled; OpenAI-compatible sources receive no Token value when the field option above is Omit.</value></data>
+  <data name="DownloadedModelsTitle.Text" xml:space="preserve"><value>Provider-reported models</value></data>
   <data name="RefreshModelsButtonText.Text" xml:space="preserve"><value>Refresh</value></data>
   <data name="DownloadedModelsSelector.Header" xml:space="preserve"><value>Select from Ollama</value></data>
-  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>Refresh calls local /api/tags. An unavailable service never overwrites the manual model name.</value></data>
+  <data name="DownloadedModelsHelp.Text" xml:space="preserve"><value>Refresh queries the current provider catalog. Manual entry remains available; use Test connection to verify the selected model.</value></data>
   <data name="ModelSourceApiKey.Header" xml:space="preserve"><value>API key (leave blank to retain the stored credential)</value></data>
   <data name="CredentialAliasPrefix.Text" xml:space="preserve"><value>Credential alias:</value></data>
   <data name="ConnectionStatus.Title" xml:space="preserve"><value>Connection status</value></data>
@@ -257,6 +262,9 @@
   <data name="QueueModelRequired" xml:space="preserve"><value>Configure and select a model source before adding packages.</value></data>
   <data name="QueueNoModelSources" xml:space="preserve"><value>No model sources are available. Configure one in Model sources before adding packages.</value></data>
   <data name="QueuePackageNotFound" xml:space="preserve"><value>Package not found: {0}</value></data>
+  <data name="QueueFolderContainsArchives" xml:space="preserve"><value>The selected folder contains {0} top-level JAR/ZIP file(s). Add expanded package accepts one expanded package; use Add package to select those archives.</value></data>
+  <data name="QueueFolderUnsupportedLayout" xml:space="preserve"><value>The selected folder is not a recognized expanded mod, resource-pack, or shader-pack root.</value></data>
+  <data name="QueueFolderInspectFailed" xml:space="preserve"><value>The selected folder could not be inspected safely: {0}</value></data>
   <data name="QueueEnqueueFailed" xml:space="preserve"><value>Could not enqueue {0}. Check the output workspace safety settings and retry.</value></data>
   <data name="QueueModelUnavailable" xml:space="preserve"><value>The selected model source is no longer available.</value></data>
   <data name="QueueModelChanged" xml:space="preserve"><value>Model source changed. Existing requests keep their original source.</value></data>
@@ -321,6 +329,13 @@
   <data name="OllamaModelsEmpty" xml:space="preserve"><value>Ollama is reachable, but no downloaded models were reported. Manual entry remains available.</value></data>
   <data name="OllamaModelsFound" xml:space="preserve"><value>Found {0} downloaded model(s).</value></data>
   <data name="OllamaModelsRefreshFailed" xml:space="preserve"><value>Local models could not be refreshed: {0}. You can keep the manual model name.</value></data>
+  <data name="ModelCatalogLoading" xml:space="preserve"><value>Refreshing provider-reported models…</value></data>
+  <data name="ModelCatalogEmpty" xml:space="preserve"><value>The provider reported no models. Manual entry remains available.</value></data>
+  <data name="ModelCatalogFound" xml:space="preserve"><value>Found {0} provider-reported model(s).</value></data>
+  <data name="ModelCatalogUnsupported" xml:space="preserve"><value>This endpoint does not expose a compatible model list. You can keep the manual model name.</value></data>
+  <data name="ModelCatalogRefreshFailed" xml:space="preserve"><value>Models could not be refreshed: {0}. You can keep the manual model name.</value></data>
+  <data name="ModelSourceMaxOutputTokensInvalid" xml:space="preserve"><value>Maximum response Tokens must be between {0} and {1}.</value></data>
+  <data name="ModelSourceBatchCharactersInvalid" xml:space="preserve"><value>Source characters per batch must be between {0} and {1}.</value></data>
   <data name="ModelSourceDeleted" xml:space="preserve"><value>Model source and its stored credential were deleted.</value></data>
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>Model source could not be deleted: {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>Display name and model name are required.</value></data>
@@ -625,8 +640,7 @@
   <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>No active entitlement</value></data>
   <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>Subscribe, or restore an existing Microsoft Store purchase for backend verification.</value></data>
   <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>Eligible new subscribers can receive a 7-day free trial; eligibility and final terms are shown by Microsoft during purchase.</value></data>
-  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>After an eligible trial, the subscription renews at the monthly price Microsoft Store then shows until cancelled. China is configured at CNY 30.00/month; the purchase UI is final.</value></data>
-  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>The global base price tier is US$4.99/month. Microsoft Store displays local market pricing; other markets are not guaranteed a fixed US$5 price.</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>After an eligible trial, the subscription renews at the local monthly price Microsoft Store then shows until cancelled; the regional price in the purchase UI is authoritative.</value></data>
   <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>Billed by Microsoft. Cancel or manage it under Services &amp; subscriptions in your Microsoft account.</value></data>
   <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Current monthly renewal price shown by Microsoft Store</value></data>
   <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>Subscribe with Microsoft</value></data>

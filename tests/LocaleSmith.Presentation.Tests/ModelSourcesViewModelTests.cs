@@ -20,12 +20,16 @@ public sealed class ModelSourcesViewModelTests
         viewModel.ConfirmProviderChangeCommand.Execute(null);
         viewModel.Endpoint = "https://models.example.test/v1";
         viewModel.ModelName = "example-model";
+        viewModel.MaxOutputTokens = 16_384;
+        viewModel.MaxSourceCharactersPerRequest = 32_000;
         var consumed = false;
         viewModel.SecretInputConsumed += (_, _) => consumed = true;
 
         await viewModel.SaveAsync("top-secret", TestContext.Current.CancellationToken);
 
         Assert.Equal("top-secret", catalog.LastApiKey);
+        Assert.Equal(16_384, catalog.LastSavedSource?.MaxOutputTokens);
+        Assert.Equal(32_000, catalog.LastSavedSource?.MaxSourceCharactersPerRequest);
         Assert.True(consumed);
         Assert.DoesNotContain("top-secret", viewModel.StatusMessage, StringComparison.Ordinal);
         Assert.DoesNotContain("top-secret", viewModel.CredentialReference, StringComparison.Ordinal);
@@ -152,6 +156,7 @@ public sealed class ModelSourcesViewModelTests
         viewModel.SelectedPresetId = ModelProviderPresets.DeepSeekId;
         viewModel.SelectedTokenLimitParameterOption = viewModel.TokenLimitParameterOptions.Single(
             static option => option.Value == OpenAiTokenLimitParameter.Omit);
+        Assert.False(viewModel.SendsOutputTokenBudget);
 
         await viewModel.TestConnectionAsync("secret", TestContext.Current.CancellationToken);
 
@@ -297,7 +302,9 @@ public sealed class ModelSourcesViewModelTests
             PresetId = ModelProviderPresets.CustomId,
             TokenLimitParameter = OpenAiTokenLimitParameter.MaxCompletionTokens,
             Endpoint = "https://models.example.test/v1",
-            ModelName = "model"
+            ModelName = "model",
+            MaxOutputTokens = 16_384,
+            MaxSourceCharactersPerRequest = 32_000
         };
 
         var json = JsonSerializer.Serialize(profile, WebJsonOptions);
@@ -305,6 +312,8 @@ public sealed class ModelSourcesViewModelTests
 
         Assert.Contains("\"tokenLimitParameter\":\"max_completion_tokens\"", json, StringComparison.Ordinal);
         Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, roundTrip?.TokenLimitParameter);
+        Assert.Equal(16_384, roundTrip?.MaxOutputTokens);
+        Assert.Equal(32_000, roundTrip?.MaxSourceCharactersPerRequest);
     }
 
     [Fact]
@@ -400,8 +409,65 @@ public sealed class ModelSourcesViewModelTests
         await viewModel.RefreshModelsAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("manual-model", viewModel.ModelName);
-        Assert.True(viewModel.IsConnectionFailure);
-        Assert.Contains("manual", viewModel.ConnectionMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ModelCatalogState.Failed, viewModel.CatalogState);
+        Assert.Equal(ConnectionTestState.NotTested, viewModel.ConnectionState);
+        Assert.Contains("manual", viewModel.CatalogMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DeepSeekCatalogRefreshUsesCurrentKeyAndPreservesManualModelUntilSelection()
+    {
+        var catalog = new MemoryModelSourceCatalog
+        {
+            CatalogModels =
+            [
+                new AvailableModelInfo("deepseek-chat", null, null, null, null, null, null),
+                new AvailableModelInfo("deepseek-reasoner", null, null, null, null, null, null)
+            ]
+        };
+        var viewModel = new ModelSourcesViewModel(catalog);
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+        viewModel.Provider = ModelProviderKind.OpenAiCompatible;
+        viewModel.ConfirmProviderChangeCommand.Execute(null);
+        viewModel.SelectedPreset = ModelProviderPresets.DeepSeek;
+        viewModel.ModelName = "manual-account-model";
+        var secretConsumed = false;
+        viewModel.SecretInputConsumed += (_, _) => secretConsumed = true;
+
+        await viewModel.RefreshModelsAsync(
+            "deepseek-secret",
+            TestContext.Current.CancellationToken);
+
+        Assert.True(viewModel.CanDiscoverModels);
+        Assert.Equal(ModelCatalogState.Fresh, viewModel.CatalogState);
+        Assert.Equal(ConnectionTestState.NotTested, viewModel.ConnectionState);
+        Assert.Equal("deepseek-secret", catalog.LastCatalogApiKey);
+        Assert.Equal(ModelProviderKind.OpenAiCompatible, catalog.LastCatalogSource?.Provider);
+        Assert.Equal("https://api.deepseek.com/", catalog.LastCatalogSource?.Endpoint.AbsoluteUri);
+        Assert.Equal("manual-account-model", viewModel.ModelName);
+        Assert.Null(viewModel.SelectedAvailableModel);
+        Assert.True(secretConsumed);
+
+        viewModel.SelectedAvailableModel = viewModel.AvailableModels.Single(model =>
+            model.Name == "deepseek-reasoner");
+
+        Assert.Equal("deepseek-reasoner", viewModel.ModelName);
+    }
+
+    [Fact]
+    public async Task NewSourceRestoresOllamaVisibilityStateAfterEditingCloudSource()
+    {
+        var viewModel = new ModelSourcesViewModel(new MemoryModelSourceCatalog());
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+        viewModel.Provider = ModelProviderKind.OpenAiCompatible;
+        viewModel.ConfirmProviderChangeCommand.Execute(null);
+        Assert.True(viewModel.IsApiKeyRequired);
+        Assert.False(viewModel.IsOllama);
+
+        viewModel.NewCommand.Execute(null);
+
+        Assert.False(viewModel.IsApiKeyRequired);
+        Assert.True(viewModel.IsOllama);
     }
 
     private sealed class DictionaryTextProvider(IReadOnlyDictionary<string, string> values) : IUiTextProvider
@@ -430,6 +496,13 @@ public sealed class ModelSourcesViewModelTests
         public string? LastTestApiKey { get; private set; }
 
         public bool FailCatalogRefresh { get; init; }
+
+        public IReadOnlyList<AvailableModelInfo> CatalogModels { get; init; } =
+            [new AvailableModelInfo("llama3", null, null, null, null, null, null)];
+
+        public ModelSourceDraft? LastCatalogSource { get; private set; }
+
+        public string? LastCatalogApiKey { get; private set; }
 
         public TaskCompletionSource TestConnectionEntered { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -462,6 +535,8 @@ public sealed class ModelSourcesViewModelTests
                 TokenLimitParameter = source.TokenLimitParameter,
                 Endpoint = source.Endpoint.AbsoluteUri,
                 ModelName = source.ModelName,
+                MaxOutputTokens = source.MaxOutputTokens,
+                MaxSourceCharactersPerRequest = source.MaxSourceCharactersPerRequest,
                 CredentialReference = source.Provider == ModelProviderKind.Ollama ? null : "model/generated/key",
                 CredentialFingerprint = source.Provider == ModelProviderKind.Ollama ? null : "sha256:…12345678"
             };
@@ -493,16 +568,23 @@ public sealed class ModelSourcesViewModelTests
 
         public Task<IReadOnlyList<AvailableModelInfo>> ListAvailableModelsAsync(
             ModelSourceDraft source,
+            CancellationToken cancellationToken = default) =>
+            ListAvailableModelsAsync(source, ReadOnlyMemory<char>.Empty, cancellationToken);
+
+        public Task<IReadOnlyList<AvailableModelInfo>> ListAvailableModelsAsync(
+            ModelSourceDraft source,
+            ReadOnlyMemory<char> apiKey,
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            LastCatalogSource = source;
+            LastCatalogApiKey = apiKey.IsEmpty ? null : new string(apiKey.Span);
             if (FailCatalogRefresh)
             {
                 throw new HttpRequestException("Ollama unavailable");
             }
 
-            return Task.FromResult<IReadOnlyList<AvailableModelInfo>>(
-                [new AvailableModelInfo("llama3", null, null, null, null, null, null)]);
+            return Task.FromResult(CatalogModels);
         }
     }
 }

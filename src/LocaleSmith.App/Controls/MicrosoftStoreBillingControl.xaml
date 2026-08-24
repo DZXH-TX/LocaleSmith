@@ -69,10 +69,6 @@
                     x:Uid="BillingRenewalDisclosure"
                     TextWrapping="WrapWholeWords" />
                 <TextBlock
-                    x:Uid="BillingRegionalPriceDisclosure"
-                    Style="{ThemeResource CaptionTextBlockStyle}"
-                    TextWrapping="WrapWholeWords" />
-                <TextBlock
                     x:Uid="BillingMicrosoftDisclosure"
                     Style="{ThemeResource CaptionTextBlockStyle}"
                     TextWrapping="WrapWholeWords" />

@@ -109,6 +109,27 @@ public sealed class EncryptedConfigurationStoreTests
     }
 
     [Fact]
+    public async Task MasterKeyUsesTheInjectedChannelSpecificLockDirectory()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var directory = new TemporaryDirectory();
+        using var secrets = new InMemorySecretStore();
+        var lockRoot = Path.Combine(directory.Path, "LocaleSmith.Dev", "SecurityLocks");
+        var keys = new CredentialManagerMasterKeyStore(secrets, lockRoot);
+
+        var key = await keys.GetOrCreateKeyAsync("settings", cancellationToken);
+        try
+        {
+            Assert.True(Directory.Exists(lockRoot));
+            Assert.Single(Directory.EnumerateFiles(lockRoot, "*.lock"));
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    [Fact]
     public async Task LegacyAssociatedDataCanBeReadWhenExplicitlySelected()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

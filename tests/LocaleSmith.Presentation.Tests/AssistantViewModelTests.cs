@@ -270,6 +270,193 @@ public sealed class AssistantViewModelTests
         await send;
     }
 
+    [Theory]
+    [InlineData(ModProjectTaskStatus.Completed)]
+    [InlineData(ModProjectTaskStatus.Failed)]
+    [InlineData(ModProjectTaskStatus.Cancelled)]
+    public async Task AssistantStartedTaskStatusUpdatesWithoutAnotherModelTurn(
+        ModProjectTaskStatus terminalStatus)
+    {
+        var workspace = new InMemoryModProjectWorkspace();
+        ModProjectSnapshot project = workspace.RegisterProject(
+            Path.Combine(Path.GetTempPath(), "assistant-live-task.jar"));
+        var assistant = new TaskStartingAssistantService(workspace);
+        using var viewModel = new AssistantViewModel(
+            assistant,
+            new StubSelectionService(CreateSource("local")),
+            projectWorkspace: workspace);
+        viewModel.RefreshModelSources();
+        viewModel.RefreshProjects();
+        viewModel.AllowProjectChanges = true;
+        viewModel.Draft = "Start a retry and keep its status visible.";
+
+        await viewModel.SendCommand.ExecuteAsync(null);
+
+        AssistantChatMessageViewModel response = viewModel.Messages[1];
+        AssistantTaskStatusViewModel queued = Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus);
+        Assert.Equal(assistant.Task!.TaskId, queued.TaskId);
+        Assert.Equal(ModProjectTaskStatus.Queued, queued.Status);
+        Assert.Contains("assistant-live-task.jar", queued.ConfigurationSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("zh_CN", queued.ConfigurationSummary, StringComparison.Ordinal);
+        Assert.Contains("zh_CN", viewModel.ActiveProjectConfiguration, StringComparison.Ordinal);
+        Assert.Equal(1, assistant.CallCount);
+
+        workspace.TryReportProgress(
+            assistant.Task.JobId!.Value,
+            new TranslationQueueProgress(
+                assistant.Task.JobId.Value,
+                PipelineStage.Translating,
+                0.5),
+            out ModProjectTaskSnapshot? runningTask);
+
+        AssistantTaskStatusViewModel running = Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus);
+        Assert.Equal(ModProjectTaskStatus.Running, running.Status);
+        Assert.Equal(PipelineStage.Translating, running.Stage);
+        Assert.Equal(0.5, running.Progress);
+        ModProjectTaskSnapshot clockRollbackTerminal = Assert.IsType<ModProjectTaskSnapshot>(runningTask) with
+        {
+            Status = terminalStatus,
+            Stage = terminalStatus switch
+            {
+                ModProjectTaskStatus.Completed => PipelineStage.Completed,
+                ModProjectTaskStatus.Failed => PipelineStage.Failed,
+                ModProjectTaskStatus.Cancelled => PipelineStage.Cancelled,
+                _ => throw new ArgumentOutOfRangeException(nameof(terminalStatus))
+            },
+            UpdatedAtUtc = runningTask!.UpdatedAtUtc - TimeSpan.FromMinutes(1),
+            Revision = runningTask.Revision + 1
+        };
+        response.UpdateTaskStatus(clockRollbackTerminal);
+        Assert.Equal(
+            terminalStatus,
+            Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus).Status);
+        response.UpdateTaskStatus(runningTask);
+        Assert.Equal(
+            terminalStatus,
+            Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus).Status);
+
+        switch (terminalStatus)
+        {
+            case ModProjectTaskStatus.Completed:
+                workspace.TryCompleteTask(
+                    assistant.Task.TaskId,
+                    new TranslationQueueResult(
+                        assistant.Task.JobId.Value,
+                        assistant.Task.OutputPath,
+                        "examplemod",
+                        "NeoForge",
+                        [assistant.Task.OutputPath],
+                        [],
+                        0,
+                        assistant.Task.Style,
+                        assistant.Task.TargetLanguage),
+                    out _);
+                break;
+            case ModProjectTaskStatus.Failed:
+                workspace.TryFailTask(assistant.Task.TaskId, "PipelineException", out _);
+                break;
+            case ModProjectTaskStatus.Cancelled:
+                workspace.TryMarkCancelled(assistant.Task.TaskId, out _);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(terminalStatus));
+        }
+
+        AssistantTaskStatusViewModel terminal = Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus);
+        Assert.Equal(terminalStatus, terminal.Status);
+        response.UpdateTaskStatus(Assert.IsType<ModProjectTaskSnapshot>(runningTask));
+        Assert.Equal(
+            terminalStatus,
+            Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus).Status);
+        Assert.Equal("The retry was accepted as queued.", response.Content);
+        Assert.Equal(1, assistant.CallCount);
+    }
+
+    [Fact]
+    public async Task TaskStatusAppearsBeforeFinalAssistantResponseCompletes()
+    {
+        var workspace = new InMemoryModProjectWorkspace();
+        _ = workspace.RegisterProject(Path.Combine(Path.GetTempPath(), "assistant-pending-task.jar"));
+        var assistant = new PausingTaskStartingAssistantService(workspace);
+        using var viewModel = new AssistantViewModel(
+            assistant,
+            new StubSelectionService(CreateSource("local")),
+            projectWorkspace: workspace);
+        viewModel.RefreshModelSources();
+        viewModel.RefreshProjects();
+        viewModel.AllowProjectChanges = true;
+        viewModel.Draft = "Start the task before finishing the explanation.";
+
+        Task send = viewModel.SendCommand.ExecuteAsync(null);
+        await assistant.Started.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(send.IsCompleted);
+        AssistantChatMessageViewModel pending = viewModel.Messages[1];
+        Assert.True(pending.IsRunning);
+        Assert.False(pending.HasContent);
+        Assert.Equal(
+            assistant.Task!.TaskId,
+            Assert.IsType<AssistantTaskStatusViewModel>(pending.TaskStatus).TaskId);
+        assistant.Release.TrySetResult();
+        await send;
+
+        Assert.False(pending.IsRunning);
+        Assert.Equal("Final explanation.", pending.Content);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartedTaskCardSurvivesFinalModelFailureOrCancellation(bool cancel)
+    {
+        var workspace = new InMemoryModProjectWorkspace();
+        _ = workspace.RegisterProject(Path.Combine(Path.GetTempPath(), "assistant-interrupted-task.jar"));
+        var assistant = new PausingTaskStartingAssistantService(
+            workspace,
+            failAfterRelease: !cancel);
+        using var viewModel = new AssistantViewModel(
+            assistant,
+            new StubSelectionService(CreateSource("local")),
+            projectWorkspace: workspace);
+        viewModel.RefreshModelSources();
+        viewModel.RefreshProjects();
+        viewModel.AllowProjectChanges = true;
+        viewModel.Draft = "Start a task even if the final explanation is interrupted.";
+
+        Task send = viewModel.SendCommand.ExecuteAsync(null);
+        await assistant.Started.Task.WaitAsync(TestContext.Current.CancellationToken);
+        if (cancel)
+        {
+            viewModel.CancelCommand.Execute(null);
+        }
+        else
+        {
+            assistant.Release.TrySetResult();
+        }
+
+        await send;
+
+        Assert.Equal(2, viewModel.Messages.Count);
+        AssistantChatMessageViewModel response = viewModel.Messages[1];
+        Assert.False(response.IsRunning);
+        Assert.True(response.HasContent);
+        Assert.Equal(
+            assistant.Task!.TaskId,
+            Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus).TaskId);
+        Assert.Equal(1, assistant.CallCount);
+        Assert.Equal(string.Empty, viewModel.Draft);
+        workspace.TryReportProgress(
+            assistant.Task.JobId!.Value,
+            new TranslationQueueProgress(
+                assistant.Task.JobId.Value,
+                PipelineStage.Translating,
+                0.7),
+            out _);
+        Assert.Equal(
+            PipelineStage.Translating,
+            Assert.IsType<AssistantTaskStatusViewModel>(response.TaskStatus).Stage);
+    }
+
     [Fact]
     public void RegisteringTaskForExistingActiveProjectFocusesItFromGeneralAssistant()
     {
@@ -396,6 +583,112 @@ public sealed class AssistantViewModelTests
                 [],
                 usage,
                 "provider-model"));
+        }
+    }
+
+    private sealed class TaskStartingAssistantService(InMemoryModProjectWorkspace workspace) : IModelAssistantService
+    {
+        public int CallCount { get; private set; }
+
+        public ModProjectTaskSnapshot? Task { get; private set; }
+
+        public Task<ModelAssistantCompletion> CompleteAsync(
+            string modelSourceId,
+            IReadOnlyList<ModelMessage> conversation,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The project-aware overload is required by this test.");
+
+        public Task<ModelAssistantCompletion> CompleteAsync(
+            string modelSourceId,
+            IReadOnlyList<ModelMessage> conversation,
+            ModProjectSnapshot? project,
+            IProgress<ModelRunEvent>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CallCount++;
+            ModProjectSnapshot selectedProject = Assert.IsType<ModProjectSnapshot>(project);
+            progress?.Report(new ModelRunEvent(
+                1,
+                ModelRunEventKind.ToolStarted,
+                1,
+                "translation_start"));
+            ModProjectTaskSnapshot task = workspace.RegisterTask(
+                selectedProject.ProjectId,
+                new ModProjectTaskRegistration(
+                    selectedProject.SourceArtifactPath,
+                    Path.Combine(Path.GetTempPath(), "assistant-live-task-output.jar"),
+                    modelSourceId,
+                    "zh_CN",
+                    TranslationStyle.Formal,
+                    "Translate the selected mod."));
+            Task = workspace.AttachJob(task.TaskId, Guid.NewGuid(), static () => { });
+            progress?.Report(new ModelRunEvent(
+                2,
+                ModelRunEventKind.ToolCompleted,
+                1,
+                "translation_start",
+                TaskId: Task.TaskId));
+            progress?.Report(new ModelRunEvent(3, ModelRunEventKind.RunCompleted, 1));
+            return System.Threading.Tasks.Task.FromResult(new ModelAssistantCompletion(
+                "The retry was accepted as queued.",
+                []));
+        }
+    }
+
+    private sealed class PausingTaskStartingAssistantService(
+        InMemoryModProjectWorkspace workspace,
+        bool failAfterRelease = false) : IModelAssistantService
+    {
+        public int CallCount { get; private set; }
+
+        public ModProjectTaskSnapshot? Task { get; private set; }
+
+        public TaskCompletionSource Started { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ModelAssistantCompletion> CompleteAsync(
+            string modelSourceId,
+            IReadOnlyList<ModelMessage> conversation,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The project-aware overload is required by this test.");
+
+        public async Task<ModelAssistantCompletion> CompleteAsync(
+            string modelSourceId,
+            IReadOnlyList<ModelMessage> conversation,
+            ModProjectSnapshot? project,
+            IProgress<ModelRunEvent>? progress,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            ModProjectSnapshot selectedProject = Assert.IsType<ModProjectSnapshot>(project);
+            ModProjectTaskSnapshot task = workspace.RegisterTask(
+                selectedProject.ProjectId,
+                new ModProjectTaskRegistration(
+                    selectedProject.SourceArtifactPath,
+                    Path.Combine(Path.GetTempPath(), "assistant-paused-task-output.jar"),
+                    modelSourceId,
+                    "zh_CN",
+                    TranslationStyle.Formal,
+                    "Translate while the final answer is pending."));
+            Task = workspace.AttachJob(task.TaskId, Guid.NewGuid(), static () => { });
+            progress?.Report(new ModelRunEvent(
+                1,
+                ModelRunEventKind.ToolCompleted,
+                1,
+                "translation_start",
+                TaskId: Task.TaskId));
+            Started.TrySetResult();
+            await Release.Task.WaitAsync(cancellationToken);
+            if (failAfterRelease)
+            {
+                throw new ModelServiceException("Final provider round failed safely.");
+            }
+
+            return new ModelAssistantCompletion("Final explanation.", []);
         }
     }
 

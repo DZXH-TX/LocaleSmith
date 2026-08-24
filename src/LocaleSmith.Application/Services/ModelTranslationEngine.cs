@@ -48,8 +48,13 @@ public sealed class ModelTranslationEngine : ITranslationEngine
         var service = ResolveService(request.ModelSourceId);
         var results = new List<TranslatedEntry>(request.Entries.Count);
         ModelTokenUsage usage = ModelTokenUsage.Empty;
+        int maxSourceCharactersPerRequest = request.MaxSourceCharactersPerRequest ??
+            _options.MaxSourceCharactersPerRequest;
+        int maxOutputTokens = request.MaxOutputTokens ?? _options.MaxOutputTokens;
 
-        foreach (var chunk in CreateChunks(request.Entries))
+        foreach (var chunk in CreateChunks(
+                     request.Entries,
+                     maxSourceCharactersPerRequest))
         {
             cancellationToken.ThrowIfCancellationRequested();
             var promptItems = chunk
@@ -74,7 +79,7 @@ public sealed class ModelTranslationEngine : ITranslationEngine
                     new ModelMessage(ModelMessageRole.User, userJson)
                 },
                 temperature: 0.2,
-                maxTokens: _options.MaxOutputTokens);
+                maxTokens: maxOutputTokens);
 
             ModelResponse response;
             try
@@ -143,14 +148,15 @@ public sealed class ModelTranslationEngine : ITranslationEngine
     }
 
     private IEnumerable<IReadOnlyList<TranslationEntry>> CreateChunks(
-        IReadOnlyList<TranslationEntry> entries)
+        IReadOnlyList<TranslationEntry> entries,
+        int maxSourceCharactersPerRequest)
     {
         var current = new List<TranslationEntry>(_options.MaxEntriesPerRequest);
         var characterCount = 0;
 
         foreach (var entry in entries)
         {
-            if (entry.SourceText.Length > _options.MaxSourceCharactersPerRequest)
+            if (entry.SourceText.Length > maxSourceCharactersPerRequest)
             {
                 if (current.Count > 0)
                 {
@@ -168,7 +174,7 @@ public sealed class ModelTranslationEngine : ITranslationEngine
 
             var wouldExceedCount = current.Count >= _options.MaxEntriesPerRequest;
             var wouldExceedCharacters = current.Count > 0 &&
-                characterCount + entry.SourceText.Length > _options.MaxSourceCharactersPerRequest;
+                characterCount + entry.SourceText.Length > maxSourceCharactersPerRequest;
             if (wouldExceedCount || wouldExceedCharacters)
             {
                 yield return current.ToArray();

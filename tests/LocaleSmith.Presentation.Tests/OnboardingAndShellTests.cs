@@ -8,6 +8,22 @@ namespace LocaleSmith.Presentation.Tests;
 public sealed class OnboardingAndShellTests
 {
     [Fact]
+    public void OnboardingAcceptsChannelSpecificSandboxAndLogDefaults()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "LocaleSmith.Dev", Guid.NewGuid().ToString("N"));
+        var sandbox = Path.Combine(root, "CliSandbox");
+        var logs = Path.Combine(root, "logs", "translations");
+
+        var viewModel = new OnboardingViewModel(
+            new RecordingOnboardingService(),
+            defaultSandboxPath: sandbox,
+            defaultLogDirectoryPath: logs);
+
+        Assert.Equal(Path.GetFullPath(sandbox), viewModel.SandboxPath);
+        Assert.Equal(Path.GetFullPath(logs), viewModel.LogDirectoryPath);
+    }
+
+    [Fact]
     public async Task FourStepOnboardingPersistsOnlyAfterSummary()
     {
         var onboarding = new RecordingOnboardingService();

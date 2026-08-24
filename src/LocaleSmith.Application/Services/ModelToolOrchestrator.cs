@@ -223,7 +223,8 @@ public sealed class ModelToolOrchestrator
                         ref eventSequence,
                         result.IsError ? ModelRunEventKind.ToolFailed : ModelRunEventKind.ToolCompleted,
                         currentRound,
-                        call.Name);
+                        call.Name,
+                        taskId: result.PublicTaskId);
                     string boundedContent = result.Content.Length <= MaximumToolResultCharacters
                         ? result.Content
                         : string.Concat(result.Content.AsSpan(0, MaximumToolResultCharacters), "\n[tool result truncated]");
@@ -282,7 +283,8 @@ public sealed class ModelToolOrchestrator
         ModelRunEventKind kind,
         int round,
         string? toolName = null,
-        ModelTokenUsage? usage = null)
+        ModelTokenUsage? usage = null,
+        Guid? taskId = null)
     {
         if (progress is null)
         {
@@ -294,7 +296,8 @@ public sealed class ModelToolOrchestrator
             kind,
             round,
             toolName,
-            usage);
+            usage,
+            taskId);
         try
         {
             progress.Report(modelEvent);

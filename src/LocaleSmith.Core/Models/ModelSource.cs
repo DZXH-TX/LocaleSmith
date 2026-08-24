@@ -2,6 +2,13 @@ namespace LocaleSmith.Core.Models;
 
 public sealed record ModelSource
 {
+    public const int DefaultMaxOutputTokens = 8_000;
+    public const int MinimumMaxOutputTokens = 256;
+    public const int MaximumMaxOutputTokens = 65_536;
+    public const int DefaultMaxSourceCharactersPerRequest = 12_000;
+    public const int MinimumMaxSourceCharactersPerRequest = 1_000;
+    public const int MaximumMaxSourceCharactersPerRequest = 100_000;
+
     public ModelSource(
         string id,
         string displayName,
@@ -10,7 +17,9 @@ public sealed record ModelSource
         string modelName,
         string? apiKeyReference = null,
         string? presetId = null,
-        OpenAiTokenLimitParameter? tokenLimitParameter = null)
+        OpenAiTokenLimitParameter? tokenLimitParameter = null,
+        int? maxOutputTokens = null,
+        int? maxSourceCharactersPerRequest = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -47,6 +56,23 @@ public sealed record ModelSource
                 "Unknown OpenAI-compatible token-limit parameter.");
         }
 
+        if (maxOutputTokens is < MinimumMaxOutputTokens or > MaximumMaxOutputTokens)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxOutputTokens),
+                $"Max output tokens must be between {MinimumMaxOutputTokens} and {MaximumMaxOutputTokens}.");
+        }
+
+        if (maxSourceCharactersPerRequest is
+            < MinimumMaxSourceCharactersPerRequest or
+            > MaximumMaxSourceCharactersPerRequest)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maxSourceCharactersPerRequest),
+                $"Max source characters per request must be between {MinimumMaxSourceCharactersPerRequest} and " +
+                $"{MaximumMaxSourceCharactersPerRequest}.");
+        }
+
         Id = id.Trim();
         DisplayName = displayName.Trim();
         Provider = provider;
@@ -58,6 +84,10 @@ public sealed record ModelSource
         TokenLimitParameter = tokenLimitParameter ?? preset.DefaultTokenLimitParameter;
         SupportsCustomTemperature = preset.SupportsCustomTemperature;
         RequiresReasoningContentReplay = preset.RequiresReasoningContentReplay;
+        UsesReasoningDetailsReplay = preset.UsesReasoningDetailsReplay;
+        RequiresNonNullToolCallContent = preset.RequiresNonNullToolCallContent;
+        MaxOutputTokens = maxOutputTokens;
+        MaxSourceCharactersPerRequest = maxSourceCharactersPerRequest;
     }
 
     public string Id { get; }
@@ -84,4 +114,16 @@ public sealed record ModelSource
 
     /// <summary>Whether provider-private reasoning state must be replayed during multi-step tool calls.</summary>
     public bool RequiresReasoningContentReplay { get; }
+
+    /// <summary>Whether private reasoning state uses MiniMax's structured reasoning_details field.</summary>
+    public bool UsesReasoningDetailsReplay { get; }
+
+    /// <summary>Whether assistant tool-call messages must serialize empty content as an empty string.</summary>
+    public bool RequiresNonNullToolCallContent { get; }
+
+    /// <summary>Optional per-source response budget. Null preserves the caller's workflow default.</summary>
+    public int? MaxOutputTokens { get; }
+
+    /// <summary>Optional per-source batching target. Null preserves the translation-engine default.</summary>
+    public int? MaxSourceCharactersPerRequest { get; }
 }

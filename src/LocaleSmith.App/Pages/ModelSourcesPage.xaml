@@ -152,10 +152,36 @@
                 <TextBox
                     x:Uid="ModelSourceModelName"
                     Text="{Binding ModelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <NumberBox
+                        x:Uid="ModelSourceMaxOutputTokens"
+                        Maximum="65536"
+                        Minimum="256"
+                        IsEnabled="{Binding SendsOutputTokenBudget}"
+                        SmallChange="256"
+                        SpinButtonPlacementMode="Compact"
+                        Value="{Binding MaxOutputTokens, Mode=TwoWay}" />
+                    <NumberBox
+                        Grid.Column="1"
+                        x:Uid="ModelSourceBatchCharacters"
+                        Maximum="100000"
+                        Minimum="1000"
+                        SmallChange="1000"
+                        SpinButtonPlacementMode="Compact"
+                        Value="{Binding MaxSourceCharactersPerRequest, Mode=TwoWay}" />
+                </Grid>
+                <TextBlock
+                    x:Uid="ModelSourceRequestBudgetHelp"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextWrapping="WrapWholeWords" />
 
                 <Border
                     Style="{ThemeResource CardBorderStyle}"
-                    Visibility="{Binding IsOllama, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    Visibility="{Binding CanDiscoverModels, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <StackPanel Spacing="12">
                         <Grid ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
@@ -163,7 +189,10 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Uid="DownloadedModelsTitle" Style="{ThemeResource SectionTitleStyle}" />
-                            <Button Grid.Column="1" Command="{Binding RefreshModelsCommand}">
+                            <Button
+                                Grid.Column="1"
+                                Command="{Binding RefreshModelsCommand}"
+                                CommandParameter="{Binding Password, ElementName=ApiKeyInput}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <FontIcon Glyph="&#xE72C;" />
                                     <TextBlock x:Uid="RefreshModelsButtonText" />
@@ -176,6 +205,12 @@
                             SelectedItem="{Binding SelectedAvailableModel, Mode=TwoWay}"
                             DisplayMemberPath="Name" />
                         <TextBlock x:Uid="DownloadedModelsHelp" Style="{ThemeResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                        <TextBlock
+                            AutomationProperties.LiveSetting="Polite"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            Text="{Binding CatalogMessage}"
+                            TextWrapping="WrapWholeWords"
+                            Visibility="{Binding HasCatalogMessage, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </StackPanel>
                 </Border>
 

@@ -221,6 +221,7 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
             task.Cancel = cancel;
             task.Status = ModProjectTaskStatus.Queued;
             task.Stage = PipelineStage.Queued;
+            task.Revision = checked(task.Revision + 1);
             task.UpdatedAtUtc = DateTimeOffset.UtcNow;
             _taskIdsByJob.Add(jobId, taskId);
             ProjectState project = _projects[task.ProjectId];
@@ -290,6 +291,17 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
 
             state.Stage = progress.Stage;
             state.Progress = Math.Clamp(progress.Fraction, 0, 1);
+            state.NextStage = progress.NextStage;
+            if (progress.Stages is not null)
+            {
+                state.Stages = progress.Stages.ToArray();
+            }
+
+            if (progress.RollbackStatus is not null)
+            {
+                state.RollbackStatus = progress.RollbackStatus;
+            }
+
             if (progress.ModelUsage is not null)
             {
                 state.ModelUsage = progress.ModelUsage;
@@ -303,6 +315,7 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
             }
 
             state.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            state.Revision = checked(state.Revision + 1);
             ProjectState project = _projects[state.ProjectId];
             project.UpdatedAtUtc = state.UpdatedAtUtc;
             snapshot = CreateTaskSnapshot(state);
@@ -324,6 +337,12 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
             if (!_tasks.TryGetValue(taskId, out TaskState? state))
             {
                 task = null;
+                return false;
+            }
+
+            if (state.Status is ModProjectTaskStatus.Completed or ModProjectTaskStatus.Failed or ModProjectTaskStatus.Cancelled)
+            {
+                task = CreateTaskSnapshot(state);
                 return false;
             }
 
@@ -349,15 +368,19 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
             var now = DateTimeOffset.UtcNow;
             state.Stage = PipelineStage.Completed;
             state.Progress = 1;
+            state.NextStage = null;
             state.ModId = result.ModId;
             state.Loader = result.Loader;
             state.ArtifactPaths = result.ArtifactPaths.ToArray();
             state.ModelUsage = result.ModelUsage;
+            state.HardcodedCandidates = result.HardcodedCandidates.ToArray();
+            state.ExternalizedCount = result.ExternalizedCount;
             state.Status = ModProjectTaskStatus.Completed;
             state.FailureType = null;
             state.UpdatedAtUtc = now;
             state.FinishedAtUtc = now;
             state.Cancel = null;
+            state.Revision = checked(state.Revision + 1);
             ProjectState project = _projects[state.ProjectId];
             project.ModId = result.ModId;
             project.Loader = result.Loader;
@@ -399,6 +422,7 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
 
             state.Status = ModProjectTaskStatus.CancellationRequested;
             state.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            state.Revision = checked(state.Revision + 1);
             ProjectState project = _projects[state.ProjectId];
             project.UpdatedAtUtc = state.UpdatedAtUtc;
             snapshot = CreateTaskSnapshot(state);
@@ -428,6 +452,12 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
                 return false;
             }
 
+            if (state.Status is ModProjectTaskStatus.Completed or ModProjectTaskStatus.Failed or ModProjectTaskStatus.Cancelled)
+            {
+                task = CreateTaskSnapshot(state);
+                return false;
+            }
+
             var now = DateTimeOffset.UtcNow;
             state.Stage = stage;
             state.Status = status;
@@ -435,6 +465,7 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
             state.UpdatedAtUtc = now;
             state.FinishedAtUtc = now;
             state.Cancel = null;
+            state.Revision = checked(state.Revision + 1);
             ProjectState project = _projects[state.ProjectId];
             project.UpdatedAtUtc = now;
             snapshot = CreateTaskSnapshot(state);
@@ -484,7 +515,13 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
         state.CreatedAtUtc,
         state.UpdatedAtUtc,
         state.FinishedAtUtc,
-        state.ModelUsage);
+        state.ModelUsage,
+        state.HardcodedCandidates.ToArray(),
+        state.ExternalizedCount,
+        state.NextStage,
+        state.Stages?.ToArray(),
+        state.RollbackStatus,
+        state.Revision);
 
     private static string NormalizeSourceArtifactPath(string sourceArtifactPath)
     {
@@ -559,6 +596,12 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
 
         public double Progress { get; set; }
 
+        public PipelineStage? NextStage { get; set; }
+
+        public IReadOnlyList<PipelineStageProgress>? Stages { get; set; }
+
+        public PipelineStageStatus? RollbackStatus { get; set; }
+
         public string? ModId { get; set; }
 
         public string? Loader { get; set; }
@@ -578,5 +621,11 @@ public sealed class InMemoryModProjectWorkspace : IModProjectWorkspace
         public Action? Cancel { get; set; }
 
         public LocaleSmith.Core.Models.ModelTokenUsage? ModelUsage { get; set; }
+
+        public IReadOnlyList<HardcodedStringCandidate> HardcodedCandidates { get; set; } = [];
+
+        public int ExternalizedCount { get; set; }
+
+        public long Revision { get; set; } = 1;
     }
 }

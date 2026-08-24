@@ -123,7 +123,8 @@ public abstract class HttpModelServiceBase : IModelService
         if (response.Content.Headers.ContentLength > MaximumResponseBodyBytes)
         {
             throw new ModelServiceException(
-                $"{providerName} returned a response larger than {MaximumResponseBodyBytes} bytes.");
+                $"{providerName} returned a response larger than the fixed 16 MiB safety limit. " +
+                "This is not a Token quota; lower the response Token budget or translation batch size.");
         }
 
         try
@@ -145,7 +146,8 @@ public abstract class HttpModelServiceBase : IModelService
         catch (HttpRequestException exception)
         {
             throw new ModelServiceException(
-                $"{providerName} returned a response that exceeded the configured safety limit.",
+                $"{providerName} could not be buffered within the fixed 16 MiB response safety limit. " +
+                "This is not a Token quota; lower the response Token budget or translation batch size.",
                 innerException: exception);
         }
     }

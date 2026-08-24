@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.ComponentModel;
 using LocaleSmith.App.Dialogs;
 using LocaleSmith.App.Services;
 using LocaleSmith.Core.Models;
@@ -6,16 +7,22 @@ using LocaleSmith.Presentation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace LocaleSmith.App.Pages;
 
 public sealed partial class AssistantPage : Page
 {
     private const int MaximumQueuedProposals = 4;
+    private const double FollowLatestThreshold = 48;
     private readonly Queue<CliCommand> _pendingProposals = [];
+    private readonly HashSet<AssistantChatMessageViewModel> _observedMessages = [];
     private ContentDialog? _activeDialog;
+    private ScrollViewer? _conversationScrollViewer;
+    private bool _followLatest = true;
     private bool _isDrainingDialogs;
     private bool _isSubscribed;
+    private bool _scrollQueued;
     private int _navigationGeneration;
 
     private AssistantViewModel ViewModel { get; }
@@ -37,12 +44,15 @@ public sealed partial class AssistantPage : Page
             ViewModel.Messages.CollectionChanged += OnMessagesChanged;
             _isSubscribed = true;
             _navigationGeneration++;
+            SynchronizeMessageObservers();
         }
 
         ViewModel.RefreshModelSources();
         ViewModel.RefreshProjects();
         ViewModel.PublishPendingCliProposals();
         StartPendingProposalDrain();
+        BindConversationScrollViewer();
+        QueueScrollToLatest(force: true);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
@@ -52,7 +62,10 @@ public sealed partial class AssistantPage : Page
         {
             ViewModel.CliProposalsRequested -= OnCliProposalsRequested;
             ViewModel.Messages.CollectionChanged -= OnMessagesChanged;
+            ClearMessageObservers();
+            UnbindConversationScrollViewer();
             _isSubscribed = false;
+            _scrollQueued = false;
         }
 
         try
@@ -69,12 +82,156 @@ public sealed partial class AssistantPage : Page
 
     private void OnMessagesChanged(object? sender, NotifyCollectionChangedEventArgs args)
     {
-        if (ViewModel.Messages.Count == 0)
+        if (args.NewItems?.OfType<AssistantChatMessageViewModel>().Any(static message => message.IsUser) == true)
+        {
+            _followLatest = true;
+        }
+
+        SynchronizeMessageObservers();
+        QueueScrollToLatest();
+    }
+
+    private void SynchronizeMessageObservers()
+    {
+        var current = ViewModel.Messages.ToHashSet();
+        foreach (AssistantChatMessageViewModel message in _observedMessages
+                     .Where(message => !current.Contains(message))
+                     .ToArray())
+        {
+            message.PropertyChanged -= OnMessagePropertyChanged;
+            message.Activities.CollectionChanged -= OnMessageActivitiesChanged;
+            _observedMessages.Remove(message);
+        }
+
+        foreach (AssistantChatMessageViewModel message in current)
+        {
+            if (!_observedMessages.Add(message))
+            {
+                continue;
+            }
+
+            message.PropertyChanged += OnMessagePropertyChanged;
+            message.Activities.CollectionChanged += OnMessageActivitiesChanged;
+        }
+    }
+
+    private void ClearMessageObservers()
+    {
+        foreach (AssistantChatMessageViewModel message in _observedMessages)
+        {
+            message.PropertyChanged -= OnMessagePropertyChanged;
+            message.Activities.CollectionChanged -= OnMessageActivitiesChanged;
+        }
+
+        _observedMessages.Clear();
+    }
+
+    private void OnMessagePropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName is (nameof(AssistantChatMessageViewModel.Content) or
+            nameof(AssistantChatMessageViewModel.HasContent) or
+            nameof(AssistantChatMessageViewModel.IsRunning) or
+            nameof(AssistantChatMessageViewModel.HasActivities) or
+            nameof(AssistantChatMessageViewModel.TaskStatus) or
+            nameof(AssistantChatMessageViewModel.HasTaskStatus) or
+            nameof(AssistantChatMessageViewModel.HasUsage) or
+            nameof(AssistantChatMessageViewModel.UsageSummary)) &&
+            sender is AssistantChatMessageViewModel message &&
+            ViewModel.Messages.Count > 0 &&
+            ReferenceEquals(message, ViewModel.Messages[^1]))
+        {
+            QueueScrollToLatest();
+        }
+    }
+
+    private void OnMessageActivitiesChanged(object? sender, NotifyCollectionChangedEventArgs args)
+    {
+        if (ViewModel.Messages.Count > 0 && ReferenceEquals(sender, ViewModel.Messages[^1].Activities))
+        {
+            QueueScrollToLatest();
+        }
+    }
+
+    private void QueueScrollToLatest(bool force = false)
+    {
+        if (!_isSubscribed ||
+            _scrollQueued ||
+            ViewModel.Messages.Count == 0 ||
+            (!force && !_followLatest))
         {
             return;
         }
 
-        DispatcherQueue.TryEnqueue(() => ConversationList.ScrollIntoView(ViewModel.Messages[^1]));
+        _scrollQueued = true;
+        int generation = _navigationGeneration;
+        if (!DispatcherQueue.TryEnqueue(() =>
+            {
+                _scrollQueued = false;
+                if (_isSubscribed &&
+                    generation == _navigationGeneration &&
+                    ViewModel.Messages.Count > 0)
+                {
+                    BindConversationScrollViewer();
+                    ConversationList.ScrollIntoView(ViewModel.Messages[^1]);
+                }
+            }))
+        {
+            _scrollQueued = false;
+        }
+    }
+
+    private void BindConversationScrollViewer()
+    {
+        ScrollViewer? scrollViewer = FindDescendant<ScrollViewer>(ConversationList);
+        if (ReferenceEquals(_conversationScrollViewer, scrollViewer))
+        {
+            return;
+        }
+
+        UnbindConversationScrollViewer();
+        _conversationScrollViewer = scrollViewer;
+        if (_conversationScrollViewer is not null)
+        {
+            _conversationScrollViewer.ViewChanged += OnConversationViewChanged;
+        }
+    }
+
+    private void UnbindConversationScrollViewer()
+    {
+        if (_conversationScrollViewer is not null)
+        {
+            _conversationScrollViewer.ViewChanged -= OnConversationViewChanged;
+            _conversationScrollViewer = null;
+        }
+    }
+
+    private void OnConversationViewChanged(object? sender, ScrollViewerViewChangedEventArgs args)
+    {
+        if (sender is ScrollViewer scrollViewer)
+        {
+            _followLatest = scrollViewer.ScrollableHeight - scrollViewer.VerticalOffset <= FollowLatestThreshold;
+        }
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root)
+        where T : DependencyObject
+    {
+        int childCount = VisualTreeHelper.GetChildrenCount(root);
+        for (var index = 0; index < childCount; index++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, index);
+            if (child is T match)
+            {
+                return match;
+            }
+
+            if (FindDescendant<T>(child) is { } descendant)
+            {
+                return descendant;
+            }
+        }
+
+        return null;
     }
 
     private async void OnCliProposalsRequested(

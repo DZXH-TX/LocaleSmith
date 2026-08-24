@@ -33,6 +33,13 @@ public sealed class ModelAssistantService(
         one-turn project-change authorization in the UI. translation_start runs LocaleSmith's real
         inspect, safe extract, translate, repack, verify, and commit pipeline. Never claim that a
         project operation ran unless its tool result says so.
+        The selected source artifact is fixed by the project. The assistant UI shows the latest task's
+        source name, target language, style, progress, and live terminal status; there is no separate
+        hidden project-configuration panel. If the user does not request a different target or style,
+        preserve the latest task configuration. After translation_start succeeds, do not ask the user
+        to send another message merely to poll status: the application updates the bound task card.
+        Do not propose CLI commands to read LocaleSmith task or log state; use approved project tools
+        for public state or direct the user to the application's Logs page for diagnostic details.
         Keep answers concise and identify uncertainty.
         """;
 
@@ -127,7 +134,7 @@ public sealed class ModelAssistantService(
                 new ModelRequest(
                     messages,
                     temperature: 0.2,
-                    maxTokens: 2048,
+                    maxTokens: service.Source.MaxOutputTokens ?? 2048,
                     tools: exposedTools),
                 recordingExecutor,
                 progress,

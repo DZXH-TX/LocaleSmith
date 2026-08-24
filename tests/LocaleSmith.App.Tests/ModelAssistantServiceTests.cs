@@ -51,6 +51,7 @@ public sealed class ModelAssistantServiceTests
         Assert.Equal(["--info"], command.Arguments);
         Assert.Equal(TimeSpan.FromSeconds(15), command.Timeout);
         Assert.Equal(2, model.Requests.Count);
+        Assert.All(model.Requests, request => Assert.Equal(4096, request.MaxTokens));
         Assert.Contains("LocaleSmith (译匠)", model.Requests[0].Messages[0].Content, StringComparison.Ordinal);
         Assert.Contains("PowerShell 7.6", model.Requests[0].Messages[0].Content, StringComparison.Ordinal);
         Assert.Contains(@"C:\sandbox", model.Requests[0].Messages[0].Content, StringComparison.Ordinal);
@@ -295,11 +296,12 @@ public sealed class ModelAssistantServiceTests
             new McpModelToolExecutor(context, new PermitPolicy(), projectBackend: backend),
             new ModelToolOrchestrator());
 
+        var progress = new RecordingProgress<ModelRunEvent>();
         await assistant.CompleteAsync(
             model.Source.Id,
             [new ModelMessage(ModelMessageRole.User, "Start this translation.")],
             CreateProject(backend.ProjectId),
-            progress: null,
+            progress,
             allowProjectChanges: true,
             TestContext.Current.CancellationToken);
 
@@ -309,6 +311,11 @@ public sealed class ModelAssistantServiceTests
         Assert.Equal(model.Source.Id, request.ModelSourceId);
         Assert.Equal("ja_jp", request.TargetLanguage);
         Assert.Equal("informal", request.Style);
+        Assert.Equal(
+            backend.LastStartedTaskId,
+            progress.Values.Single(value =>
+                value.Kind == ModelRunEventKind.ToolCompleted &&
+                value.ToolName == "translation_start").TaskId);
     }
 
     [Fact]
@@ -458,7 +465,8 @@ public sealed class ModelAssistantServiceTests
             "Assistant model",
             ModelProviderKind.Ollama,
             new Uri("http://127.0.0.1:11434"),
-            "qwen3");
+            "qwen3",
+            maxOutputTokens: 4096);
 
         public List<ModelRequest> Requests { get; } = [];
 
@@ -511,6 +519,8 @@ public sealed class ModelAssistantServiceTests
 
         public TranslationMcpStartRequest? LastStartRequest { get; private set; }
 
+        public Guid? LastStartedTaskId { get; private set; }
+
         public ValueTask<ProjectMcpSnapshot?> GetActiveProjectAsync(
             CancellationToken cancellationToken = default)
         {
@@ -551,7 +561,9 @@ public sealed class ModelAssistantServiceTests
         {
             StartCount++;
             LastStartRequest = request;
-            return ValueTask.FromResult(CreateTask(request.ProjectId, request.Objective));
+            TaskMcpSnapshot task = CreateTask(request.ProjectId, request.Objective);
+            LastStartedTaskId = task.TaskId;
+            return ValueTask.FromResult(task);
         }
 
         public ValueTask<TaskMcpSnapshot?> GetTaskAsync(

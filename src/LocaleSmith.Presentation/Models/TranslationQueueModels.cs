@@ -9,7 +9,9 @@ public sealed record TranslationQueueRequest(
     string OutputPath,
     string ModelSourceId,
     TranslationStyle Style = TranslationStyle.Formal,
-    string TargetLanguage = TranslationLanguageCatalog.DefaultLocale);
+    string TargetLanguage = TranslationLanguageCatalog.DefaultLocale,
+    int MaxOutputTokens = ModelSource.DefaultMaxOutputTokens,
+    int MaxSourceCharactersPerRequest = ModelSource.DefaultMaxSourceCharactersPerRequest);
 
 public sealed record TranslationQueueResult(
     Guid JobId,

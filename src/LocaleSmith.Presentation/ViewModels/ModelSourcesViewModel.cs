@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +15,16 @@ public enum ConnectionTestState
     NotTested,
     Testing,
     Successful,
+    Failed
+}
+
+public enum ModelCatalogState
+{
+    NotLoaded,
+    Loading,
+    Fresh,
+    Empty,
+    Unsupported,
     Failed
 }
 
@@ -54,6 +65,8 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     private OpenAiTokenLimitParameter _selectedTokenLimitParameter = OpenAiTokenLimitParameter.MaxTokens;
     private string _endpoint = "http://127.0.0.1:11434";
     private string _modelName = "llama3";
+    private int _maxOutputTokens = ModelSource.DefaultMaxOutputTokens;
+    private int _maxSourceCharactersPerRequest = ModelSource.DefaultMaxSourceCharactersPerRequest;
     private string? _credentialReference;
     private string? _credentialFingerprint;
     private bool _applyingPresetDefaults;
@@ -64,6 +77,9 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     private string? _connectionMessage;
     private AvailableModelInfo? _selectedAvailableModel;
     private long _editorRevision;
+    private long _catalogRevision;
+    private ModelCatalogState _catalogState;
+    private string? _catalogMessage;
 
     public ModelSourcesViewModel(
         IModelSourceCatalog catalog,
@@ -82,7 +98,9 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         NewCommand = new RelayCommand(StartNew, () => !IsBusy);
         SaveCommand = new AsyncRelayCommand<string?>(SaveAsync, _ => CanSave);
         TestConnectionCommand = new AsyncRelayCommand<string?>(TestConnectionAsync, _ => CanTestConnection);
-        RefreshModelsCommand = new AsyncRelayCommand(RefreshModelsAsync, () => IsOllama && !IsBusy);
+        RefreshModelsCommand = new AsyncRelayCommand<string?>(
+            RefreshModelsAsync,
+            _ => CanDiscoverModels && !IsBusy);
         ConfirmProviderChangeCommand = new RelayCommand(ConfirmProviderChange, () => PendingProvider is not null);
         CancelProviderChangeCommand = new RelayCommand(CancelProviderChange, () => PendingProvider is not null);
     }
@@ -106,7 +124,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
 
     public IAsyncRelayCommand<string?> TestConnectionCommand { get; }
 
-    public IAsyncRelayCommand RefreshModelsCommand { get; }
+    public IAsyncRelayCommand<string?> RefreshModelsCommand { get; }
 
     public IRelayCommand ConfirmProviderChangeCommand { get; }
 
@@ -159,13 +177,15 @@ public sealed class ModelSourcesViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsApiKeyRequired));
                 OnPropertyChanged(nameof(IsOllama));
                 OnPropertyChanged(nameof(IsOpenAiCompatible));
+                OnPropertyChanged(nameof(CanDiscoverModels));
+                OnPropertyChanged(nameof(SendsOutputTokenBudget));
                 NotifyPresetProperties();
                 if (value != ModelProviderKind.OpenAiCompatible)
                 {
                     SetPresetWithoutApplyingDefaults(ModelProviderPresets.Custom);
                 }
 
-                RefreshModelsCommand.NotifyCanExecuteChanged();
+                InvalidateModelCatalog();
             }
         }
     }
@@ -189,6 +209,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
             }
 
             MarkDirty();
+            InvalidateModelCatalog();
             if (Provider == ModelProviderKind.OpenAiCompatible)
             {
                 _applyingPresetDefaults = true;
@@ -234,6 +255,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
             if (SetProperty(ref _selectedTokenLimitParameter, value))
             {
                 OnPropertyChanged(nameof(SelectedTokenLimitParameterOption));
+                OnPropertyChanged(nameof(SendsOutputTokenBudget));
                 MarkDirty();
             }
         }
@@ -263,6 +285,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
             if (SetProperty(ref _endpoint, value))
             {
                 MarkDirty();
+                InvalidateModelCatalog();
                 ReconcilePresetWithEndpoint(value);
             }
         }
@@ -272,6 +295,30 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     {
         get => _modelName;
         set => SetEditorProperty(ref _modelName, value);
+    }
+
+    public int MaxOutputTokens
+    {
+        get => _maxOutputTokens;
+        set
+        {
+            if (SetProperty(ref _maxOutputTokens, value))
+            {
+                MarkDirty();
+            }
+        }
+    }
+
+    public int MaxSourceCharactersPerRequest
+    {
+        get => _maxSourceCharactersPerRequest;
+        set
+        {
+            if (SetProperty(ref _maxSourceCharactersPerRequest, value))
+            {
+                MarkDirty();
+            }
+        }
     }
 
     public string CredentialReference => string.IsNullOrWhiteSpace(_credentialReference)
@@ -285,6 +332,45 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     public bool IsOllama => Provider == ModelProviderKind.Ollama;
 
     public bool IsOpenAiCompatible => Provider == ModelProviderKind.OpenAiCompatible;
+
+    public bool CanDiscoverModels => Provider is
+        ModelProviderKind.Ollama or
+        ModelProviderKind.OpenAiCompatible;
+
+    public bool SendsOutputTokenBudget =>
+        Provider != ModelProviderKind.OpenAiCompatible ||
+        SelectedTokenLimitParameter != OpenAiTokenLimitParameter.Omit;
+
+    public ModelCatalogState CatalogState
+    {
+        get => _catalogState;
+        private set
+        {
+            if (SetProperty(ref _catalogState, value))
+            {
+                OnPropertyChanged(nameof(IsCatalogLoading));
+                OnPropertyChanged(nameof(IsCatalogFailure));
+            }
+        }
+    }
+
+    public bool IsCatalogLoading => CatalogState == ModelCatalogState.Loading;
+
+    public bool IsCatalogFailure => CatalogState == ModelCatalogState.Failed;
+
+    public string? CatalogMessage
+    {
+        get => _catalogMessage;
+        private set
+        {
+            if (SetProperty(ref _catalogMessage, value))
+            {
+                OnPropertyChanged(nameof(HasCatalogMessage));
+            }
+        }
+    }
+
+    public bool HasCatalogMessage => !string.IsNullOrWhiteSpace(CatalogMessage);
 
     public Uri? PresetDocumentationUri => SelectedPreset.DocumentationUri;
 
@@ -531,20 +617,31 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         }
     }
 
-    public async Task RefreshModelsAsync(CancellationToken cancellationToken = default)
+    public async Task RefreshModelsAsync(
+        string? apiKey,
+        CancellationToken cancellationToken = default)
     {
-        if (!IsOllama || !TryCreateDraft(out var draft))
+        if (!CanDiscoverModels || !TryCreateCatalogDraft(out var draft))
         {
             return;
         }
 
+        char[] secretCharacters = apiKey?.ToCharArray() ?? [];
+        long catalogRevision = _catalogRevision;
         IsBusy = true;
+        CatalogState = ModelCatalogState.Loading;
+        CatalogMessage = Text("ModelCatalogLoading", "Refreshing provider-reported models…");
         NotifyCommands();
         try
         {
             var models = await _catalog
-                .ListAvailableModelsAsync(draft, cancellationToken)
+                .ListAvailableModelsAsync(draft, secretCharacters, cancellationToken)
                 .ConfigureAwait(true);
+            if (_catalogRevision != catalogRevision)
+            {
+                return;
+            }
+
             AvailableModels.Clear();
             foreach (var model in models)
             {
@@ -553,29 +650,62 @@ public sealed class ModelSourcesViewModel : ViewModelBase
 
             SelectedAvailableModel = AvailableModels.FirstOrDefault(model =>
                 string.Equals(model.Name, ModelName, StringComparison.OrdinalIgnoreCase));
-            ConnectionMessage = models.Count == 0
+            CatalogState = models.Count == 0
+                ? ModelCatalogState.Empty
+                : ModelCatalogState.Fresh;
+            CatalogMessage = models.Count == 0
                 ? Text(
-                    "OllamaModelsEmpty",
-                    "Ollama is reachable, but no downloaded models were reported. Manual entry remains available.")
-                : Text("OllamaModelsFound", "Found {0} downloaded model(s).", models.Count);
-            ConnectionState = ConnectionTestState.Successful;
+                    "ModelCatalogEmpty",
+                    "The provider reported no models. Manual entry remains available.")
+                : Text("ModelCatalogFound", "Found {0} provider-reported model(s).", models.Count);
             ErrorMessage = null;
+        }
+        catch (ModelServiceException exception) when (exception.StatusCode is
+            HttpStatusCode.NotFound or
+            HttpStatusCode.MethodNotAllowed or
+            HttpStatusCode.NotImplemented)
+        {
+            if (_catalogRevision == catalogRevision)
+            {
+                CatalogState = ModelCatalogState.Unsupported;
+                CatalogMessage = Text(
+                    "ModelCatalogUnsupported",
+                    "This endpoint does not expose a compatible model list. You can keep the manual model name.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            if (_catalogRevision == catalogRevision)
+            {
+                CatalogState = ModelCatalogState.NotLoaded;
+                CatalogMessage = null;
+            }
+
+            throw;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // A catalog failure never destroys a manually entered model name.
-            ConnectionMessage = Text(
-                "OllamaModelsRefreshFailed",
-                "Local models could not be refreshed: {0}. You can keep the manual model name.",
-                exception.Message);
-            ConnectionState = ConnectionTestState.Failed;
+            if (_catalogRevision == catalogRevision)
+            {
+                // A catalog failure never destroys a manually entered model name or a successful connection test.
+                CatalogState = ModelCatalogState.Failed;
+                CatalogMessage = Text(
+                    "ModelCatalogRefreshFailed",
+                    "Models could not be refreshed: {0}. You can keep the manual model name.",
+                    exception.Message);
+            }
         }
         finally
         {
+            ClearSecret(secretCharacters);
+            SecretInputConsumed?.Invoke(this, EventArgs.Empty);
             IsBusy = false;
             NotifyCommands();
         }
     }
+
+    public Task RefreshModelsAsync(CancellationToken cancellationToken = default) =>
+        RefreshModelsAsync(apiKey: null, cancellationToken);
 
     public async Task DeleteSelectedAsync(CancellationToken cancellationToken = default)
     {
@@ -621,6 +751,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     private void StartNew()
     {
         _editorRevision++;
+        _catalogRevision++;
         _selectedSource = null;
         OnPropertyChanged(nameof(SelectedSource));
         OnPropertyChanged(nameof(HasSelectedSource));
@@ -629,11 +760,17 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         DisplayName = "Local Ollama";
         _provider = ModelProviderKind.Ollama;
         OnPropertyChanged(nameof(Provider));
+        OnPropertyChanged(nameof(IsApiKeyRequired));
+        OnPropertyChanged(nameof(IsOllama));
         OnPropertyChanged(nameof(IsOpenAiCompatible));
+        OnPropertyChanged(nameof(CanDiscoverModels));
+        OnPropertyChanged(nameof(SendsOutputTokenBudget));
         SetPresetWithoutApplyingDefaults(ModelProviderPresets.Custom);
         SetTokenLimitParameterWithoutTracking(OpenAiTokenLimitParameter.MaxTokens);
         Endpoint = "http://127.0.0.1:11434";
         ModelName = "llama3";
+        MaxOutputTokens = ModelSource.DefaultMaxOutputTokens;
+        MaxSourceCharactersPerRequest = ModelSource.DefaultMaxSourceCharactersPerRequest;
         _credentialReference = null;
         _credentialFingerprint = null;
         OnPropertyChanged(nameof(CredentialReference));
@@ -644,12 +781,15 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         ConnectionMessage = null;
         AvailableModels.Clear();
         SelectedAvailableModel = null;
+        CatalogState = ModelCatalogState.NotLoaded;
+        CatalogMessage = null;
         ErrorMessage = null;
     }
 
     private void LoadEditor(ModelSourceProfile profile)
     {
         _editorRevision++;
+        _catalogRevision++;
         _suppressDirtyTracking = true;
         _editingId = profile.Id;
         DisplayName = profile.DisplayName;
@@ -658,6 +798,8 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsApiKeyRequired));
         OnPropertyChanged(nameof(IsOllama));
         OnPropertyChanged(nameof(IsOpenAiCompatible));
+        OnPropertyChanged(nameof(CanDiscoverModels));
+        OnPropertyChanged(nameof(SendsOutputTokenBudget));
         var configuredPreset = ModelProviderPresets.ResolveOrCustom(profile.PresetId);
         var preset = ModelProviderPresets.ResolveEffective(
             profile.Provider,
@@ -669,6 +811,9 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         RefreshModelsCommand.NotifyCanExecuteChanged();
         Endpoint = profile.Endpoint;
         ModelName = profile.ModelName;
+        MaxOutputTokens = profile.MaxOutputTokens ?? ModelSource.DefaultMaxOutputTokens;
+        MaxSourceCharactersPerRequest = profile.MaxSourceCharactersPerRequest ??
+            ModelSource.DefaultMaxSourceCharactersPerRequest;
         _credentialReference = profile.CredentialReference;
         _credentialFingerprint = profile.CredentialFingerprint;
         OnPropertyChanged(nameof(CredentialReference));
@@ -679,6 +824,8 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         ConnectionMessage = null;
         AvailableModels.Clear();
         SelectedAvailableModel = null;
+        CatalogState = ModelCatalogState.NotLoaded;
+        CatalogMessage = null;
         ErrorMessage = null;
     }
 
@@ -695,13 +842,15 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsApiKeyRequired));
         OnPropertyChanged(nameof(IsOllama));
         OnPropertyChanged(nameof(IsOpenAiCompatible));
+        OnPropertyChanged(nameof(CanDiscoverModels));
+        OnPropertyChanged(nameof(SendsOutputTokenBudget));
         NotifyPresetProperties();
         if (provider != ModelProviderKind.OpenAiCompatible)
         {
             SetPresetWithoutApplyingDefaults(ModelProviderPresets.Custom);
         }
 
-        RefreshModelsCommand.NotifyCanExecuteChanged();
+        InvalidateModelCatalog();
         MarkDirty();
     }
 
@@ -718,6 +867,11 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(DisplayName) || string.IsNullOrWhiteSpace(ModelName))
         {
             ErrorMessage = Text("ModelSourceFieldsRequired", "Display name and model name are required.");
+            return false;
+        }
+
+        if (!ValidateRequestBudgets())
+        {
             return false;
         }
 
@@ -760,7 +914,95 @@ public sealed class ModelSourcesViewModel : ViewModelBase
                 : ModelProviderPresets.CustomId,
             Provider == ModelProviderKind.OpenAiCompatible
                 ? SelectedTokenLimitParameter
-                : null);
+                : null,
+            MaxOutputTokens,
+            MaxSourceCharactersPerRequest);
+        return true;
+    }
+
+    private bool TryCreateCatalogDraft(out ModelSourceDraft draft)
+    {
+        draft = null!;
+        ErrorMessage = null;
+        if (!ValidateRequestBudgets())
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(Endpoint, UriKind.Absolute, out Uri? endpoint) ||
+            (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
+        {
+            ErrorMessage = Text("ModelSourceAddressInvalid", "Enter an absolute HTTP or HTTPS service address.");
+            return false;
+        }
+
+        if (endpoint.Scheme == Uri.UriSchemeHttp && !endpoint.IsLoopback)
+        {
+            ErrorMessage = Text(
+                "ModelSourceHttpsRequired",
+                "Remote model sources must use HTTPS; HTTP is allowed only for loopback services.");
+            return false;
+        }
+
+        if (Provider == ModelProviderKind.OpenAiCompatible &&
+            endpoint.Scheme == Uri.UriSchemeHttp &&
+            !ModelProviderPresets.IsSupportedCustomLoopbackEndpoint(endpoint))
+        {
+            ErrorMessage = Text(
+                "ModelSourceLoopbackOpenAiV1Required",
+                "Loopback HTTP OpenAI-compatible sources must use an explicit /v1 base address.");
+            return false;
+        }
+
+        ModelProviderPreset effectivePreset = ModelProviderPresets.ResolveEffective(
+            Provider,
+            SelectedPreset.Id,
+            endpoint);
+        string modelName = string.IsNullOrWhiteSpace(ModelName)
+            ? effectivePreset.DefaultModelName ?? "catalog-discovery"
+            : ModelName.Trim();
+        draft = new ModelSourceDraft(
+            _editingId,
+            string.IsNullOrWhiteSpace(DisplayName) ? "Model catalog" : DisplayName.Trim(),
+            Provider,
+            endpoint,
+            modelName,
+            _credentialReference,
+            Provider == ModelProviderKind.OpenAiCompatible
+                ? effectivePreset.Id
+                : ModelProviderPresets.CustomId,
+            Provider == ModelProviderKind.OpenAiCompatible
+                ? SelectedTokenLimitParameter
+                : null,
+            MaxOutputTokens,
+            MaxSourceCharactersPerRequest);
+        return true;
+    }
+
+    private bool ValidateRequestBudgets()
+    {
+        if (MaxOutputTokens is < ModelSource.MinimumMaxOutputTokens or > ModelSource.MaximumMaxOutputTokens)
+        {
+            ErrorMessage = Text(
+                "ModelSourceMaxOutputTokensInvalid",
+                "Response tokens must be between {0} and {1}.",
+                ModelSource.MinimumMaxOutputTokens,
+                ModelSource.MaximumMaxOutputTokens);
+            return false;
+        }
+
+        if (MaxSourceCharactersPerRequest is
+            < ModelSource.MinimumMaxSourceCharactersPerRequest or
+            > ModelSource.MaximumMaxSourceCharactersPerRequest)
+        {
+            ErrorMessage = Text(
+                "ModelSourceBatchCharactersInvalid",
+                "Source characters per translation batch must be between {0} and {1}.",
+                ModelSource.MinimumMaxSourceCharactersPerRequest,
+                ModelSource.MaximumMaxSourceCharactersPerRequest);
+            return false;
+        }
+
         return true;
     }
 
@@ -788,6 +1030,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         _selectedTokenLimitParameter = parameter;
         OnPropertyChanged(nameof(SelectedTokenLimitParameter));
         OnPropertyChanged(nameof(SelectedTokenLimitParameterOption));
+        OnPropertyChanged(nameof(SendsOutputTokenBudget));
     }
 
     private void ReconcilePresetWithEndpoint(string endpointText)
@@ -845,6 +1088,16 @@ public sealed class ModelSourcesViewModel : ViewModelBase
             ConnectionState = ConnectionTestState.NotTested;
             ConnectionMessage = null;
         }
+    }
+
+    private void InvalidateModelCatalog()
+    {
+        _catalogRevision++;
+        AvailableModels.Clear();
+        SelectedAvailableModel = null;
+        CatalogState = ModelCatalogState.NotLoaded;
+        CatalogMessage = null;
+        RefreshModelsCommand.NotifyCanExecuteChanged();
     }
 
     private static void ClearSecret(char[] characters)

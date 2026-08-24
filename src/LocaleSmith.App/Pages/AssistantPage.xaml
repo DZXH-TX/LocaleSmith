@@ -78,6 +78,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions>
@@ -101,12 +102,17 @@
                         Grid.Row="2"
                         Text="{Binding ActiveProjectObjective}"
                         TextWrapping="WrapWholeWords" />
-                    <ProgressBar
+                    <TextBlock
                         Grid.Row="3"
+                        Text="{Binding ActiveProjectConfiguration}"
+                        Style="{ThemeResource CaptionTextBlockStyle}"
+                        TextWrapping="WrapWholeWords" />
+                    <ProgressBar
+                        Grid.Row="4"
                         Maximum="1"
                         Value="{Binding ActiveProjectProgress}" />
                     <TextBlock
-                        Grid.Row="4"
+                        Grid.Row="5"
                         Text="{Binding ActiveProjectUsageSummary}"
                         Style="{ThemeResource CaptionTextBlockStyle}"
                         TextWrapping="WrapWholeWords"
@@ -200,6 +206,39 @@
                                         IsTextSelectionEnabled="True"
                                         TextWrapping="WrapWholeWords"
                                         Visibility="{Binding HasContent, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <Border
+                                        Margin="0,4,0,0"
+                                        Padding="10"
+                                        Background="{ThemeResource SubtleFillColorTertiaryBrush}"
+                                        CornerRadius="6"
+                                        Visibility="{Binding HasTaskStatus, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <StackPanel DataContext="{Binding TaskStatus}" Spacing="5">
+                                            <TextBlock
+                                                Text="{Binding Title}"
+                                                Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                            <TextBlock
+                                                Text="{Binding Summary}"
+                                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                                TextWrapping="WrapWholeWords" />
+                                            <TextBlock
+                                                Text="{Binding Objective}"
+                                                TextWrapping="WrapWholeWords" />
+                                            <TextBlock
+                                                Text="{Binding ConfigurationSummary}"
+                                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                                TextWrapping="WrapWholeWords" />
+                                            <ProgressBar
+                                                AutomationProperties.Name="{Binding Title}"
+                                                Maximum="1"
+                                                Value="{Binding Progress}" />
+                                            <TextBlock
+                                                FontFamily="Consolas"
+                                                IsTextSelectionEnabled="True"
+                                                Text="{Binding TaskIdText}"
+                                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                                TextWrapping="WrapWholeWords" />
+                                        </StackPanel>
+                                    </Border>
                                     <Border
                                         Margin="0,4,0,0"
                                         Padding="10,6"

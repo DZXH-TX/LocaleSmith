@@ -438,10 +438,77 @@ public sealed class LocalizationResourceContractTests
 
         var packageVersion = Version.Parse(
             Assert.IsType<string>((string?)identity.Attribute("Version")));
-        Assert.InRange(packageVersion.Major, 1, ushort.MaxValue);
-        Assert.InRange(packageVersion.Minor, 0, ushort.MaxValue);
-        Assert.InRange(packageVersion.Build, 0, ushort.MaxValue);
-        Assert.Equal(0, packageVersion.Revision);
+        Assert.Equal(new Version(1, 2, 0, 0), packageVersion);
+        Assert.Equal(4, AppConfiguration.CurrentSchemaVersion);
+    }
+
+    [Fact]
+    public void DevelopmentPackageUsesAnIsolatedIdentityAndTheSameReleaseVersion()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var packageRoot = Path.Combine(repositoryRoot, "packaging", "LocaleSmith.Package");
+        var production = XDocument.Load(Path.Combine(packageRoot, "Package.appxmanifest"));
+        var development = XDocument.Load(Path.Combine(packageRoot, "Package.dev.appxmanifest"));
+        var productionNamespace = production.Root!.Name.Namespace;
+        var developmentNamespace = development.Root!.Name.Namespace;
+        var productionIdentity = Assert.Single(
+            production.Descendants(productionNamespace + "Identity"));
+        var developmentIdentity = Assert.Single(
+            development.Descendants(developmentNamespace + "Identity"));
+
+        Assert.Equal("CRTech.LocaleSmith.Dev", (string?)developmentIdentity.Attribute("Name"));
+        Assert.Equal("CN=LocaleSmith Development", (string?)developmentIdentity.Attribute("Publisher"));
+        Assert.Equal(
+            (string?)productionIdentity.Attribute("Version"),
+            (string?)developmentIdentity.Attribute("Version"));
+        Assert.NotEqual(
+            (string?)productionIdentity.Attribute("Name"),
+            (string?)developmentIdentity.Attribute("Name"));
+        Assert.Equal(
+            (string?)productionIdentity.Attribute("ProcessorArchitecture"),
+            (string?)developmentIdentity.Attribute("ProcessorArchitecture"));
+        Assert.True(XNode.DeepEquals(
+            production.Root.Element(productionNamespace + "Resources"),
+            development.Root.Element(developmentNamespace + "Resources")));
+        Assert.True(XNode.DeepEquals(
+            production.Root.Element(productionNamespace + "Dependencies"),
+            development.Root.Element(developmentNamespace + "Dependencies")));
+        Assert.True(XNode.DeepEquals(
+            production.Root.Element(productionNamespace + "Capabilities"),
+            development.Root.Element(developmentNamespace + "Capabilities")));
+        var productionApplication = Assert.Single(
+            production.Descendants(productionNamespace + "Application"));
+        var developmentApplication = Assert.Single(
+            development.Descendants(developmentNamespace + "Application"));
+        Assert.Equal(
+            (string?)productionApplication.Attribute("Executable"),
+            (string?)developmentApplication.Attribute("Executable"));
+        Assert.Equal(
+            (string?)productionApplication.Attribute("EntryPoint"),
+            (string?)developmentApplication.Attribute("EntryPoint"));
+
+        var project = XDocument.Load(Path.Combine(packageRoot, "LocaleSmith.Package.wapproj"));
+        var projectNamespace = project.Root!.Name.Namespace;
+        var defaultFlavor = Assert.Single(
+            project.Descendants(projectNamespace + "PackageFlavor"),
+            element => string.Equals(
+                (string?)element.Attribute("Condition"),
+                "'$(PackageFlavor)' == ''",
+                StringComparison.Ordinal));
+        Assert.Equal("Development", defaultFlavor.Value);
+        var manifests = project.Descendants(projectNamespace + "AppxManifest").ToArray();
+        Assert.Contains(
+            manifests,
+            element => (string?)element.Attribute("Include") == "Package.dev.appxmanifest"
+                && ((string?)element.Attribute("Condition"))?.Contains(
+                    "'$(PackageFlavor)' == 'Development'",
+                    StringComparison.Ordinal) is true);
+        Assert.Contains(
+            manifests,
+            element => (string?)element.Attribute("Include") == "Package.appxmanifest"
+                && ((string?)element.Attribute("Condition"))?.Contains(
+                    "'$(PackageFlavor)' == 'Store'",
+                    StringComparison.Ordinal) is true);
     }
 
     [Fact]

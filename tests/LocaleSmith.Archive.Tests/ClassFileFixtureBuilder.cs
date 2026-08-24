@@ -15,7 +15,8 @@ internal enum ClassFileFixtureKind
     BranchTargetsTranslatable,
     BranchTargetsInstructionInterior,
     UnknownOpcode,
-    LdcWide
+    LdcWide,
+    SharedConstantPoolNearLdcLimit
 }
 
 /// <summary>
@@ -43,7 +44,12 @@ internal static class ClassFileFixtureBuilder
         // Indices are intentionally stable: #9 is the shared String and #15
         // is the original Methodref. LdcWide pads the pool without changing
         // either index.
-        int paddingConstants = kind == ClassFileFixtureKind.LdcWide ? 250 : 0;
+        int paddingConstants = kind switch
+        {
+            ClassFileFixtureKind.LdcWide => 250,
+            ClassFileFixtureKind.SharedConstantPoolNearLdcLimit => 232,
+            _ => 0
+        };
         WriteU2(output, 16 + paddingConstants);
         WriteUtf8(output, "example/Test");              // #1
         WriteSingleIndex(output, 7, 1);                  // #2 Class
@@ -115,7 +121,8 @@ internal static class ClassFileFixtureBuilder
             ClassFileFixtureKind.ExceptionBoundaryAtInvocation or
             ClassFileFixtureKind.InterfaceMethodReference =>
             new byte[] { 0x12, 0x09, 0xb8, 0x00, 0x0f, 0x57, 0xb1 },
-        ClassFileFixtureKind.SharedConstantPool =>
+        ClassFileFixtureKind.SharedConstantPool or
+            ClassFileFixtureKind.SharedConstantPoolNearLdcLimit =>
             new byte[]
             {
                 0x12, 0x09, 0xb8, 0x00, 0x0f, 0x57,

@@ -16,8 +16,13 @@ public sealed class ModPlatformArtifactDownloadCoordinatorTests
     [InlineData("scope")]
     [InlineData("entitlement")]
     [InlineData("expired")]
+    [InlineData("canceled")]
+    [InlineData("refunded")]
+    [InlineData("trial_ended")]
     [InlineData("stale")]
     [InlineData("source")]
+    [InlineData("suspended")]
+    [InlineData("api")]
     public async Task RefusalMatrixNeverRequestsGrantOrPrivateStorage(string denial)
     {
         var fixture = CreateFixture();
@@ -158,6 +163,9 @@ public sealed class ModPlatformArtifactDownloadCoordinatorTests
                 fixture.Client.Entitlements = new MicrosoftStoreEntitlements([], Now);
                 break;
             case "expired":
+            case "canceled":
+            case "refunded":
+            case "trial_ended":
                 fixture.Client.Sources = CreateSources(fixture.Artifact, "entitlement_expired");
                 break;
             case "stale":
@@ -165,6 +173,18 @@ public sealed class ModPlatformArtifactDownloadCoordinatorTests
                 break;
             case "source":
                 fixture.Client.Sources = CreateSources(fixture.Artifact, "accelerated_source_unavailable");
+                break;
+            case "suspended":
+                fixture.Client.SessionError = new ModPlatformException(
+                    System.Net.HttpStatusCode.Unauthorized,
+                    "auth_required",
+                    "Account unavailable.");
+                break;
+            case "api":
+                fixture.Client.MetaError = new ModPlatformException(
+                    System.Net.HttpStatusCode.ServiceUnavailable,
+                    "network_error",
+                    "API unavailable.");
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(denial));
@@ -272,6 +292,10 @@ public sealed class ModPlatformArtifactDownloadCoordinatorTests
 
         public ModPlatformDownloadSources Sources { get; set; } = CreateSources(artifact);
 
+        public Exception? MetaError { get; set; }
+
+        public Exception? SessionError { get; set; }
+
         public int MetaCalls { get; private set; }
 
         public int SessionCalls { get; private set; }
@@ -285,14 +309,18 @@ public sealed class ModPlatformArtifactDownloadCoordinatorTests
         public Task<ModPlatformMeta> GetMetaAsync(CancellationToken cancellationToken = default)
         {
             MetaCalls++;
-            return Task.FromResult(Meta);
+            return MetaError is null
+                ? Task.FromResult(Meta)
+                : Task.FromException<ModPlatformMeta>(MetaError);
         }
 
         public Task<ModPlatformAuthSession> GetAuthenticatedSessionAsync(
             CancellationToken cancellationToken = default)
         {
             SessionCalls++;
-            return Task.FromResult(Session);
+            return SessionError is null
+                ? Task.FromResult(Session)
+                : Task.FromException<ModPlatformAuthSession>(SessionError);
         }
 
         public Task<MicrosoftStoreEntitlements> GetEntitlementsAsync(

@@ -21,26 +21,45 @@ internal sealed class SecurityOperationLock : IDisposable
     public static async ValueTask<SecurityOperationLock> AcquireAsync(
         string operation,
         string key,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? securityLockRoot = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operation);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        var localApplicationData = System.Environment.GetFolderPath(
-            System.Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localApplicationData))
+        string lockRoot;
+        if (string.IsNullOrWhiteSpace(securityLockRoot))
         {
-            throw new InvalidOperationException("The per-user application-data directory is unavailable.");
-        }
+            var localApplicationData = System.Environment.GetFolderPath(
+                System.Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(localApplicationData))
+            {
+                throw new InvalidOperationException("The per-user application-data directory is unavailable.");
+            }
 
-        var applicationDataRoot = Path.TrimEndingDirectorySeparator(
-            Path.GetFullPath(localApplicationData));
-        var lockRoot = Path.GetFullPath(
-            Path.Combine(applicationDataRoot, "LocaleSmith", "SecurityLocks"));
-        if (!lockRoot.StartsWith(
-                applicationDataRoot + Path.DirectorySeparatorChar,
-                StringComparison.OrdinalIgnoreCase))
+            var applicationDataRoot = Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(localApplicationData));
+            lockRoot = Path.GetFullPath(
+                Path.Combine(applicationDataRoot, "LocaleSmith", "SecurityLocks"));
+            if (!lockRoot.StartsWith(
+                    applicationDataRoot + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("The security-lock directory escaped application data.");
+            }
+        }
+        else
         {
-            throw new InvalidOperationException("The security-lock directory escaped application data.");
+            lockRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(securityLockRoot));
+            var filesystemRoot = Path.GetPathRoot(lockRoot)
+                ?? throw new ArgumentException(
+                    "The security-lock directory does not have a filesystem root.",
+                    nameof(securityLockRoot));
+            if (string.Equals(lockRoot, filesystemRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException(
+                    "A filesystem root cannot be used as the security-lock directory.",
+                    nameof(securityLockRoot));
+            }
         }
 
         Directory.CreateDirectory(lockRoot);
