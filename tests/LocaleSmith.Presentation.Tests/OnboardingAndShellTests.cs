@@ -100,6 +100,36 @@ public sealed class OnboardingAndShellTests
     }
 
     [Fact]
+    public void NetworkEndpointEditDemotesNamedPresetWithoutChangingModelOrTokenSelection()
+    {
+        var viewModel = new OnboardingViewModel(new RecordingOnboardingService());
+        viewModel.SelectModelPath(OnboardingModelPath.NetworkProvider);
+        viewModel.NetworkTokenLimitParameter = OpenAiTokenLimitParameter.MaxCompletionTokens;
+
+        viewModel.NetworkEndpoint = "https://gateway.example.test/v1";
+
+        Assert.Equal(ModelProviderPresets.CustomId, viewModel.SelectedNetworkPresetId);
+        Assert.Equal("https://gateway.example.test/v1", viewModel.NetworkEndpoint);
+        Assert.Equal("deepseek-v4-pro", viewModel.NetworkModelName);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, viewModel.NetworkTokenLimitParameter);
+    }
+
+    [Fact]
+    public void SelectingNamedNetworkPresetAppliesItsDefaultsAfterCustomEndpointEdit()
+    {
+        var viewModel = new OnboardingViewModel(new RecordingOnboardingService());
+        viewModel.SelectModelPath(OnboardingModelPath.NetworkProvider);
+        viewModel.NetworkEndpoint = "https://gateway.example.test/v1";
+
+        viewModel.SelectedNetworkPresetId = ModelProviderPresets.XiaomiMimoId;
+
+        Assert.Equal(ModelProviderPresets.XiaomiMimoId, viewModel.SelectedNetworkPresetId);
+        Assert.Equal("https://api.xiaomimimo.com/v1", viewModel.NetworkEndpoint);
+        Assert.Equal("mimo-v2.5-pro", viewModel.NetworkModelName);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, viewModel.NetworkTokenLimitParameter);
+    }
+
+    [Fact]
     public void NetworkOmitTokenOptionUsesLocalizedLabelAndRemainsTheSelectedObject()
     {
         var text = new DictionaryTextProvider(new Dictionary<string, string>(StringComparer.Ordinal)

@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:behaviors="using:LocaleSmith.App.Behaviors"
+    xmlns:controls="using:LocaleSmith.App.Controls"
     NavigationCacheMode="Required">
     <Grid
         Padding="24"
@@ -305,6 +306,7 @@
                             AutomationProperties.HeadingLevel="Level2"
                             Style="{ThemeResource SectionTitleStyle}" />
                         <TextBlock Text="{Binding SelectedMod.Title}" Style="{ThemeResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                        <controls:ModArtifactDownloadControl x:Name="ArtifactDownloadControl" Margin="0,8,0,0" />
                     </StackPanel>
                     <Grid Grid.Row="1">
                         <ListView
@@ -384,6 +386,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -468,6 +471,10 @@
                                 HorizontalAlignment="Stretch"
                                 Click="OnReportSelectedThreadAuthorClicked" />
                         </Grid>
+                        <controls:ModArtifactDownloadControl
+                            Grid.Row="4"
+                            Grid.ColumnSpan="2"
+                            Margin="0,4,0,0" />
                     </Grid>
 
                     <Expander
@@ -497,7 +504,8 @@
                                         x:Uid="CommunityManagePatLink"
                                         NavigateUri="https://dow.dzxh-tx.cn/user/dashboard" />
                                 </StackPanel>
-                            </StackPanel>
+                                </StackPanel>
+                            <controls:MicrosoftStoreBillingControl />
                         </StackPanel>
                     </Expander>
 

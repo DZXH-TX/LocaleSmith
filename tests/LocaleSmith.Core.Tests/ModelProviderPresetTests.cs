@@ -82,6 +82,91 @@ public sealed class ModelProviderPresetTests
         Assert.Equal(OpenAiTokenLimitParameter.MaxTokens, preset.DefaultTokenLimitParameter);
     }
 
+    [Theory]
+    [InlineData(ModelProviderPresets.DeepSeekId, "https://api.deepseek.com", ModelProviderPresets.DeepSeekId)]
+    [InlineData(ModelProviderPresets.DeepSeekId, "https://api.deepseek.com/v1/chat/completions", ModelProviderPresets.DeepSeekId)]
+    [InlineData(ModelProviderPresets.QwenId, "https://dashscope.aliyuncs.com/compatible-mode/v1", ModelProviderPresets.QwenId)]
+    [InlineData(ModelProviderPresets.QwenId, "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", ModelProviderPresets.QwenId)]
+    [InlineData(ModelProviderPresets.QwenId, "https://dashscope-us.aliyuncs.com/compatible-mode/v1", ModelProviderPresets.QwenId)]
+    [InlineData(ModelProviderPresets.QwenId, "https://llm-example.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", ModelProviderPresets.QwenId)]
+    [InlineData(ModelProviderPresets.QwenId, "https://trial.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1", ModelProviderPresets.QwenId)]
+    [InlineData(ModelProviderPresets.QwenId, "https://token-plan.us-east-1.maas.aliyuncs.com/compatible-mode/v1", ModelProviderPresets.QwenId)]
+    [InlineData(ModelProviderPresets.XiaomiMimoId, "https://api.xiaomimimo.com/v1", ModelProviderPresets.XiaomiMimoId)]
+    [InlineData(ModelProviderPresets.XiaomiMimoId, "https://token-plan-cn.xiaomimimo.com/v1", ModelProviderPresets.XiaomiMimoId)]
+    [InlineData(ModelProviderPresets.XiaomiMimoId, "https://token-plan-sgp.xiaomimimo.com/v1", ModelProviderPresets.XiaomiMimoId)]
+    [InlineData(ModelProviderPresets.XiaomiMimoId, "https://token-plan-ams.xiaomimimo.com/v1", ModelProviderPresets.XiaomiMimoId)]
+    [InlineData(ModelProviderPresets.KimiId, "https://api.moonshot.ai/v1", ModelProviderPresets.KimiId)]
+    public void EffectivePresetKeepsOnlyExplicitOfficialEndpointShapes(
+        string presetId,
+        string endpoint,
+        string expectedPresetId)
+    {
+        var effective = ModelProviderPresets.ResolveEffective(
+            ModelProviderKind.OpenAiCompatible,
+            presetId,
+            new Uri(endpoint));
+
+        Assert.Equal(expectedPresetId, effective.Id);
+    }
+
+    [Theory]
+    [InlineData(ModelProviderPresets.DeepSeekId, "http://api.deepseek.com/v1")]
+    [InlineData(ModelProviderPresets.DeepSeekId, "https://api.deepseek.com.evil.test/v1")]
+    [InlineData(ModelProviderPresets.DeepSeekId, "https://deepseek.proxy.test/v1")]
+    [InlineData(ModelProviderPresets.QwenId, "https://workspace.invalid-region.maas.aliyuncs.com/compatible-mode/v1")]
+    [InlineData(ModelProviderPresets.QwenId, "https://extra.workspace.cn-beijing.maas.aliyuncs.com/compatible-mode/v1")]
+    [InlineData(ModelProviderPresets.QwenId, "https://workspace.cn-beijing.maas.aliyuncs.com.evil.test/compatible-mode/v1")]
+    [InlineData(ModelProviderPresets.QwenId, "https://example.aliyuncs.com/compatible-mode/v1")]
+    [InlineData(ModelProviderPresets.QwenId, "https://dashscope.aliyuncs.com/api/v1")]
+    [InlineData(ModelProviderPresets.XiaomiMimoId, "https://private.xiaomimimo.com/v1")]
+    [InlineData(ModelProviderPresets.XiaomiMimoId, "https://api.xiaomimimo.com.evil.test/v1")]
+    [InlineData(ModelProviderPresets.KimiId, "https://gateway.example.test/v1")]
+    public void EffectivePresetDemotesCustomOrDeceptiveEndpoints(string presetId, string endpoint)
+    {
+        var effective = ModelProviderPresets.ResolveEffective(
+            ModelProviderKind.OpenAiCompatible,
+            presetId,
+            new Uri(endpoint));
+
+        Assert.Equal(ModelProviderPresets.CustomId, effective.Id);
+    }
+
+    [Fact]
+    public void EffectivePresetDoesNotInferProviderIdentityFromEndpointOrModelMetadata()
+    {
+        var effective = ModelProviderPresets.ResolveEffective(
+            ModelProviderKind.OpenAiCompatible,
+            ModelProviderPresets.CustomId,
+            ModelProviderPresets.DeepSeek.DefaultEndpoint!);
+        var runtime = new ModelSource(
+            "custom-deepseek-model-name",
+            "Custom gateway",
+            ModelProviderKind.OpenAiCompatible,
+            new Uri("https://gateway.example.test/v1"),
+            "deepseek-v4-pro",
+            presetId: ModelProviderPresets.DeepSeekId,
+            tokenLimitParameter: OpenAiTokenLimitParameter.MaxCompletionTokens);
+
+        Assert.Equal(ModelProviderPresets.CustomId, effective.Id);
+        Assert.Equal(ModelProviderPresets.CustomId, runtime.PresetId);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, runtime.TokenLimitParameter);
+    }
+
+    [Theory]
+    [InlineData("http://127.0.0.1:11434/v1")]
+    [InlineData("http://localhost:11434/openai/v1/")]
+    [InlineData("http://[::1]:11434/v1/chat/completions")]
+    public void CustomLoopbackRequiresExplicitOpenAiV1Route(string endpoint) =>
+        Assert.True(ModelProviderPresets.IsSupportedCustomLoopbackEndpoint(new Uri(endpoint)));
+
+    [Theory]
+    [InlineData("http://127.0.0.1:11434")]
+    [InlineData("http://127.0.0.1:11434/api/chat")]
+    [InlineData("https://127.0.0.1:11434/v1")]
+    [InlineData("http://models.example.test/v1")]
+    public void NonCustomOrProviderNativeLoopbackRoutesAreNotAcceptedAsPlaintextCustomOpenAi(string endpoint) =>
+        Assert.False(ModelProviderPresets.IsSupportedCustomLoopbackEndpoint(new Uri(endpoint)));
+
     [Fact]
     public void ModelSourceRejectsUnknownPersistedTokenParameter()
     {

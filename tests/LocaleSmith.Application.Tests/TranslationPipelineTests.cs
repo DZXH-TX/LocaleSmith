@@ -59,7 +59,10 @@ public sealed class TranslationPipelineTests
         {
             IsWorkspaceCommitted = () => workspace.Committed
         };
-        var engine = new StubTranslationEngine();
+        var engine = new StubTranslationEngine
+        {
+            ModelUsage = ModelTokenUsage.FromProviderResponse(12, 3, 20)
+        };
         var pipeline = new TranslationPipeline(
             new StubWorkspaceBackend(workspace),
             engine,
@@ -83,6 +86,9 @@ public sealed class TranslationPipelineTests
         Assert.NotNull(engine.LastRequest);
         Assert.Equal(TranslationStyle.Formal, Assert.Single(engine.LastRequest.Styles));
         Assert.Equal(MinecraftContentKind.Unknown, engine.LastRequest.ContentKind);
+        Assert.Same(engine.ModelUsage, result.ModelUsage);
+        Assert.Same(engine.ModelUsage, workspace.AppliedTranslations.ModelUsage);
+        Assert.Equal(20L, result.ModelUsage!.TotalTokens);
         Assert.Equal(TranslationStyle.Formal, Assert.Single(result.Artifacts).Style);
         Assert.Equal(
             TranslationStyle.Formal,
@@ -391,9 +397,10 @@ public sealed class TranslationPipelineTests
             "OpenAI-compatible endpoint returned HTTP 401 (Unauthorized).",
             System.Net.HttpStatusCode.Unauthorized,
             requestId: "request-401");
+        var reportedUsage = ModelTokenUsage.FromProviderResponse(250, 40, 290)!;
         var pipeline = new TranslationPipeline(
             new StubWorkspaceBackend(workspace),
-            new StubTranslationEngine { Failure = modelFailure },
+            new StubTranslationEngine { Failure = modelFailure, ModelUsage = reportedUsage },
             new StubMemoryStore());
         var progressUpdates = new List<PipelineProgress>();
 
@@ -411,6 +418,7 @@ public sealed class TranslationPipelineTests
         Assert.Null(workspace.AppliedTranslations);
         Assert.Equal(PipelineStage.Failed, progressUpdates[^1].Stage);
         Assert.Equal(PipelineStageStatus.Completed, progressUpdates[^1].RollbackStatus);
+        Assert.Same(reportedUsage, progressUpdates[^1].ModelUsage);
     }
 
     [Fact]
@@ -673,6 +681,8 @@ public sealed class TranslationPipelineTests
 
         public Exception? Failure { get; init; }
 
+        public ModelTokenUsage? ModelUsage { get; init; }
+
         public int CallCount { get; private set; }
 
         public TranslationBatchRequest? LastRequest { get; private set; }
@@ -695,7 +705,20 @@ public sealed class TranslationPipelineTests
                 request.Styles
                     .Select(style => new TranslationVariant(style, $"{style}:{entry.SourceText}"))
                     .ToArray())).ToArray();
-            return Task.FromResult(new TranslationBatchResult(request.TargetLanguage, entries));
+            return Task.FromResult(new TranslationBatchResult(request.TargetLanguage, entries, ModelUsage));
+        }
+
+        public Task<TranslationBatchResult> TranslateAsync(
+            TranslationBatchRequest request,
+            IProgress<ModelTokenUsage>? usageProgress,
+            CancellationToken cancellationToken)
+        {
+            if (ModelUsage is not null)
+            {
+                usageProgress?.Report(ModelUsage);
+            }
+
+            return TranslateAsync(request, cancellationToken);
         }
     }
 

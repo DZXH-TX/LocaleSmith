@@ -1,3 +1,4 @@
+using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Models;
 using LocaleSmith.Presentation.Models;
 
@@ -110,6 +111,32 @@ public interface IModelAssistantService
         string modelSourceId,
         IReadOnlyList<ModelMessage> conversation,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs a project-aware assistant turn and reports only public lifecycle events. Implementations
+    /// must never place provider-private reasoning, raw tool arguments/results, credentials, or
+    /// unsanitized machine context in <paramref name="progress"/>.
+    /// </summary>
+    Task<ModelAssistantCompletion> CompleteAsync(
+        string modelSourceId,
+        IReadOnlyList<ModelMessage> conversation,
+        ModProjectSnapshot? project,
+        IProgress<ModelRunEvent>? progress,
+        CancellationToken cancellationToken = default) =>
+        CompleteAsync(modelSourceId, conversation, cancellationToken);
+
+    /// <summary>
+    /// Runs a project-aware turn with a user-controlled, one-turn authorization gate for project
+    /// mutations. Read-only project tools remain available when a project is selected.
+    /// </summary>
+    Task<ModelAssistantCompletion> CompleteAsync(
+        string modelSourceId,
+        IReadOnlyList<ModelMessage> conversation,
+        ModProjectSnapshot? project,
+        IProgress<ModelRunEvent>? progress,
+        bool allowProjectChanges,
+        CancellationToken cancellationToken = default) =>
+        CompleteAsync(modelSourceId, conversation, project, progress, cancellationToken);
 }
 
 public sealed class FallbackUiTextProvider : IUiTextProvider

@@ -40,6 +40,9 @@ public sealed partial class AssistantPage : Page
         }
 
         ViewModel.RefreshModelSources();
+        ViewModel.RefreshProjects();
+        ViewModel.PublishPendingCliProposals();
+        StartPendingProposalDrain();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs args)
@@ -52,7 +55,6 @@ public sealed partial class AssistantPage : Page
             _isSubscribed = false;
         }
 
-        _pendingProposals.Clear();
         try
         {
             _activeDialog?.Hide();
@@ -101,13 +103,20 @@ public sealed partial class AssistantPage : Page
             var factory = App.Services.GetRequiredService<CliConfirmationViewModelFactory>();
             while (_isSubscribed &&
                    generation == _navigationGeneration &&
-                   _pendingProposals.TryDequeue(out CliCommand? command))
+                   _pendingProposals.TryPeek(out CliCommand? command))
             {
                 var confirmation = await factory.CreateAsync(command).ConfigureAwait(true);
                 if (!_isSubscribed || generation != _navigationGeneration || XamlRoot is null)
                 {
                     confirmation.Dispose();
                     break;
+                }
+
+                if (!_pendingProposals.TryDequeue(out CliCommand? claimedCommand) ||
+                    !ReferenceEquals(claimedCommand, command))
+                {
+                    confirmation.Dispose();
+                    continue;
                 }
 
                 var dialog = new CliConfirmationDialog(confirmation)
@@ -143,6 +152,19 @@ public sealed partial class AssistantPage : Page
         finally
         {
             _isDrainingDialogs = false;
+            StartPendingProposalDrain();
         }
+    }
+
+    private void StartPendingProposalDrain()
+    {
+        if (!_isSubscribed || _isDrainingDialogs || _pendingProposals.Count == 0)
+        {
+            return;
+        }
+
+        OnCliProposalsRequested(
+            this,
+            new CliProposalsRequestedEventArgs(Array.Empty<CliCommand>()));
     }
 }

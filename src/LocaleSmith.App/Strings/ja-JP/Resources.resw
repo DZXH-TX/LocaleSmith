@@ -196,7 +196,7 @@
   <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>CLI のセキュリティ境界</value></data>
   <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>許可するサンドボックスのルート</value></data>
   <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>ポリシーでは常にシステムの一時ディレクトリを許可し、ドライブのルート、システムディレクトリ、再解析ポイントを含むパス、過大なタイムアウト、ブラックリスト登録済みのコマンドを拒否します。</value></data>
-  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>内蔵 MCP の CLI 実行ツールは既定で非表示かつ無効です。コンテキスト取得と読み取り専用の機能だけが有効です。</value></data>
+  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>MCP の CLI 実行ツールは常に非表示かつ無効です。プロジェクトの変更は、ユーザーが現在のアシスタントターンを明示的に許可した場合にのみ有効になります。</value></data>
   <data name="SaveSettingsButton.Content" xml:space="preserve"><value>設定を保存</value></data>
   <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>モデルが提案したコマンド</value></data>
   <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>コマンドを実行</value></data>
@@ -230,7 +230,8 @@
   <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>絶対 HTTP または HTTPS の Ollama アドレスを入力してください。</value></data>
   <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>暗号化されていない HTTP は、ループバックの Ollama サービスでのみ使用できます。</value></data>
   <data name="OnboardingModelRequired" xml:space="preserve"><value>インストール済みの Ollama モデル名を入力してください。</value></data>
-  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>選択したネットワークプロバイダーの絶対 HTTPS アドレスを入力してください。</value></data>
+  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>絶対 HTTPS アドレス、またはループバック HTTP の OpenAI 互換 /v1 アドレスを入力してください。</value></data>
+  <data name="OnboardingLoopbackOpenAiV1Required" xml:space="preserve"><value>ループバック HTTP の OpenAI 互換ソースには明示的な /v1 ベースアドレスが必要です。</value></data>
   <data name="OnboardingNetworkModelRequired" xml:space="preserve"><value>ネットワークモデル名を入力してください。</value></data>
   <data name="OnboardingNetworkApiKeyRequired" xml:space="preserve"><value>選択したプロバイダーの API キーを入力してください。</value></data>
   <data name="QueueStatusQueued" xml:space="preserve"><value>キューに追加済み</value></data>
@@ -303,6 +304,12 @@
   <data name="QueueStageTimingStarted" xml:space="preserve"><value>{0:t} に開始</value></data>
   <data name="QueueStageTimingCompleted" xml:space="preserve"><value>{0:t}～{1:t}（{2}）</value></data>
   <data name="QueueStageDurationSeconds" xml:space="preserve"><value>{0:0.#} 秒</value></data>
+  <data name="QueueDefaultObjective" xml:space="preserve"><value>{2} を使用して {0} を {1} に翻訳します。</value></data>
+  <data name="QueueUsageNoModelCalls" xml:space="preserve"><value>Tokens: モデル呼び出しは不要でした。すべての翻訳は検証済みメモリから再利用されました。</value></data>
+  <data name="QueueUsageNoCompletedCalls" xml:space="preserve"><value>Tokens: タスクが終了するまでに完了したプロバイダー呼び出しはありませんでした。</value></data>
+  <data name="QueueUsageUnavailable" xml:space="preserve"><value>Tokens: プロバイダーは {0} 回の呼び出しについて使用量を返しませんでした。</value></data>
+  <data name="QueueUsageComplete" xml:space="preserve"><value>Tokens · 入力 {0} · 出力 {1} · 合計 {2} · プロバイダー呼び出し {3} 回</value></data>
+  <data name="QueueUsagePartial" xml:space="preserve"><value>一部の Token 使用量 · 入力 {0} · 出力 {1} · 報告済み合計 {2} · 完全な呼び出し {3}/{4} 回</value></data>
   <data name="QueueCancelling" xml:space="preserve"><value>キャンセルしています… ジョブが停止する前にロールバックを完了します。</value></data>
   <data name="ModelSourcesLoadFailed" xml:space="preserve"><value>モデルソースを読み込めませんでした: {0}</value></data>
   <data name="ModelSourceSaved" xml:space="preserve"><value>モデルソースを保存しました。API キーは Windows 資格情報マネージャーに移動されました。</value></data>
@@ -318,7 +325,8 @@
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>モデルソースを削除できませんでした: {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>表示名とモデル名は必須です。</value></data>
   <data name="ModelSourceAddressInvalid" xml:space="preserve"><value>絶対 HTTP または HTTPS のサービスアドレスを入力してください。</value></data>
-  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>リモートのモデルソースには HTTPS が必要です。HTTP はループバックの Ollama でのみ使用できます。</value></data>
+  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>リモートのモデルソースには HTTPS が必要です。HTTP はループバックサービスでのみ使用できます。</value></data>
+  <data name="ModelSourceLoopbackOpenAiV1Required" xml:space="preserve"><value>ループバック HTTP の OpenAI 互換モデルソースには明示的な /v1 ベースアドレスが必要です。</value></data>
   <data name="ModelPresetDeepSeekHint" xml:space="preserve"><value>DeepSeek ではホストのベース URL を使用できます。/v1 または完全な chat/completions を入力した場合は正規化されます。</value></data>
   <data name="ModelPresetQwenHint" xml:space="preserve"><value>既定値は中国向けの従量課金エンドポイントです。必要に応じて、API キーに対応するワークスペース、リージョン、またはプランのエンドポイントへ変更してください。</value></data>
   <data name="ModelPresetXiaomiMimoHint" xml:space="preserve"><value>Xiaomi MiMo Token Plan を使用する場合は、エンドポイントを https://token-plan-cn.xiaomimimo.com/v1 に変更してください。</value></data>
@@ -373,18 +381,24 @@
   <data name="SettingsRestartBlockedByActiveTranslations" xml:space="preserve"><value>アプリを再起動する前に、実行中の翻訳ジョブが完了するまで待つか、ジョブをキャンセルしてください。</value></data>
   <data name="SettingsNavigationLabel" xml:space="preserve"><value>設定</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>コマンドの確認画面を開けませんでした: {0}</value></data>
-  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>モデルアシスタント</value></data>
-  <data name="AssistantTitle.Text" xml:space="preserve"><value>モデル・ターミナルアシスタント</value></data>
-  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>現在の Windows とシェル環境に合わせて診断手順を準備します。すべてのコマンドは個別に確認し、許可する必要があります。</value></data>
+  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>Mod プロジェクトアシスタント</value></data>
+  <data name="AssistantTitle.Text" xml:space="preserve"><value>Mod プロジェクトアシスタント</value></data>
+  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Mod ごとに独立した会話を保持し、プロジェクト範囲の実際の MCP ツールでアーカイブの検査と翻訳タスクの管理を行い、公開可能な処理状況を確認できます。非公開の思考過程は表示されません。</value></data>
+  <data name="AssistantProjectSelector.Header" xml:space="preserve"><value>Mod プロジェクトのコンテキスト</value></data>
+  <data name="AssistantProjectSelector.AutomationProperties.Name" xml:space="preserve"><value>アシスタントが使用する Mod プロジェクト</value></data>
+  <data name="AssistantAllowProjectChanges.Content" xml:space="preserve"><value>このメッセージによるプロジェクト翻訳タスクの開始またはキャンセルを許可する</value></data>
+  <data name="AssistantAllowProjectChanges.AutomationProperties.Name" xml:space="preserve"><value>このメッセージでのプロジェクト変更を許可</value></data>
   <data name="AssistantModelSelector.Header" xml:space="preserve"><value>このリクエストに使用するモデル</value></data>
   <data name="AssistantModelSelector.AutomationProperties.Name" xml:space="preserve"><value>アシスタントが使用するモデルソース</value></data>
   <data name="AssistantToolBoundary.Title" xml:space="preserve"><value>ツールのセキュリティ境界</value></data>
-  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>モデルは秘密情報を除去したシステムコンテキストを読み取り、コマンド案を提出できます。コマンドを実行したり、承認トークンを発行したりすることはできません。</value></data>
+  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>プロジェクトツールは選択中の Mod にのみ作用し、サニタイズ済みの公開状態だけを表示します。生の引数、結果、非公開の思考過程は表示しません。コマンドの実行には引き続き個別の確認と承認が必要です。</value></data>
   <data name="AssistantError.Title" xml:space="preserve"><value>アシスタントのリクエストに失敗しました</value></data>
   <data name="AssistantStatus.Title" xml:space="preserve"><value>アシスタントの状態</value></data>
   <data name="AssistantConversationList.AutomationProperties.Name" xml:space="preserve"><value>モデルアシスタントとの会話</value></data>
+  <data name="AssistantActiveProjectLabel.Text" xml:space="preserve"><value>現在のプロジェクト</value></data>
+  <data name="AssistantProcessLabel.Text" xml:space="preserve"><value>公開処理状況</value></data>
   <data name="AssistantEmptyTitle.Text" xml:space="preserve"><value>具体的な質問から始めましょう</value></data>
-  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Mod のローカライズ、パッケージ構造、現在のターミナル環境、安全な診断コマンドについて質問できます。コマンドが自動的に実行されることはありません。</value></data>
+  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Mod プロジェクトを選択すると会話を復元し、アーカイブの検査や翻訳タスクの開始・監視ができます。ターミナルの相談には一般アシスタントを使用できます。公開ツール状況のみを表示し、非公開の思考過程は表示しません。</value></data>
   <data name="AssistantDraft.Header" xml:space="preserve"><value>メッセージ</value></data>
   <data name="AssistantDraft.PlaceholderText" xml:space="preserve"><value>例: 現在のシェルで Java のバージョンを読み取り専用で確認するコマンドを作成して</value></data>
   <data name="AssistantDraft.AutomationProperties.Name" xml:space="preserve"><value>モデルアシスタントへのメッセージ</value></data>
@@ -405,8 +419,40 @@
   <data name="AssistantRequestFailed" xml:space="preserve"><value>アシスタントのリクエストに失敗しました。選択したモデルソースを確認して、もう一度お試しください。</value></data>
   <data name="AssistantRequestFailedWithDetails" xml:space="preserve"><value>アシスタントのリクエストに失敗しました: {0}</value></data>
   <data name="AssistantCleared" xml:space="preserve"><value>会話をクリアしました。</value></data>
-  <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>モデルソースが変更されました。プロバイダー間で情報が漏れないよう、以前の会話をクリアしました。</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>コマンド案の確認画面を開けませんでした。何も実行されていません。</value></data>
+  <data name="AssistantUsageUnknownModel" xml:space="preserve"><value>モデル</value></data>
+  <data name="AssistantUsageUnavailable" xml:space="preserve"><value>{0} は {1} 回のプロバイダー呼び出しについて Token 使用量を返しませんでした。</value></data>
+  <data name="AssistantUsageComplete" xml:space="preserve"><value>{0} · 入力 {1} · 出力 {2} · 合計 {3} Tokens · プロバイダー呼び出し {4} 回</value></data>
+  <data name="AssistantUsagePartial" xml:space="preserve"><value>{0} の使用量は一部のみです · 入力 {1} · 出力 {2} · 報告済み合計 {3} · 完全な呼び出し {4}/{5} 回</value></data>
+  <data name="AssistantActivityModelStarted" xml:space="preserve"><value>モデルを呼び出しています · ラウンド {0}</value></data>
+  <data name="AssistantActivityModelCompleted" xml:space="preserve"><value>モデルのラウンド {0} が応答しました</value></data>
+  <data name="AssistantActivityToolStarted" xml:space="preserve"><value>{0} を実行しています</value></data>
+  <data name="AssistantActivityToolCompleted" xml:space="preserve"><value>{0} が完了しました</value></data>
+  <data name="AssistantActivityToolFailed" xml:space="preserve"><value>{0} は拒否されたか失敗しました</value></data>
+  <data name="AssistantActivityCancelled" xml:space="preserve"><value>リクエストをキャンセルしました</value></data>
+  <data name="AssistantActivityFailed" xml:space="preserve"><value>リクエストに失敗しました</value></data>
+  <data name="AssistantActivityComplete" xml:space="preserve"><value>応答が完了しました</value></data>
+  <data name="AssistantActivityToolSafeDetail" xml:space="preserve"><value>引数と生の結果は表示せず、ツールの公開状態だけを表示します。</value></data>
+  <data name="AssistantActivityCompleteDetail" xml:space="preserve"><value>最終応答とプロバイダー報告の使用量を表示できます。</value></data>
+  <data name="AssistantActivityUsageMissing" xml:space="preserve"><value>このラウンドではプロバイダーが使用量を返しませんでした。</value></data>
+  <data name="AssistantActivityUsageReported" xml:space="preserve"><value>このラウンドのプロバイダー使用量を受信しました。</value></data>
+  <data name="AssistantToolSystemContext" xml:space="preserve"><value>安全なシステムコンテキスト</value></data>
+  <data name="AssistantToolCliProposal" xml:space="preserve"><value>コマンド案の検証</value></data>
+  <data name="AssistantToolProjectContext" xml:space="preserve"><value>現在のプロジェクトコンテキスト</value></data>
+  <data name="AssistantToolArchiveInspect" xml:space="preserve"><value>アーカイブ検査</value></data>
+  <data name="AssistantToolTranslationStart" xml:space="preserve"><value>トランザクション翻訳</value></data>
+  <data name="AssistantToolTaskStatus" xml:space="preserve"><value>タスク状態</value></data>
+  <data name="AssistantToolTaskCancel" xml:space="preserve"><value>タスクのキャンセル</value></data>
+  <data name="AssistantToolUnknown" xml:space="preserve"><value>承認済みツール</value></data>
+  <data name="AssistantGeneralProject" xml:space="preserve"><value>一般アシスタント</value></data>
+  <data name="AssistantGeneralProjectDetail" xml:space="preserve"><value>パッケージコンテキストがないため、プロジェクトツールは使用できません。</value></data>
+  <data name="AssistantModelChangedConversationPreserved" xml:space="preserve"><value>モデルソースを変更しました。プロバイダーごとに独立した会話を保持し、以前のコンテキストは保存されたまま新しいプロバイダーには開示されません。</value></data>
+  <data name="AssistantGeneralContextSelected" xml:space="preserve"><value>一般アシスタントを選択しました。この会話では Mod プロジェクトツールを使用できません。</value></data>
+  <data name="AssistantProjectContextSelected" xml:space="preserve"><value>プロジェクトコンテキストを変更しました。他の Mod の履歴を混在させずに会話を復元しました。</value></data>
+  <data name="AssistantProjectReady" xml:space="preserve"><value>{0} · 準備完了</value></data>
+  <data name="AssistantProjectTaskDetail" xml:space="preserve"><value>{0} · {1} · {2:P0}</value></data>
+  <data name="AssistantProjectNoObjective" xml:space="preserve"><value>このプロジェクトにはまだ翻訳タスクがありません。</value></data>
+  <data name="AssistantProjectIdle" xml:space="preserve"><value>待機中</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod コミュニティ</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod コミュニティ</value></data>
   <data name="CommunitySubtitle.Text" xml:space="preserve"><value>サインインすると、LocaleSmith 内で Mod のディスカッションを閲覧し、アプリケーション トークンで安全に投稿できます。</value></data>
@@ -563,4 +609,61 @@
   <data name="CommunityReportNetworkError" xml:space="preserve"><value>報告サービスに接続できません。ネットワークを確認して再送信してください。</value></data>
   <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>報告サービスから予期しない応答が返されました。再読み込みして後でもう一度お試しください。</value></data>
   <data name="CommunityReportFailedError" xml:space="preserve"><value>報告を送信できませんでした。詳細を確認して後でもう一度お試しください。</value></data>
+  <data name="BillingTitle.Text" xml:space="preserve"><value>国内アクセラレーション サブスクリプション</value></data>
+  <data name="BillingSubtitle.Text" xml:space="preserve"><value>Microsoft Store が処理する LocaleSmith の月額サブスクリプションです。MCTX バックエンドの確認後にのみ権利が有効になります。</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Title" xml:space="preserve"><value>サブスクリプションを利用できません</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Message" xml:space="preserve"><value>MCTX で Microsoft Store 課金が有効ではないため、購入入口は非表示です。</value></data>
+  <data name="BillingLoginRequiredInfo.Title" xml:space="preserve"><value>先に LocaleSmith/MCTX へサインインしてください</value></data>
+  <data name="BillingLoginRequiredInfo.Message" xml:space="preserve"><value>購入、復元、確認の前に既存アカウントと PAT の検証が必要です。</value></data>
+  <data name="BillingAccountLink.Content" xml:space="preserve"><value>アカウントと PAT を管理</value></data>
+  <data name="BillingBackendUnavailableInfo.Title" xml:space="preserve"><value>権利サービスを利用できません</value></data>
+  <data name="BillingBackendUnavailableInfo.Message" xml:space="preserve"><value>MCTX の権利状態を確認できないため、購入は無効のままです。</value></data>
+  <data name="BillingStoreUnavailableInfo.Title" xml:space="preserve"><value>Microsoft Store 商品を利用できません</value></data>
+  <data name="BillingStoreUnavailableInfo.Message" xml:space="preserve"><value>Microsoft Store 版を正しいアカウントで使用し、管理者として実行しないでください。</value></data>
+  <data name="BillingActiveInfo.Title" xml:space="preserve"><value>国内アクセラレーションは有効です</value></data>
+  <data name="BillingActiveInfo.Message" xml:space="preserve"><value>この状態は MCTX バックエンドの確認結果です。ローカルの Store 結果だけでは解除されません。</value></data>
+  <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>有効な権利はありません</value></data>
+  <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>購読するか、既存の Microsoft Store 購入を復元してバックエンドで確認してください。</value></data>
+  <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>対象となる新規購読者は 7 日間の無料試用を利用できます。資格と最終条件は Microsoft の購入画面に表示されます。</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>対象の試用後は Microsoft Store がその時点で表示する月額で、キャンセルするまで自動更新されます。中国市場の設定価格は月額 CNY 30.00 で、購入画面が最終条件です。</value></data>
+  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>世界共通の基本価格帯は月額 US$4.99 です。Microsoft Store が各市場の現地価格を表示し、他市場で一律 US$5 とは限りません。</value></data>
+  <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>請求は Microsoft が行います。Microsoft アカウントの「サービスとサブスクリプション」で管理またはキャンセルできます。</value></data>
+  <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Microsoft Store が表示する現在の月額更新価格</value></data>
+  <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>Microsoft で購読</value></data>
+  <data name="BillingRestoreButton.Content" xml:space="preserve"><value>購入を復元</value></data>
+  <data name="BillingRefreshButton.Content" xml:space="preserve"><value>状態を更新</value></data>
+  <data name="BillingProgress.AutomationProperties.Name" xml:space="preserve"><value>サブスクリプション状態を更新中</value></data>
+  <data name="BillingErrorInfo.Title" xml:space="preserve"><value>サブスクリプション操作に失敗しました</value></data>
+  <data name="BillingStatusInfo.Title" xml:space="preserve"><value>サブスクリプション状態</value></data>
+  <data name="BillingManageSubscriptionsLink.Content" xml:space="preserve"><value>Microsoft で管理またはキャンセル</value></data>
+  <data name="BillingPrivacyLink.Content" xml:space="preserve"><value>プライバシー ポリシー</value></data>
+  <data name="BillingPurchasePendingVerificationStatus" xml:space="preserve"><value>Microsoft の購入手順が完了しました。LocaleSmith が MCTX で権利を確認しています。</value></data>
+  <data name="BillingEntitlementVerifiedStatus" xml:space="preserve"><value>MCTX の権利が有効です。</value></data>
+  <data name="BillingEntitlementPendingStatus" xml:space="preserve"><value>Microsoft は購入を報告しましたが、MCTX の権利はまだ有効ではありません。「購入を復元」で再確認してください。</value></data>
+  <data name="BillingPurchaseCancelledStatus" xml:space="preserve"><value>Microsoft で購入が完了しませんでした。権利は変更されていません。</value></data>
+  <data name="BillingStoreNetworkError" xml:space="preserve"><value>Microsoft Store に接続できません。権利は変更されていません。</value></data>
+  <data name="BillingStoreUnavailableError" xml:space="preserve"><value>Microsoft Store が要求を完了できません。権利は変更されていません。</value></data>
+  <data name="BillingRestoreVerifiedStatus" xml:space="preserve"><value>購入確認を更新し、MCTX の権利が有効になりました。</value></data>
+  <data name="BillingRestoreNoEntitlementStatus" xml:space="preserve"><value>有効な MCTX 権利は返されませんでした。Microsoft の購入記録だけではアクセラレーションは解除されません。</value></data>
+  <data name="BillingCapabilityUnavailableError" xml:space="preserve"><value>サブスクリプションの利用可否を確認できません。購入は無効のままです。</value></data>
+  <data name="BillingCapabilityUnavailableStatus" xml:space="preserve"><value>MCTX で Microsoft Store 課金が有効ではないため、購入入口は非表示です。</value></data>
+  <data name="BillingLoginRequiredStatus" xml:space="preserve"><value>購入または復元の前に LocaleSmith/MCTX アカウントと PAT でサインインしてください。</value></data>
+  <data name="BillingBackendUnavailableError" xml:space="preserve"><value>MCTX の権利状態を利用できないため、購入は無効のままです。</value></data>
+  <data name="BillingVerificationFailedError" xml:space="preserve"><value>購入確認を完了できません。権利は解除されていません。「購入を復元」で再試行してください。</value></data>
+  <data name="BillingAlreadyEntitledStatus" xml:space="preserve"><value>MCTX の権利はすでに有効なため、Microsoft の購入画面は開きませんでした。</value></data>
+  <data name="BillingScopeRequiredInfo.Title" xml:space="preserve"><value>PAT に高速ダウンロード権限がありません</value></data>
+  <data name="BillingScopeRequiredInfo.Message" xml:space="preserve"><value>downloads:accelerated scope を含む通常の PAT を作成してください。購入と高速化は無効のままです。</value></data>
+  <data name="BillingAcceleratedScopeRequiredStatus" xml:space="preserve"><value>課金または高速ダウンロードを使用するには、保存済み PAT に downloads:accelerated scope が必要です。</value></data>
+  <data name="CommunityDownloadTitle.Text" xml:space="preserve"><value>選択したバージョンをダウンロード</value></data>
+  <data name="CommunityDefaultDownloadButton.Content" xml:space="preserve"><value>既定のソースからダウンロード</value></data>
+  <data name="CommunityAcceleratedDownloadButton.Content" xml:space="preserve"><value>国内アクセラレーションを使用</value></data>
+  <data name="CommunityAccelerationDisclosure.Text" xml:space="preserve"><value>MCTX が有効で新しい権利と準備済みの非公開レプリカを確認した場合のみ表示されます。失敗時は既定ソースに戻ります。</value></data>
+  <data name="CommunityDownloadProgress.AutomationProperties.Name" xml:space="preserve"><value>アーティファクトのダウンロード進行状況</value></data>
+  <data name="CommunityCancelDownloadButton.Content" xml:space="preserve"><value>ダウンロードをキャンセル</value></data>
+  <data name="CommunityDownloadErrorInfo.Title" xml:space="preserve"><value>ダウンロードに失敗しました</value></data>
+  <data name="CommunityDownloadStatusInfo.Title" xml:space="preserve"><value>ダウンロード状態</value></data>
+  <data name="CommunityDownloadFallbackStatus" xml:space="preserve"><value>高速化ソースを利用できないため、既定ソースから安全にダウンロードしました。</value></data>
+  <data name="CommunityDownloadCompletedStatus" xml:space="preserve"><value>ダウンロードが完了し、SHA-256 検証に合格しました。</value></data>
+  <data name="CommunityDownloadCancelledStatus" xml:space="preserve"><value>ダウンロードをキャンセルしました。資格情報を含まない部分ファイルを再開用に保持できます。</value></data>
+  <data name="CommunityDownloadFailedError" xml:space="preserve"><value>ダウンロードまたは検証を完了できません。不完全なアーティファクトは公開されませんでした。</value></data>
 </root>

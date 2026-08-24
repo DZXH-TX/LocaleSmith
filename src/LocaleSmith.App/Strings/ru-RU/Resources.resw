@@ -196,7 +196,7 @@
   <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>Граница безопасности CLI</value></data>
   <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>Разрешённый корень песочницы</value></data>
   <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>Политика всегда оставляет разрешённым системный временный каталог и отклоняет корни дисков, системные каталоги, пути с точками повторной обработки, чрезмерные тайм-ауты и запрещённые команды.</value></data>
-  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>Встроенный инструмент выполнения команд MCP CLI по умолчанию скрыт и отключён; доступны только контекст и функции только для чтения.</value></data>
+  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>Инструмент выполнения команд MCP CLI всегда скрыт и отключён; изменения проекта доступны только после явного разрешения пользователя для текущего шага ассистента.</value></data>
   <data name="SaveSettingsButton.Content" xml:space="preserve"><value>Сохранить настройки</value></data>
   <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>Команда, предложенная моделью</value></data>
   <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>Выполнить команду</value></data>
@@ -230,7 +230,8 @@
   <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>Введите абсолютный HTTP- или HTTPS-адрес Ollama.</value></data>
   <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>Незашифрованный HTTP разрешён только для Ollama на loopback-интерфейсе.</value></data>
   <data name="OnboardingModelRequired" xml:space="preserve"><value>Введите имя установленной модели Ollama.</value></data>
-  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>Введите абсолютный HTTPS-адрес выбранного сетевого провайдера.</value></data>
+  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>Введите абсолютный HTTPS-адрес или loopback HTTP OpenAI-совместимый адрес /v1.</value></data>
+  <data name="OnboardingLoopbackOpenAiV1Required" xml:space="preserve"><value>Loopback HTTP OpenAI-совместимые источники должны явно использовать базовый адрес /v1.</value></data>
   <data name="OnboardingNetworkModelRequired" xml:space="preserve"><value>Введите имя сетевой модели.</value></data>
   <data name="OnboardingNetworkApiKeyRequired" xml:space="preserve"><value>Введите ключ API выбранного провайдера.</value></data>
   <data name="QueueStatusQueued" xml:space="preserve"><value>В очереди</value></data>
@@ -303,6 +304,12 @@
   <data name="QueueStageTimingStarted" xml:space="preserve"><value>Начало: {0:t}</value></data>
   <data name="QueueStageTimingCompleted" xml:space="preserve"><value>{0:t}–{1:t} ({2})</value></data>
   <data name="QueueStageDurationSeconds" xml:space="preserve"><value>{0:0.#} с</value></data>
+  <data name="QueueDefaultObjective" xml:space="preserve"><value>Перевести {0} на {1} с помощью {2}.</value></data>
+  <data name="QueueUsageNoModelCalls" xml:space="preserve"><value>Токены: вызов модели не потребовался; все переводы взяты из проверенной памяти переводов.</value></data>
+  <data name="QueueUsageNoCompletedCalls" xml:space="preserve"><value>Токены: до завершения задания не завершился ни один вызов поставщика.</value></data>
+  <data name="QueueUsageUnavailable" xml:space="preserve"><value>Токены: поставщик не вернул данные об использовании для вызовов: {0}.</value></data>
+  <data name="QueueUsageComplete" xml:space="preserve"><value>Токены · вход {0} · выход {1} · всего {2} · вызовов поставщика: {3}</value></data>
+  <data name="QueueUsagePartial" xml:space="preserve"><value>Неполные данные о токенах · вход {0} · выход {1} · заявлено всего {2} · полных вызовов: {3}/{4}</value></data>
   <data name="QueueCancelling" xml:space="preserve"><value>Отмена… перед остановкой задания будет завершён откат.</value></data>
   <data name="ModelSourcesLoadFailed" xml:space="preserve"><value>Не удалось загрузить источники моделей: {0}</value></data>
   <data name="ModelSourceSaved" xml:space="preserve"><value>Источник модели сохранён. Ключ API перемещён в Диспетчер учётных данных Windows.</value></data>
@@ -318,7 +325,8 @@
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>Не удалось удалить источник модели: {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>Необходимо указать отображаемое имя и имя модели.</value></data>
   <data name="ModelSourceAddressInvalid" xml:space="preserve"><value>Введите абсолютный HTTP- или HTTPS-адрес сервиса.</value></data>
-  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>Удалённые источники моделей должны использовать HTTPS; HTTP разрешён только для Ollama на loopback-интерфейсе.</value></data>
+  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>Удалённые источники моделей должны использовать HTTPS; HTTP разрешён только для loopback-сервисов.</value></data>
+  <data name="ModelSourceLoopbackOpenAiV1Required" xml:space="preserve"><value>Loopback HTTP OpenAI-совместимые источники моделей должны явно использовать базовый адрес /v1.</value></data>
   <data name="ModelPresetDeepSeekHint" xml:space="preserve"><value>DeepSeek принимает базовый URL хоста; входные значения /v1 и полные chat/completions нормализуются.</value></data>
   <data name="ModelPresetQwenHint" xml:space="preserve"><value>По умолчанию используется китайский тариф с оплатой по мере использования. При необходимости замените конечную точку на соответствующую рабочей области, региону или тарифу.</value></data>
   <data name="ModelPresetXiaomiMimoHint" xml:space="preserve"><value>Для Xiaomi MiMo Token Plan замените конечную точку на https://token-plan-cn.xiaomimimo.com/v1.</value></data>
@@ -373,18 +381,24 @@
   <data name="SettingsRestartBlockedByActiveTranslations" xml:space="preserve"><value>Дождитесь завершения активных заданий перевода или отмените их перед перезапуском приложения.</value></data>
   <data name="SettingsNavigationLabel" xml:space="preserve"><value>Настройки</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>Не удалось открыть проверку команды: {0}</value></data>
-  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>ИИ-помощник</value></data>
-  <data name="AssistantTitle.Text" xml:space="preserve"><value>Помощник по моделям и терминалу</value></data>
-  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Подготовьте диагностику текущей среды Windows и оболочки. Каждая команда требует отдельной проверки и подтверждения.</value></data>
+  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>Помощник проекта мода</value></data>
+  <data name="AssistantTitle.Text" xml:space="preserve"><value>Помощник проекта мода</value></data>
+  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Сохраняйте отдельный диалог для каждого проекта мода, проверяйте архивы и управляйте заданиями перевода через реальные MCP-инструменты в рамках проекта, просматривая открытый ход обработки. Скрытая цепочка рассуждений не отображается.</value></data>
+  <data name="AssistantProjectSelector.Header" xml:space="preserve"><value>Контекст проекта мода</value></data>
+  <data name="AssistantProjectSelector.AutomationProperties.Name" xml:space="preserve"><value>Проект мода, используемый помощником</value></data>
+  <data name="AssistantAllowProjectChanges.Content" xml:space="preserve"><value>Разрешить этому сообщению запускать или отменять задания перевода проекта</value></data>
+  <data name="AssistantAllowProjectChanges.AutomationProperties.Name" xml:space="preserve"><value>Разрешить изменения проекта для этого сообщения</value></data>
   <data name="AssistantModelSelector.Header" xml:space="preserve"><value>Модель для этого запроса</value></data>
   <data name="AssistantModelSelector.AutomationProperties.Name" xml:space="preserve"><value>Источник модели, используемый помощником</value></data>
   <data name="AssistantToolBoundary.Title" xml:space="preserve"><value>Ограничения безопасности инструментов</value></data>
-  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>Модель может читать системный контекст с удалёнными конфиденциальными данными и отправлять черновики команд. Она не может выполнять команды или выдавать токены подтверждения.</value></data>
+  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>Инструменты проекта работают только с выбранным модом и показывают лишь очищенное открытое состояние. Исходные аргументы, результаты и скрытая цепочка рассуждений не отображаются. Для выполнения команд по-прежнему требуются отдельная проверка и подтверждение.</value></data>
   <data name="AssistantError.Title" xml:space="preserve"><value>Сбой запроса помощника</value></data>
   <data name="AssistantStatus.Title" xml:space="preserve"><value>Состояние помощника</value></data>
   <data name="AssistantConversationList.AutomationProperties.Name" xml:space="preserve"><value>Диалог с ИИ-помощником</value></data>
+  <data name="AssistantActiveProjectLabel.Text" xml:space="preserve"><value>Активный проект</value></data>
+  <data name="AssistantProcessLabel.Text" xml:space="preserve"><value>Открытый ход обработки</value></data>
   <data name="AssistantEmptyTitle.Text" xml:space="preserve"><value>Начните с конкретного вопроса</value></data>
-  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Спросите о локализации модов, структуре пакета, текущей среде терминала или безопасной диагностической команде. Команды никогда не запускаются автоматически.</value></data>
+  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Выберите проект мода, чтобы восстановить его диалог, проверить архив, запустить или отслеживать задания перевода. Для терминала можно выбрать общего помощника. Показывается только открытая активность инструментов, а не скрытая цепочка рассуждений.</value></data>
   <data name="AssistantDraft.Header" xml:space="preserve"><value>Сообщение</value></data>
   <data name="AssistantDraft.PlaceholderText" xml:space="preserve"><value>Пример: подготовьте проверку версии Java только для чтения в текущей оболочке</value></data>
   <data name="AssistantDraft.AutomationProperties.Name" xml:space="preserve"><value>Сообщение ИИ-помощнику</value></data>
@@ -405,8 +419,40 @@
   <data name="AssistantRequestFailed" xml:space="preserve"><value>Сбой запроса к помощнику. Проверьте выбранный источник модели и повторите попытку.</value></data>
   <data name="AssistantRequestFailedWithDetails" xml:space="preserve"><value>Сбой запроса к помощнику: {0}</value></data>
   <data name="AssistantCleared" xml:space="preserve"><value>Диалог очищен.</value></data>
-  <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>Источник модели изменён. Предыдущий диалог очищен, чтобы предотвратить раскрытие данных между провайдерами.</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>Не удалось открыть предложение команды для проверки. Ничего не было выполнено.</value></data>
+  <data name="AssistantUsageUnknownModel" xml:space="preserve"><value>модель</value></data>
+  <data name="AssistantUsageUnavailable" xml:space="preserve"><value>{0}: поставщик не вернул данные о токенах для вызовов: {1}.</value></data>
+  <data name="AssistantUsageComplete" xml:space="preserve"><value>{0} · вход {1} · выход {2} · всего {3} токенов · вызовов поставщика: {4}</value></data>
+  <data name="AssistantUsagePartial" xml:space="preserve"><value>{0}: данные об использовании неполные · вход {1} · выход {2} · заявлено всего {3} · полных вызовов: {4}/{5}</value></data>
+  <data name="AssistantActivityModelStarted" xml:space="preserve"><value>Запрос к модели · раунд {0}</value></data>
+  <data name="AssistantActivityModelCompleted" xml:space="preserve"><value>Получен ответ модели в раунде {0}</value></data>
+  <data name="AssistantActivityToolStarted" xml:space="preserve"><value>Выполняется: {0}</value></data>
+  <data name="AssistantActivityToolCompleted" xml:space="preserve"><value>{0}: выполнено</value></data>
+  <data name="AssistantActivityToolFailed" xml:space="preserve"><value>{0}: отклонено или завершилось с ошибкой</value></data>
+  <data name="AssistantActivityCancelled" xml:space="preserve"><value>Запрос отменён</value></data>
+  <data name="AssistantActivityFailed" xml:space="preserve"><value>Сбой запроса</value></data>
+  <data name="AssistantActivityComplete" xml:space="preserve"><value>Ответ готов</value></data>
+  <data name="AssistantActivityToolSafeDetail" xml:space="preserve"><value>Исходные аргументы и результаты скрыты; показано только открытое состояние инструмента.</value></data>
+  <data name="AssistantActivityCompleteDetail" xml:space="preserve"><value>Итоговый ответ и заявленные поставщиком данные об использовании готовы.</value></data>
+  <data name="AssistantActivityUsageMissing" xml:space="preserve"><value>Поставщик не вернул данные об использовании для этого раунда.</value></data>
+  <data name="AssistantActivityUsageReported" xml:space="preserve"><value>Получены данные поставщика об использовании для этого раунда.</value></data>
+  <data name="AssistantToolSystemContext" xml:space="preserve"><value>безопасный системный контекст</value></data>
+  <data name="AssistantToolCliProposal" xml:space="preserve"><value>проверка предложения команды</value></data>
+  <data name="AssistantToolProjectContext" xml:space="preserve"><value>контекст активного проекта</value></data>
+  <data name="AssistantToolArchiveInspect" xml:space="preserve"><value>проверка архива</value></data>
+  <data name="AssistantToolTranslationStart" xml:space="preserve"><value>транзакционный перевод</value></data>
+  <data name="AssistantToolTaskStatus" xml:space="preserve"><value>состояние задания</value></data>
+  <data name="AssistantToolTaskCancel" xml:space="preserve"><value>отмена задания</value></data>
+  <data name="AssistantToolUnknown" xml:space="preserve"><value>разрешённый инструмент</value></data>
+  <data name="AssistantGeneralProject" xml:space="preserve"><value>Общий помощник</value></data>
+  <data name="AssistantGeneralProjectDetail" xml:space="preserve"><value>Контекст пакета отсутствует; инструменты проекта недоступны.</value></data>
+  <data name="AssistantModelChangedConversationPreserved" xml:space="preserve"><value>Источник модели изменён. Для каждого поставщика сохраняется отдельный диалог; прежний контекст сохранён и не раскрыт новому поставщику.</value></data>
+  <data name="AssistantGeneralContextSelected" xml:space="preserve"><value>Выбран общий помощник. Инструменты проекта мода недоступны в этом диалоге.</value></data>
+  <data name="AssistantProjectContextSelected" xml:space="preserve"><value>Контекст проекта изменён. Его диалог восстановлен без смешивания с историей другого мода.</value></data>
+  <data name="AssistantProjectReady" xml:space="preserve"><value>{0} · готово</value></data>
+  <data name="AssistantProjectTaskDetail" xml:space="preserve"><value>{0} · {1} · {2:P0}</value></data>
+  <data name="AssistantProjectNoObjective" xml:space="preserve"><value>Для этого проекта ещё не создано задание перевода.</value></data>
+  <data name="AssistantProjectIdle" xml:space="preserve"><value>Ожидание</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Сообщество модов</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Сообщество модов</value></data>
   <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Войдите, чтобы читать обсуждения модов в LocaleSmith и безопасно публиковать сообщения с помощью токена приложения.</value></data>
@@ -563,4 +609,61 @@
   <data name="CommunityReportNetworkError" xml:space="preserve"><value>Не удалось подключиться к сервису жалоб. Проверьте сеть и отправьте жалобу снова.</value></data>
   <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>Сервис жалоб вернул неожиданный ответ. Обновите страницу и повторите попытку позже.</value></data>
   <data name="CommunityReportFailedError" xml:space="preserve"><value>Не удалось отправить жалобу. Проверьте подробности и повторите попытку позже.</value></data>
+  <data name="BillingTitle.Text" xml:space="preserve"><value>Подписка на ускорение загрузки</value></data>
+  <data name="BillingSubtitle.Text" xml:space="preserve"><value>Ежемесячная подписка LocaleSmith через Microsoft Store. Доступ включается только после проверки сервером MCTX.</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Title" xml:space="preserve"><value>Подписка недоступна</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Message" xml:space="preserve"><value>MCTX не включил оплату через Microsoft Store, поэтому кнопка покупки скрыта.</value></data>
+  <data name="BillingLoginRequiredInfo.Title" xml:space="preserve"><value>Сначала войдите в LocaleSmith/MCTX</value></data>
+  <data name="BillingLoginRequiredInfo.Message" xml:space="preserve"><value>Перед покупкой, восстановлением или проверкой прав необходимо подтвердить существующую учётную запись и PAT.</value></data>
+  <data name="BillingAccountLink.Content" xml:space="preserve"><value>Управление учётной записью и PAT</value></data>
+  <data name="BillingBackendUnavailableInfo.Title" xml:space="preserve"><value>Служба прав недоступна</value></data>
+  <data name="BillingBackendUnavailableInfo.Message" xml:space="preserve"><value>Не удалось подтвердить права MCTX, поэтому покупка остаётся отключённой.</value></data>
+  <data name="BillingStoreUnavailableInfo.Title" xml:space="preserve"><value>Товар Microsoft Store недоступен</value></data>
+  <data name="BillingStoreUnavailableInfo.Message" xml:space="preserve"><value>Используйте LocaleSmith из Microsoft Store с правильной учётной записью и не запускайте приложение с повышенными правами.</value></data>
+  <data name="BillingActiveInfo.Title" xml:space="preserve"><value>Ускорение загрузки активно</value></data>
+  <data name="BillingActiveInfo.Message" xml:space="preserve"><value>Этот статус получен от сервера MCTX; локальный результат Store не открывает доступ напрямую.</value></data>
+  <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>Нет активного права</value></data>
+  <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>Оформите подписку или восстановите существующую покупку Microsoft Store для серверной проверки.</value></data>
+  <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>Новые подписчики, соответствующие условиям, могут получить 7-дневный бесплатный период; право и окончательные условия показывает Microsoft при покупке.</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>После доступного пробного периода подписка автоматически продлевается по месячной цене, которую тогда показывает Microsoft Store, до отмены. Для Китая настроено 30,00 CNY в месяц; окончательные условия указаны на экране покупки.</value></data>
+  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>Глобальный базовый ценовой уровень — 4,99 US$ в месяц. Microsoft Store показывает местную цену; для других рынков цена не фиксирована на уровне 5 US$.</value></data>
+  <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>Оплату обрабатывает Microsoft. Управление и отмена доступны в разделе «Службы и подписки» учётной записи Microsoft.</value></data>
+  <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Текущая ежемесячная цена продления в Microsoft Store</value></data>
+  <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>Подписаться через Microsoft</value></data>
+  <data name="BillingRestoreButton.Content" xml:space="preserve"><value>Восстановить покупку</value></data>
+  <data name="BillingRefreshButton.Content" xml:space="preserve"><value>Обновить статус</value></data>
+  <data name="BillingProgress.AutomationProperties.Name" xml:space="preserve"><value>Обновление статуса подписки</value></data>
+  <data name="BillingErrorInfo.Title" xml:space="preserve"><value>Ошибка операции с подпиской</value></data>
+  <data name="BillingStatusInfo.Title" xml:space="preserve"><value>Статус подписки</value></data>
+  <data name="BillingManageSubscriptionsLink.Content" xml:space="preserve"><value>Управление или отмена в Microsoft</value></data>
+  <data name="BillingPrivacyLink.Content" xml:space="preserve"><value>Политика конфиденциальности</value></data>
+  <data name="BillingPurchasePendingVerificationStatus" xml:space="preserve"><value>Этап покупки Microsoft завершён. LocaleSmith проверяет права через MCTX.</value></data>
+  <data name="BillingEntitlementVerifiedStatus" xml:space="preserve"><value>Право MCTX активно.</value></data>
+  <data name="BillingEntitlementPendingStatus" xml:space="preserve"><value>Microsoft сообщил о покупке, но MCTX ещё не активировал право. Используйте восстановление покупки для повторной проверки.</value></data>
+  <data name="BillingPurchaseCancelledStatus" xml:space="preserve"><value>Покупка Microsoft не завершена. Права не изменились.</value></data>
+  <data name="BillingStoreNetworkError" xml:space="preserve"><value>Не удалось подключиться к Microsoft Store. Права не изменились.</value></data>
+  <data name="BillingStoreUnavailableError" xml:space="preserve"><value>Microsoft Store не смог выполнить запрос. Права не изменились.</value></data>
+  <data name="BillingRestoreVerifiedStatus" xml:space="preserve"><value>Проверка покупки обновлена, право MCTX активно.</value></data>
+  <data name="BillingRestoreNoEntitlementStatus" xml:space="preserve"><value>Активное право MCTX не получено. Само наличие покупки Microsoft не открывает ускорение.</value></data>
+  <data name="BillingCapabilityUnavailableError" xml:space="preserve"><value>Не удалось подтвердить доступность подписки. Покупка остаётся отключённой.</value></data>
+  <data name="BillingCapabilityUnavailableStatus" xml:space="preserve"><value>Оплата Microsoft Store не включена службой MCTX. Кнопка покупки скрыта.</value></data>
+  <data name="BillingLoginRequiredStatus" xml:space="preserve"><value>Перед покупкой или восстановлением войдите в LocaleSmith/MCTX с помощью PAT.</value></data>
+  <data name="BillingBackendUnavailableError" xml:space="preserve"><value>Статус прав MCTX недоступен. Покупка остаётся отключённой.</value></data>
+  <data name="BillingVerificationFailedError" xml:space="preserve"><value>Не удалось завершить проверку покупки. Права не открыты; повторите через восстановление покупки.</value></data>
+  <data name="BillingAlreadyEntitledStatus" xml:space="preserve"><value>Право MCTX уже активно, поэтому интерфейс покупки Microsoft не открывался.</value></data>
+  <data name="BillingScopeRequiredInfo.Title" xml:space="preserve"><value>У PAT нет доступа к ускоренной загрузке</value></data>
+  <data name="BillingScopeRequiredInfo.Message" xml:space="preserve"><value>Создайте обычный PAT с областью downloads:accelerated. Покупка и ускорение остаются отключёнными.</value></data>
+  <data name="BillingAcceleratedScopeRequiredStatus" xml:space="preserve"><value>Для оплаты или ускорения сохранённому PAT требуется область downloads:accelerated.</value></data>
+  <data name="CommunityDownloadTitle.Text" xml:space="preserve"><value>Скачать выбранную версию</value></data>
+  <data name="CommunityDefaultDownloadButton.Content" xml:space="preserve"><value>Скачать из источника по умолчанию</value></data>
+  <data name="CommunityAcceleratedDownloadButton.Content" xml:space="preserve"><value>Использовать ускоренную загрузку</value></data>
+  <data name="CommunityAccelerationDisclosure.Text" xml:space="preserve"><value>Показывается только когда MCTX подтверждает действующее свежее право и готовую приватную копию. При сбое используется источник по умолчанию.</value></data>
+  <data name="CommunityDownloadProgress.AutomationProperties.Name" xml:space="preserve"><value>Ход загрузки артефакта</value></data>
+  <data name="CommunityCancelDownloadButton.Content" xml:space="preserve"><value>Отменить загрузку</value></data>
+  <data name="CommunityDownloadErrorInfo.Title" xml:space="preserve"><value>Ошибка загрузки</value></data>
+  <data name="CommunityDownloadStatusInfo.Title" xml:space="preserve"><value>Статус загрузки</value></data>
+  <data name="CommunityDownloadFallbackStatus" xml:space="preserve"><value>Ускоренный источник недоступен. Файл безопасно загружен из источника по умолчанию.</value></data>
+  <data name="CommunityDownloadCompletedStatus" xml:space="preserve"><value>Загрузка завершена, проверка SHA-256 пройдена.</value></data>
+  <data name="CommunityDownloadCancelledStatus" xml:space="preserve"><value>Загрузка отменена. Для продолжения может быть сохранён частичный файл без учётных данных.</value></data>
+  <data name="CommunityDownloadFailedError" xml:space="preserve"><value>Не удалось завершить или проверить загрузку. Неполный артефакт не опубликован.</value></data>
 </root>

@@ -7,6 +7,8 @@ public sealed class DefaultOutputPathStrategy : IOutputPathStrategy
 {
     private const string OutputDirectoryName = "LocaleSmith.Output";
     private readonly IAppConfigurationService _configurationService;
+    private readonly object _reservationGate = new();
+    private readonly HashSet<string> _reservedOutputPaths = new(StringComparer.OrdinalIgnoreCase);
 
     public DefaultOutputPathStrategy(IAppConfigurationService configurationService)
     {
@@ -78,8 +80,11 @@ public sealed class DefaultOutputPathStrategy : IOutputPathStrategy
             extension = ".zip";
         }
 
-        var outputPath = Path.GetFullPath(
-            Path.Combine(outputRoot, $"{sourceName}.{canonicalTargetLanguage}{extension}"));
+        var outputPath = ReserveAvailableOutputPath(
+            outputRoot,
+            sourceName,
+            canonicalTargetLanguage,
+            extension);
         if (!IsSameOrDescendant(outputPath, outputRoot) ||
             string.Equals(outputPath, sourceFullPath, StringComparison.OrdinalIgnoreCase))
         {
@@ -88,6 +93,37 @@ public sealed class DefaultOutputPathStrategy : IOutputPathStrategy
 
         EnsureHierarchyHasNoReparsePoints(outputPath, allowMissing: true);
         return outputPath;
+    }
+
+    private string ReserveAvailableOutputPath(
+        string outputRoot,
+        string sourceName,
+        string targetLanguage,
+        string extension)
+    {
+        string stem = $"{sourceName}.{targetLanguage}";
+        lock (_reservationGate)
+        {
+            for (var suffix = 1; suffix < int.MaxValue; suffix++)
+            {
+                string fileName = suffix == 1
+                    ? $"{stem}{extension}"
+                    : $"{stem}.{suffix}{extension}";
+                string candidate = Path.GetFullPath(Path.Combine(outputRoot, fileName));
+                EnsureHierarchyHasNoReparsePoints(candidate, allowMissing: true);
+                if (File.Exists(candidate) || Directory.Exists(candidate))
+                {
+                    continue;
+                }
+
+                if (_reservedOutputPaths.Add(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        throw new IOException("No collision-free output path is available in the configured workspace.");
     }
 
     private static void EnsureHierarchyHasNoReparsePoints(string path, bool allowMissing)

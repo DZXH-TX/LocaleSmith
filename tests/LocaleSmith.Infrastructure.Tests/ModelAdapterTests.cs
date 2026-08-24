@@ -37,7 +37,10 @@ public sealed class ModelAdapterTests
         Assert.Equal("http://127.0.0.1:11434/api/chat", requestedUri?.AbsoluteUri);
         Assert.Contains("\"stream\":false", requestJson, StringComparison.Ordinal);
         Assert.Equal("你好", response.Content);
-        Assert.Equal(7, response.InputTokens);
+        Assert.Equal(7L, response.InputTokens);
+        Assert.Equal(2L, response.OutputTokens);
+        Assert.Equal(9L, response.TotalTokens);
+        Assert.True(response.Usage!.IsComplete);
     }
 
     [Fact]
@@ -85,7 +88,7 @@ public sealed class ModelAdapterTests
             authorization = request.Headers.Authorization?.ToString();
             requestJson = await request.Content!.ReadAsStringAsync(cancellationToken);
             Assert.Equal("https://models.example/v1/chat/completions", request.RequestUri?.AbsoluteUri);
-            return JsonResponse("""{"model":"demo","choices":[{"message":{"content":"translated"}}],"usage":{"prompt_tokens":11,"completion_tokens":3}}""");
+            return JsonResponse("""{"model":"demo","choices":[{"message":{"content":"translated"}}],"usage":{"prompt_tokens":3000000000,"completion_tokens":4000000000,"total_tokens":9000000000}}""");
         });
         using var client = new HttpClient(handler);
         using var secrets = new InMemorySecretStore();
@@ -104,8 +107,12 @@ public sealed class ModelAdapterTests
         Assert.Equal("Bearer cloud-secret", authorization);
         Assert.Contains("\"max_tokens\":128", requestJson, StringComparison.Ordinal);
         Assert.Equal("translated", response.Content);
-        Assert.Equal(11, response.InputTokens);
-        Assert.Equal(3, response.OutputTokens);
+        Assert.Equal(3_000_000_000L, response.InputTokens);
+        Assert.Equal(4_000_000_000L, response.OutputTokens);
+        Assert.Equal(9_000_000_000L, response.TotalTokens);
+        Assert.Equal(1, response.Usage!.ProviderCallCount);
+        Assert.Equal(1, response.Usage.CallsWithUsage);
+        Assert.Equal(1, response.Usage.CallsWithCompleteUsage);
     }
 
     [Theory]
@@ -146,6 +153,7 @@ public sealed class ModelAdapterTests
         var response = await service.CompleteAsync(CreateRequest(), TestContext.Current.CancellationToken);
 
         Assert.Equal("OK", response.Content);
+        Assert.Null(response.Usage);
     }
 
     [Theory]
@@ -172,13 +180,14 @@ public sealed class ModelAdapterTests
         using var client = new HttpClient(handler);
         using var secrets = new InMemorySecretStore();
         await secrets.SetAsync("providers/preset", "secret".AsMemory(), TestContext.Current.CancellationToken);
+        var preset = ModelProviderPresets.ResolveOrCustom(presetId);
         var service = new OpenAiCompatibleModelService(
             client,
             new ModelSource(
                 "preset",
                 "Preset",
                 ModelProviderKind.OpenAiCompatible,
-                new Uri("https://models.example/v1"),
+                preset.DefaultEndpoint ?? new Uri("https://models.example/v1"),
                 "editable-model",
                 "providers/preset",
                 presetId),
@@ -215,13 +224,14 @@ public sealed class ModelAdapterTests
         using var client = new HttpClient(handler);
         using var secrets = new InMemorySecretStore();
         await secrets.SetAsync("providers/preset", "secret".AsMemory(), TestContext.Current.CancellationToken);
+        var preset = ModelProviderPresets.ResolveOrCustom(presetId);
         var service = new OpenAiCompatibleModelService(
             client,
             new ModelSource(
                 "preset",
                 "Preset",
                 ModelProviderKind.OpenAiCompatible,
-                new Uri("https://models.example/v1"),
+                preset.DefaultEndpoint ?? new Uri("https://models.example/v1"),
                 "editable-model",
                 "providers/preset",
                 presetId),
@@ -366,7 +376,9 @@ public sealed class ModelAdapterTests
 
         Assert.Contains("\"system\":\"system prompt\"", requestJson, StringComparison.Ordinal);
         Assert.Equal("part one + part two", response.Content);
-        Assert.Equal(4, response.OutputTokens);
+        Assert.Equal(9L, response.InputTokens);
+        Assert.Equal(4L, response.OutputTokens);
+        Assert.Equal(13L, response.TotalTokens);
     }
 
     [Fact]

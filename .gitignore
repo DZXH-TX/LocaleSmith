@@ -65,10 +65,11 @@ data/
 logs/
 sandbox/
 
-# Remote documentation policy: only the requested root language READMEs may be tracked.
+# Remote documentation policy: only requested root documentation may be tracked.
 *.md
 !/README.md
 !/README.en.md
+!/AGENTS.md
 
 # Editors / OS
 .idea/

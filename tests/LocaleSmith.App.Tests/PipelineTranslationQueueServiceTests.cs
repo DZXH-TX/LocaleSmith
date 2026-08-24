@@ -68,6 +68,7 @@ public sealed class PipelineTranslationQueueServiceTests
             scheduler.Request.HardcodedStringMode);
         Assert.Equal(style, result.Style);
         Assert.Equal("zh_CN", result.TargetLanguage);
+        Assert.Same(scheduler.ModelUsage, result.ModelUsage);
         Assert.Equal(outputPath, Assert.Single(result.ArtifactPaths));
         var latest = Assert.IsType<TranslationQueueProgress>(handle.LatestProgress);
         Assert.Equal(PipelineStage.Completed, latest.Stage);
@@ -119,6 +120,8 @@ public sealed class PipelineTranslationQueueServiceTests
 
         public int EnqueueCount { get; private set; }
 
+        public ModelTokenUsage ModelUsage { get; } = new(10, 4, 14, 1, 1, 1);
+
         public ValueTask<PipelineJobHandle> EnqueueAsync(
             PipelineRequest request,
             CancellationToken cancellationToken = default)
@@ -147,7 +150,8 @@ public sealed class PipelineTranslationQueueServiceTests
                 new ExternalizationReport(0, 0, []),
                 artifacts,
                 new PackageVerification(true, true, [], artifacts),
-                Warnings: []);
+                Warnings: [],
+                ModelUsage: ModelUsage);
             var now = DateTimeOffset.UtcNow;
             var stages = new[]
             {

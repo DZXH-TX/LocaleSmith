@@ -33,14 +33,21 @@ public sealed class ModelTranslationEngine : ITranslationEngine
 
     public string TranslationContractVersion => TranslationPromptContract.CurrentVersion;
 
+    public Task<TranslationBatchResult> TranslateAsync(
+        TranslationBatchRequest request,
+        CancellationToken cancellationToken) =>
+        TranslateAsync(request, usageProgress: null, cancellationToken);
+
     public async Task<TranslationBatchResult> TranslateAsync(
         TranslationBatchRequest request,
+        IProgress<ModelTokenUsage>? usageProgress,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var targetLanguage = TranslationLanguageCatalog.GetRequired(request.TargetLanguage);
         var service = ResolveService(request.ModelSourceId);
         var results = new List<TranslatedEntry>(request.Entries.Count);
+        ModelTokenUsage usage = ModelTokenUsage.Empty;
 
         foreach (var chunk in CreateChunks(request.Entries))
         {
@@ -69,11 +76,26 @@ public sealed class ModelTranslationEngine : ITranslationEngine
                 temperature: 0.2,
                 maxTokens: _options.MaxOutputTokens);
 
-            var response = await service.CompleteAsync(modelRequest, cancellationToken).ConfigureAwait(false);
+            ModelResponse response;
+            try
+            {
+                response = await service.CompleteAsync(modelRequest, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (
+                exception is not OutOfMemoryException and
+                not AccessViolationException)
+            {
+                usage = usage.AddProviderCall(null);
+                usageProgress?.Report(usage);
+                throw;
+            }
+
+            usage = usage.AddProviderCall(response.Usage);
+            usageProgress?.Report(usage);
             results.AddRange(ParseAndValidate(response.Content, chunk, promptItems, request.Styles));
         }
 
-        return new TranslationBatchResult(request.TargetLanguage, results);
+        return new TranslationBatchResult(request.TargetLanguage, results, usage);
     }
 
     private static string CreateSystemPrompt(

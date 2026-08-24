@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +13,7 @@ using LocaleSmith.Core.Models;
 namespace LocaleSmith.Infrastructure.ModPlatform;
 
 /// <summary>Typed client for the stable, versioned MCTX Mod Hub inline API.</summary>
-public sealed class ModPlatformClient : IModPlatformClient, IDisposable
+public sealed class ModPlatformClient : IModPlatformClient, IModPlatformBillingClient, IDisposable
 {
     public static readonly Uri ProductionBaseUri = new("https://api.dzxh-tx.cn/");
 
@@ -183,6 +184,96 @@ public sealed class ModPlatformClient : IModPlatformClient, IDisposable
             cancellationToken,
             expectedStatus: HttpStatusCode.OK).ConfigureAwait(false);
         return MapAuthSession(result);
+    }
+
+    public async Task<MicrosoftStoreServiceTicket> RequestMicrosoftStoreServiceTicketAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<MicrosoftStoreServiceTicketResponse>(
+            HttpMethod.Post,
+            "api/v1/me/billing/microsoft-store/service-ticket",
+            null,
+            authorize: true,
+            cancellationToken,
+            expectedStatus: HttpStatusCode.OK).ConfigureAwait(false);
+        return new MicrosoftStoreServiceTicket(
+            new SecretValue(response.ServiceTicket.AsSpan()),
+            response.ExpiresAt,
+            response.PublisherUserId,
+            response.ParentStoreId,
+            response.SubscriptionStoreId);
+    }
+
+    public Task VerifyMicrosoftStorePurchaseAsync(
+        SecretValue storeIdKey,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(storeIdKey);
+        return SendAuthorizedSecretAsync(
+            "api/v1/me/billing/microsoft-store/verify",
+            "store_id_key",
+            storeIdKey,
+            cancellationToken);
+    }
+
+    public Task<MicrosoftStoreEntitlements> GetEntitlementsAsync(
+        CancellationToken cancellationToken = default) =>
+        SendAsync<MicrosoftStoreEntitlements>(
+            HttpMethod.Get,
+            "api/v1/me/entitlements",
+            null,
+            authorize: true,
+            cancellationToken,
+            expectedStatus: HttpStatusCode.OK);
+
+    public async Task<ModPlatformDownloadSources> GetDownloadSourcesAsync(
+        Guid versionId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateIdentifier(versionId, nameof(versionId));
+        var response = await SendAsync<ModPlatformDownloadSources>(
+            HttpMethod.Get,
+            $"api/v1/files/{versionId:D}/download-sources",
+            null,
+            authorize: true,
+            cancellationToken,
+            expectedStatus: HttpStatusCode.OK).ConfigureAwait(false);
+        if (response.VersionId != versionId)
+        {
+            throw CreateInvalidResponseException(HttpStatusCode.OK);
+        }
+
+        return response;
+    }
+
+    public async Task<ModPlatformAcceleratedDownloadGrant> CreateAcceleratedDownloadGrantAsync(
+        Guid versionId,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateIdentifier(versionId, nameof(versionId));
+        var response = await SendAsync<AcceleratedDownloadGrantResponse>(
+            HttpMethod.Post,
+            $"api/v1/files/{versionId:D}/accelerated-download-grants",
+            null,
+            authorize: true,
+            cancellationToken,
+            expectedStatus: HttpStatusCode.OK).ConfigureAwait(false);
+        if (response.VersionId != versionId)
+        {
+            throw CreateInvalidResponseException(HttpStatusCode.OK);
+        }
+
+        return new ModPlatformAcceleratedDownloadGrant(
+            response.GrantId,
+            response.VersionId,
+            response.GetUrl.AsSpan(),
+            response.HeadUrl.AsSpan(),
+            response.ExpiresAt,
+            response.FallbackUrl,
+            response.Size,
+            response.Sha256,
+            response.SupportsRange,
+            response.BrowserParallelRangeEnabled);
     }
 
     public Task<ModPlatformPage<ModPlatformModSummary>> GetModsAsync(
@@ -363,6 +454,31 @@ public sealed class ModPlatformClient : IModPlatformClient, IDisposable
             throw CreateInvalidResponseException(response.StatusCode);
         }
     }
+
+    private static ModPlatformException CreateSensitiveOperationException(HttpStatusCode statusCode) =>
+        statusCode switch
+        {
+            HttpStatusCode.BadRequest => new ModPlatformException(
+                statusCode,
+                "store_credential_invalid",
+                "MCTX rejected the Microsoft Store credential."),
+            HttpStatusCode.Unauthorized => new ModPlatformException(
+                statusCode,
+                "unauthorized",
+                "MCTX authentication is required for Microsoft Store verification."),
+            HttpStatusCode.Forbidden => new ModPlatformException(
+                statusCode,
+                "forbidden",
+                "The saved PAT does not permit Microsoft Store verification."),
+            HttpStatusCode.Conflict => new ModPlatformException(
+                statusCode,
+                "billing_binding_conflict",
+                "The Microsoft Store subscription could not be bound to this MCTX account."),
+            _ => new ModPlatformException(
+                statusCode,
+                $"http_{(int)statusCode}",
+                "MCTX could not complete Microsoft Store verification.")
+        };
 
     public Task<ModPlatformCompletedUpload> CompleteUploadAsync(
         Guid uploadId,
@@ -717,6 +833,39 @@ public sealed class ModPlatformClient : IModPlatformClient, IDisposable
         }
     }
 
+    private async Task SendAuthorizedSecretAsync(
+        string relativePath,
+        string propertyName,
+        SecretValue secret,
+        CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        using var request = new HttpRequestMessage(HttpMethod.Post, ResolveUri(relativePath));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.UserAgent.ParseAdd("LocaleSmith/1.0");
+        request.Content = new SecretJsonContent(propertyName, secret);
+        using var token = await ResolveRequiredTokenAsync(cancellationToken).ConfigureAwait(false);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.DangerousGetString());
+
+        using var response = await SendHttpAsync(
+            _httpClient,
+            request,
+            HttpCompletionOption.ResponseContentRead,
+            cancellationToken).ConfigureAwait(false);
+        ModPlatformApiContract.ValidateVersionHeader(response, request.RequestUri);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw CreateSensitiveOperationException(response.StatusCode);
+        }
+
+        if (response.StatusCode is not HttpStatusCode.OK
+            and not HttpStatusCode.Accepted
+            and not HttpStatusCode.NoContent)
+        {
+            throw CreateInvalidResponseException(response.StatusCode);
+        }
+    }
+
     private static async Task<HttpResponseMessage> SendHttpAsync(
         HttpClient httpClient,
         HttpRequestMessage request,
@@ -814,8 +963,131 @@ public sealed class ModPlatformClient : IModPlatformClient, IDisposable
         ModPlatformReport report => IsValidReport(report),
         ModPlatformUploadSession upload => IsValidUploadSession(upload),
         ModPlatformCompletedUpload upload => IsValidCompletedUpload(upload),
+        MicrosoftStoreServiceTicketResponse ticket => IsValidServiceTicket(ticket),
+        MicrosoftStoreEntitlements entitlements => IsValidEntitlements(entitlements),
+        ModPlatformDownloadSources sources => IsValidDownloadSources(sources),
+        AcceleratedDownloadGrantResponse grant => IsValidAcceleratedDownloadGrant(grant),
         _ => false
     };
+
+    private static bool IsValidServiceTicket(MicrosoftStoreServiceTicketResponse? ticket) =>
+        ticket is not null
+        && IsBoundedSecret(ticket.ServiceTicket)
+        && ticket.TokenType == "Bearer"
+        && ticket.ExpiresAt != default
+        && ticket.PublisherUserId != Guid.Empty
+        && ticket.ParentStoreId == MicrosoftStoreBillingContract.ParentAppStoreId
+        && ticket.SubscriptionStoreId == MicrosoftStoreBillingContract.SubscriptionStoreId;
+
+    private static bool IsValidEntitlements(MicrosoftStoreEntitlements? response) =>
+        response?.Data is { Count: <= 128 }
+        && response.ServerTime != default
+        && response.Data.All(static entitlement =>
+            entitlement.Id != Guid.Empty
+            && IsBoundedToken(entitlement.EntitlementKey, 128)
+            && IsBoundedToken(entitlement.Status, 64)
+            && entitlement.ValidFrom != default
+            && entitlement.ValidUntil != default
+            && entitlement.ValidUntil >= entitlement.ValidFrom
+            && entitlement.LastVerifiedAt != default
+            && IsBoundedToken(entitlement.SourceProvider, 64)
+            && IsBoundedToken(entitlement.SourceProductId, 128)
+            && IsBoundedToken(entitlement.SourceSkuId, 128)
+            && IsBoundedToken(entitlement.SourceStatus, 64));
+
+    private static bool IsValidDownloadSources(ModPlatformDownloadSources? response) =>
+        response is not null
+        && response.VersionId != Guid.Empty
+        && IsArtifactFilenameContractValid(response.Filename)
+        && response.Size > 0
+        && IsCanonicalSha256(response.Sha256)
+        && response.Sources is { Count: > 0 and <= 16 }
+        && response.Sources.All(static source =>
+            IsBoundedToken(source.Id, 64)
+            && IsBoundedToken(source.Kind, 64)
+            && IsSafeRelativeApiPath(source.DownloadUrl))
+        && response.Sources.Select(static source => source.Id).Distinct(StringComparer.Ordinal).Count()
+            == response.Sources.Count
+        && response.Sources.Any(static source =>
+            source is { Id: "default", Kind: "local_nginx", SupportsRange: true })
+        && IsValidAdditionalSource(response.VersionId, response.AdditionalSource);
+
+    private static bool IsValidAdditionalSource(
+        Guid versionId,
+        ModPlatformAdditionalDownloadSource? source) =>
+        source is not null
+        && (source.Status switch
+        {
+            "available" => source.ReasonCode is null
+                && source.GrantUrl == $"/api/v1/files/{versionId:D}/accelerated-download-grants"
+                && source.BrowserParallelRangeEnabled is not null,
+            "unavailable" => source.ReasonCode is
+                    "entitlement_required"
+                    or "entitlement_expired"
+                    or "billing_verification_stale"
+                    or "accelerated_source_unavailable"
+                && source.GrantUrl is null
+                && source.BrowserParallelRangeEnabled is null,
+            _ => false
+        });
+
+    private static bool IsValidAcceleratedDownloadGrant(AcceleratedDownloadGrantResponse? grant) =>
+        grant is not null
+        && grant.GrantId != Guid.Empty
+        && grant.VersionId != Guid.Empty
+        && grant.ExpiresAt != default
+        && grant.Size > 0
+        && IsCanonicalSha256(grant.Sha256)
+        && grant.SupportsRange
+        && grant.FallbackUrl == $"/api/v1/files/{grant.VersionId:D}/download"
+        && IsSafeSignedHttpsUri(grant.GetUrl, out var getUri)
+        && IsSafeSignedHttpsUri(grant.HeadUrl, out var headUri)
+        && !string.Equals(grant.GetUrl, grant.HeadUrl, StringComparison.Ordinal)
+        && HaveSameOrigin(getUri, headUri);
+
+    private static bool IsSafeRelativeApiPath(string? value) =>
+        value is { Length: > 0 and <= 2048 }
+        && value.StartsWith("/api/v1/", StringComparison.Ordinal)
+        && !value.StartsWith("//", StringComparison.Ordinal)
+        && !value.Contains('?', StringComparison.Ordinal)
+        && !value.Contains('#', StringComparison.Ordinal)
+        && !Uri.TryCreate(value, UriKind.Absolute, out _);
+
+    private static bool IsSafeSignedHttpsUri(string? value, out Uri uri)
+    {
+        uri = null!;
+        if (value is not { Length: > 0 and <= 32768 }
+            || !Uri.TryCreate(value, UriKind.Absolute, out var candidate)
+            || !string.Equals(candidate.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            || !string.IsNullOrEmpty(candidate.UserInfo)
+            || !string.IsNullOrEmpty(candidate.Fragment)
+            || string.IsNullOrEmpty(candidate.Query))
+        {
+            return false;
+        }
+
+        uri = candidate;
+        return true;
+    }
+
+    private static bool HaveSameOrigin(Uri left, Uri right) =>
+        string.Equals(left.Scheme, right.Scheme, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(left.Host, right.Host, StringComparison.OrdinalIgnoreCase)
+        && left.Port == right.Port;
+
+    private static bool IsBoundedSecret(string? value) =>
+        value is { Length: >= 32 and <= 32768 }
+        && value.All(static character => !char.IsWhiteSpace(character) && !char.IsControl(character));
+
+    private static bool IsBoundedToken(string? value, int maximumLength) =>
+        value is { Length: > 0 }
+        && value.Length <= maximumLength
+        && value.All(static character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-' or '.');
+
+    private static bool IsBoundedText(string? value, int maximumLength) =>
+        value is { Length: > 0 }
+        && value.Length <= maximumLength
+        && value.All(static character => !char.IsControl(character));
 
     private static bool IsValidAuthResponse(ModPlatformAuthResponse? auth) =>
         auth is not null
@@ -852,10 +1124,36 @@ public sealed class ModPlatformClient : IModPlatformClient, IDisposable
         && meta.ServerTime != default
         && (meta.Artifacts is null || IsValidArtifactCapabilities(meta.Artifacts))
         && (meta.Reporting is null || IsValidReportingCapabilities(meta.Reporting))
+        && (meta.MicrosoftStore is null || IsValidMicrosoftStoreMeta(meta.MicrosoftStore))
         && (!meta.Features.Contains("artifact_types_v1", StringComparer.Ordinal)
             || IsValidArtifactCapabilities(meta.Artifacts))
         && (!meta.Features.Contains("content_reports_v1", StringComparer.Ordinal)
-            || IsValidReportingCapabilities(meta.Reporting));
+            || IsValidReportingCapabilities(meta.Reporting))
+        && (!meta.Features.Contains(MicrosoftStoreBillingContract.Capability, StringComparer.Ordinal)
+            || IsValidMicrosoftStoreMeta(meta.MicrosoftStore))
+        && (!meta.Features.Contains(MicrosoftStoreBillingContract.AcceleratedDownloadsCapability, StringComparer.Ordinal)
+            || (meta.Features.Contains(MicrosoftStoreBillingContract.Capability, StringComparer.Ordinal)
+                && IsValidMicrosoftStoreMeta(meta.MicrosoftStore)));
+
+    private static bool IsValidMicrosoftStoreMeta(MicrosoftStoreMeta? store) =>
+        store is not null
+        && store.CatalogStatus is "draft" or "published"
+        && store.ParentStoreId == MicrosoftStoreBillingContract.ParentAppStoreId
+        && store.SubscriptionStoreId == MicrosoftStoreBillingContract.SubscriptionStoreId
+        && store.InternalProductId == MicrosoftStoreBillingContract.SubscriptionProductId
+        && store.BillingPeriod == "P1M"
+        && store.TrialDays == 7
+        && store.HiddenParentAppOnly
+        && store.PrivacyUrl == MicrosoftStoreBillingContract.PrivacyPolicyUri.AbsoluteUri
+        && store.Pricing is
+        {
+            BaseCurrency: "USD",
+            BaseAmount: "4.99",
+            LocalizedByStore: true,
+            ChinaCurrency: "CNY",
+            ChinaAmount: "30.00",
+            IntroductoryPrice: null
+        };
 
     private static bool IsValidReportingCapabilities(ModPlatformReportingCapabilities? reporting) =>
         reporting is not null
@@ -1424,6 +1722,120 @@ public sealed class ModPlatformClient : IModPlatformClient, IDisposable
         [property: JsonPropertyName("csrf_token")] string? CsrfToken,
         [property: JsonPropertyName("expires_at")] DateTimeOffset? ExpiresAt,
         IReadOnlyList<string>? Scopes = null);
+
+    private sealed class MicrosoftStoreServiceTicketResponse
+    {
+        [JsonPropertyName("service_ticket")]
+        public required string ServiceTicket { get; init; }
+
+        [JsonPropertyName("token_type")]
+        public required string TokenType { get; init; }
+
+        [JsonPropertyName("expires_at")]
+        public required DateTimeOffset ExpiresAt { get; init; }
+
+        [JsonPropertyName("publisher_user_id")]
+        public required Guid PublisherUserId { get; init; }
+
+        [JsonPropertyName("parent_store_id")]
+        public required string ParentStoreId { get; init; }
+
+        [JsonPropertyName("subscription_store_id")]
+        public required string SubscriptionStoreId { get; init; }
+
+        public override string ToString() => "MicrosoftStoreServiceTicketResponse { [redacted] }";
+    }
+
+    private sealed class AcceleratedDownloadGrantResponse
+    {
+        [JsonPropertyName("grant_id")]
+        public required Guid GrantId { get; init; }
+
+        [JsonPropertyName("version_id")]
+        public required Guid VersionId { get; init; }
+
+        [JsonPropertyName("get_url")]
+        public required string GetUrl { get; init; }
+
+        [JsonPropertyName("head_url")]
+        public required string HeadUrl { get; init; }
+
+        [JsonPropertyName("expires_at")]
+        public required DateTimeOffset ExpiresAt { get; init; }
+
+        [JsonPropertyName("fallback_url")]
+        public required string FallbackUrl { get; init; }
+
+        public required long Size { get; init; }
+
+        public required string Sha256 { get; init; }
+
+        [JsonPropertyName("supports_range")]
+        public required bool SupportsRange { get; init; }
+
+        [JsonPropertyName("browser_parallel_range_enabled")]
+        public required bool BrowserParallelRangeEnabled { get; init; }
+
+        public override string ToString() => "AcceleratedDownloadGrantResponse { [URLs redacted] }";
+    }
+
+    private sealed class SecretJsonContent : HttpContent
+    {
+        private readonly string _propertyName;
+        private readonly SecretValue _secret;
+
+        internal SecretJsonContent(string propertyName, SecretValue secret)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(propertyName);
+            _propertyName = propertyName;
+            _secret = secret ?? throw new ArgumentNullException(nameof(secret));
+            Headers.ContentType = new MediaTypeHeaderValue("application/json")
+            {
+                CharSet = "utf-8"
+            };
+        }
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream,
+            TransportContext? context) => SerializeAsync(stream, CancellationToken.None);
+
+        protected override Task SerializeToStreamAsync(
+            Stream stream,
+            TransportContext? context,
+            CancellationToken cancellationToken) => SerializeAsync(stream, cancellationToken);
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+
+        private async Task SerializeAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            using var buffer = new ZeroingPooledBufferWriter();
+            using (var writer = new Utf8JsonWriter(buffer))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(_propertyName);
+                var secretBuffer = ArrayPool<char>.Shared.Rent(_secret.Length);
+                try
+                {
+                    _secret.CopyTo(secretBuffer);
+                    writer.WriteStringValue(secretBuffer.AsSpan(0, _secret.Length));
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(secretBuffer.AsSpan()));
+                    ArrayPool<char>.Shared.Return(secretBuffer);
+                }
+
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+
+            await stream.WriteAsync(buffer.WrittenMemory, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     private sealed class ApplicationLoginJsonContent : HttpContent
     {

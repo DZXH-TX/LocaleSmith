@@ -34,6 +34,7 @@ public sealed class OnboardingViewModel : ViewModelBase
     private string _networkModelName = ModelProviderPresets.DeepSeek.DefaultModelName!;
     private OpenAiTokenLimitParameter _networkTokenLimitParameter =
         ModelProviderPresets.DeepSeek.DefaultTokenLimitParameter;
+    private bool _applyingNetworkPresetDefaults;
     private bool _hasNetworkApiKey;
 
     public OnboardingViewModel(
@@ -228,9 +229,20 @@ public sealed class OnboardingViewModel : ViewModelBase
             }
 
             OnPropertyChanged(nameof(SelectedNetworkPresetId));
-            NetworkEndpoint = value.DefaultEndpoint?.AbsoluteUri ?? string.Empty;
-            NetworkModelName = value.DefaultModelName ?? string.Empty;
-            NetworkTokenLimitParameter = value.DefaultTokenLimitParameter;
+            _applyingNetworkPresetDefaults = true;
+            try
+            {
+                NetworkTokenLimitParameter = value.DefaultTokenLimitParameter;
+                if (!value.IsCustom)
+                {
+                    NetworkEndpoint = value.DefaultEndpoint?.AbsoluteUri ?? NetworkEndpoint;
+                    NetworkModelName = value.DefaultModelName ?? NetworkModelName;
+                }
+            }
+            finally
+            {
+                _applyingNetworkPresetDefaults = false;
+            }
         }
     }
 
@@ -249,7 +261,13 @@ public sealed class OnboardingViewModel : ViewModelBase
     public string NetworkEndpoint
     {
         get => _networkEndpoint;
-        set => SetProperty(ref _networkEndpoint, value);
+        set
+        {
+            if (SetProperty(ref _networkEndpoint, value))
+            {
+                ReconcileNetworkPresetWithEndpoint(value);
+            }
+        }
     }
 
     public string NetworkModelName
@@ -560,11 +578,21 @@ public sealed class OnboardingViewModel : ViewModelBase
         }
 
         if (!Uri.TryCreate(NetworkEndpoint, UriKind.Absolute, out var endpoint) ||
-            endpoint.Scheme != Uri.UriSchemeHttps)
+            (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps) ||
+            (endpoint.Scheme == Uri.UriSchemeHttp && !endpoint.IsLoopback))
         {
             ErrorMessage = Text(
                 "OnboardingNetworkAddressInvalid",
-                "Enter an absolute HTTPS address for the selected network provider.");
+                "Enter an absolute HTTPS address, or a loopback HTTP OpenAI-compatible address.");
+            return false;
+        }
+
+        if (endpoint.Scheme == Uri.UriSchemeHttp &&
+            !ModelProviderPresets.IsSupportedCustomLoopbackEndpoint(endpoint))
+        {
+            ErrorMessage = Text(
+                "OnboardingLoopbackOpenAiV1Required",
+                "Loopback HTTP OpenAI-compatible sources must use an explicit /v1 base address.");
             return false;
         }
 
@@ -583,6 +611,28 @@ public sealed class OnboardingViewModel : ViewModelBase
         }
 
         return true;
+    }
+
+    private void ReconcileNetworkPresetWithEndpoint(string endpointText)
+    {
+        if (_applyingNetworkPresetDefaults ||
+            SelectedNetworkPreset.IsCustom ||
+            !Uri.TryCreate(endpointText, UriKind.Absolute, out var endpoint) ||
+            (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
+        {
+            return;
+        }
+
+        var effective = ModelProviderPresets.ResolveEffective(
+            ModelProviderKind.OpenAiCompatible,
+            SelectedNetworkPreset.Id,
+            endpoint);
+        if (effective.IsCustom)
+        {
+            _selectedNetworkPreset = ModelProviderPresets.Custom;
+            OnPropertyChanged(nameof(SelectedNetworkPreset));
+            OnPropertyChanged(nameof(SelectedNetworkPresetId));
+        }
     }
 
     private void NotifyCommands()

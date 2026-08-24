@@ -169,8 +169,8 @@ public abstract class HttpModelServiceBase : IModelService
         return element.GetString()!;
     }
 
-    protected static int? OptionalInt32(JsonElement parent, string name) =>
-        parent.TryGetProperty(name, out var value) && value.TryGetInt32(out var number) ? number : null;
+    protected static long? OptionalInt64(JsonElement parent, string name) =>
+        parent.TryGetProperty(name, out var value) && value.TryGetInt64(out var number) ? number : null;
 
     protected static string? OptionalString(JsonElement parent, string name) =>
         parent.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String

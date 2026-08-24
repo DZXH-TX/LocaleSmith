@@ -196,7 +196,7 @@
   <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>CLI 安全边界</value></data>
   <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>允许的沙箱根目录</value></data>
   <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>策略始终保留系统临时目录，并拒绝磁盘根、系统目录、重解析路径、超时及黑名单命令。</value></data>
-  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>内置 MCP 的 CLI 执行工具默认隐藏且禁用；仅启用上下文与只读能力。</value></data>
+  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>MCP 的 CLI 执行工具始终隐藏且禁用；项目写操作仅在模组助手中由用户对本轮消息明确授权后启用。</value></data>
   <data name="SaveSettingsButton.Content" xml:space="preserve"><value>保存设置</value></data>
   <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>模型建议执行命令</value></data>
   <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>执行命令</value></data>
@@ -230,7 +230,8 @@
   <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>请输入绝对 HTTP 或 HTTPS Ollama 地址。</value></data>
   <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>未加密 HTTP 仅允许用于本机回环 Ollama 服务。</value></data>
   <data name="OnboardingModelRequired" xml:space="preserve"><value>请输入已安装的 Ollama 模型名称。</value></data>
-  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>请输入所选网络提供方的绝对 HTTPS 地址。</value></data>
+  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>请输入绝对 HTTPS 地址；本机回环的 OpenAI 兼容服务也可使用带 /v1 的 HTTP 地址。</value></data>
+  <data name="OnboardingLoopbackOpenAiV1Required" xml:space="preserve"><value>本机回环的 HTTP OpenAI 兼容服务必须明确使用 /v1 基础地址。</value></data>
   <data name="OnboardingNetworkModelRequired" xml:space="preserve"><value>请输入网络模型名称。</value></data>
   <data name="OnboardingNetworkApiKeyRequired" xml:space="preserve"><value>请输入所选提供方的 API Key。</value></data>
   <data name="QueueStatusQueued" xml:space="preserve"><value>已排队</value></data>
@@ -303,6 +304,12 @@
   <data name="QueueStageTimingStarted" xml:space="preserve"><value>开始于 {0:t}</value></data>
   <data name="QueueStageTimingCompleted" xml:space="preserve"><value>{0:t}–{1:t}（{2}）</value></data>
   <data name="QueueStageDurationSeconds" xml:space="preserve"><value>{0:0.#} 秒</value></data>
+  <data name="QueueDefaultObjective" xml:space="preserve"><value>使用 {2} 将 {0} 翻译为 {1}。</value></data>
+  <data name="QueueUsageNoModelCalls" xml:space="preserve"><value>Tokens：无需调用模型；所有译文均从已验证的翻译记忆中复用。</value></data>
+  <data name="QueueUsageNoCompletedCalls" xml:space="preserve"><value>Tokens：任务结束前没有任何提供方调用完成。</value></data>
+  <data name="QueueUsageUnavailable" xml:space="preserve"><value>Tokens：提供方未返回 {0} 次调用的用量。</value></data>
+  <data name="QueueUsageComplete" xml:space="preserve"><value>Tokens · 输入 {0} · 输出 {1} · 总计 {2} · {3} 次提供方调用</value></data>
+  <data name="QueueUsagePartial" xml:space="preserve"><value>部分 Token 用量 · 输入 {0} · 输出 {1} · 已报告总计 {2} · {3}/{4} 次调用完整</value></data>
   <data name="QueueCancelling" xml:space="preserve"><value>正在取消…任务会在回滚完成后停止。</value></data>
   <data name="ModelSourcesLoadFailed" xml:space="preserve"><value>无法加载模型源：{0}</value></data>
   <data name="ModelSourceSaved" xml:space="preserve"><value>模型源已保存；API Key 已移入 Windows 凭据管理器。</value></data>
@@ -318,7 +325,8 @@
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>无法删除模型源：{0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>显示名称和模型名称均为必填项。</value></data>
   <data name="ModelSourceAddressInvalid" xml:space="preserve"><value>请输入绝对 HTTP 或 HTTPS 服务地址。</value></data>
-  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>远程模型源必须使用 HTTPS；HTTP 仅允许本机回环 Ollama。</value></data>
+  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>远程模型源必须使用 HTTPS；HTTP 仅允许本机回环服务。</value></data>
+  <data name="ModelSourceLoopbackOpenAiV1Required" xml:space="preserve"><value>本机回环的 HTTP OpenAI 兼容模型源必须明确使用 /v1 基础地址。</value></data>
   <data name="ModelPresetDeepSeekHint" xml:space="preserve"><value>DeepSeek 可使用主机 Base URL；输入 /v1 或完整 chat/completions 地址时会自动避免重复路径。</value></data>
   <data name="ModelPresetQwenHint" xml:space="preserve"><value>默认值为中国区按量付费地址；如使用工作空间、其他区域或套餐，请替换为与 API Key 匹配的地址。</value></data>
   <data name="ModelPresetXiaomiMimoHint" xml:space="preserve"><value>如使用 Xiaomi MiMo Token Plan，请将地址改为 https://token-plan-cn.xiaomimimo.com/v1。</value></data>
@@ -373,18 +381,24 @@
   <data name="SettingsRestartBlockedByActiveTranslations" xml:space="preserve"><value>请等待正在进行的翻译任务完成，或先取消任务，再重启应用。</value></data>
   <data name="SettingsNavigationLabel" xml:space="preserve"><value>设置</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>无法打开命令审阅：{0}</value></data>
-  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>模型助手</value></data>
-  <data name="AssistantTitle.Text" xml:space="preserve"><value>模型与终端助手</value></data>
-  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>结合当前 Windows 与 Shell 环境准备诊断方案；任何命令都必须另行审阅和确认。</value></data>
+  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>模组项目助手</value></data>
+  <data name="AssistantTitle.Text" xml:space="preserve"><value>模组项目助手</value></data>
+  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>以单个模组为项目保留独立对话，使用项目范围内的真实 MCP 工具检查归档并管理翻译任务，同时显示可公开的处理过程；不会展示私有思维链。</value></data>
+  <data name="AssistantProjectSelector.Header" xml:space="preserve"><value>模组项目上下文</value></data>
+  <data name="AssistantProjectSelector.AutomationProperties.Name" xml:space="preserve"><value>助手使用的模组项目</value></data>
+  <data name="AssistantAllowProjectChanges.Content" xml:space="preserve"><value>允许此条消息启动或取消项目翻译任务</value></data>
+  <data name="AssistantAllowProjectChanges.AutomationProperties.Name" xml:space="preserve"><value>授权本轮项目变更</value></data>
   <data name="AssistantModelSelector.Header" xml:space="preserve"><value>本次请求使用的模型</value></data>
   <data name="AssistantModelSelector.AutomationProperties.Name" xml:space="preserve"><value>模型助手所用模型源</value></data>
   <data name="AssistantToolBoundary.Title" xml:space="preserve"><value>工具安全边界</value></data>
-  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>模型只能读取脱敏系统上下文并提交命令草案；不能自行执行命令或生成确认令牌。</value></data>
+  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>项目工具仅作用于当前所选模组，并只公开经过脱敏的执行状态；原始参数、结果和私有思维链均保持隐藏。任何命令仍需单独审阅并确认后才能执行。</value></data>
   <data name="AssistantError.Title" xml:space="preserve"><value>助手请求失败</value></data>
   <data name="AssistantStatus.Title" xml:space="preserve"><value>助手状态</value></data>
   <data name="AssistantConversationList.AutomationProperties.Name" xml:space="preserve"><value>模型助手对话</value></data>
+  <data name="AssistantActiveProjectLabel.Text" xml:space="preserve"><value>当前项目</value></data>
+  <data name="AssistantProcessLabel.Text" xml:space="preserve"><value>公开处理过程</value></data>
   <data name="AssistantEmptyTitle.Text" xml:space="preserve"><value>从一个明确的问题开始</value></data>
-  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>可以询问模组本地化、包结构、当前终端环境或安全的诊断命令。命令永远不会自动运行。</value></data>
+  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>选择一个模组项目即可恢复其对话、检查归档、启动或跟踪翻译任务；也可选择“通用助手”获取终端建议。界面只显示公开工具活动，不显示私有思维链。</value></data>
   <data name="AssistantDraft.Header" xml:space="preserve"><value>消息</value></data>
   <data name="AssistantDraft.PlaceholderText" xml:space="preserve"><value>例如：根据当前 Shell 准备一个只读的 Java 版本检查命令</value></data>
   <data name="AssistantDraft.AutomationProperties.Name" xml:space="preserve"><value>发送给模型助手的消息</value></data>
@@ -405,8 +419,40 @@
   <data name="AssistantRequestFailed" xml:space="preserve"><value>助手请求失败。请检查所选模型来源后重试。</value></data>
   <data name="AssistantRequestFailedWithDetails" xml:space="preserve"><value>助手请求失败：{0}</value></data>
   <data name="AssistantCleared" xml:space="preserve"><value>对话已清空。</value></data>
-  <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>模型来源已切换。为防止跨提供商泄露，之前的对话已清空。</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>无法打开命令草案审阅窗口。未执行任何命令。</value></data>
+  <data name="AssistantUsageUnknownModel" xml:space="preserve"><value>模型</value></data>
+  <data name="AssistantUsageUnavailable" xml:space="preserve"><value>{0} 未返回 {1} 次提供方调用的 Token 用量。</value></data>
+  <data name="AssistantUsageComplete" xml:space="preserve"><value>{0} · 输入 {1} · 输出 {2} · 总计 {3} Tokens · {4} 次提供方调用</value></data>
+  <data name="AssistantUsagePartial" xml:space="preserve"><value>{0} 仅返回部分用量 · 输入 {1} · 输出 {2} · 已报告总计 {3} · {4}/{5} 次调用完整</value></data>
+  <data name="AssistantActivityModelStarted" xml:space="preserve"><value>正在请求模型 · 第 {0} 轮</value></data>
+  <data name="AssistantActivityModelCompleted" xml:space="preserve"><value>模型第 {0} 轮已返回</value></data>
+  <data name="AssistantActivityToolStarted" xml:space="preserve"><value>正在运行：{0}</value></data>
+  <data name="AssistantActivityToolCompleted" xml:space="preserve"><value>{0}已完成</value></data>
+  <data name="AssistantActivityToolFailed" xml:space="preserve"><value>{0}被拒绝或失败</value></data>
+  <data name="AssistantActivityCancelled" xml:space="preserve"><value>请求已取消</value></data>
+  <data name="AssistantActivityFailed" xml:space="preserve"><value>请求失败</value></data>
+  <data name="AssistantActivityComplete" xml:space="preserve"><value>响应已完成</value></data>
+  <data name="AssistantActivityToolSafeDetail" xml:space="preserve"><value>原始参数和结果保持隐藏；这里只显示工具的公开状态。</value></data>
+  <data name="AssistantActivityCompleteDetail" xml:space="preserve"><value>最终响应和提供方报告的 Token 用量已就绪。</value></data>
+  <data name="AssistantActivityUsageMissing" xml:space="preserve"><value>本轮提供方未返回用量。</value></data>
+  <data name="AssistantActivityUsageReported" xml:space="preserve"><value>已收到本轮提供方用量。</value></data>
+  <data name="AssistantToolSystemContext" xml:space="preserve"><value>脱敏系统上下文</value></data>
+  <data name="AssistantToolCliProposal" xml:space="preserve"><value>命令草案验证</value></data>
+  <data name="AssistantToolProjectContext" xml:space="preserve"><value>当前项目上下文</value></data>
+  <data name="AssistantToolArchiveInspect" xml:space="preserve"><value>归档检查</value></data>
+  <data name="AssistantToolTranslationStart" xml:space="preserve"><value>事务式翻译</value></data>
+  <data name="AssistantToolTaskStatus" xml:space="preserve"><value>任务状态</value></data>
+  <data name="AssistantToolTaskCancel" xml:space="preserve"><value>任务取消</value></data>
+  <data name="AssistantToolUnknown" xml:space="preserve"><value>已批准工具</value></data>
+  <data name="AssistantGeneralProject" xml:space="preserve"><value>通用助手</value></data>
+  <data name="AssistantGeneralProjectDetail" xml:space="preserve"><value>无归档上下文；项目工具不可用。</value></data>
+  <data name="AssistantModelChangedConversationPreserved" xml:space="preserve"><value>模型来源已切换。每个提供方保留独立对话；之前的上下文已保留，且未向新提供方披露。</value></data>
+  <data name="AssistantGeneralContextSelected" xml:space="preserve"><value>已选择通用助手；此对话无法使用模组项目工具。</value></data>
+  <data name="AssistantProjectContextSelected" xml:space="preserve"><value>项目上下文已切换；对应对话已恢复，不会混入其他模组的历史。</value></data>
+  <data name="AssistantProjectReady" xml:space="preserve"><value>{0} · 已就绪</value></data>
+  <data name="AssistantProjectTaskDetail" xml:space="preserve"><value>{0} · {1} · {2:P0}</value></data>
+  <data name="AssistantProjectNoObjective" xml:space="preserve"><value>此项目尚未创建翻译任务。</value></data>
+  <data name="AssistantProjectIdle" xml:space="preserve"><value>空闲</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod 社区</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod 社区</value></data>
   <data name="CommunitySubtitle.Text" xml:space="preserve"><value>登录后在 LocaleSmith 内浏览 Mod 讨论，并使用应用令牌安全发帖。</value></data>
@@ -563,4 +609,61 @@
   <data name="CommunityReportNetworkError" xml:space="preserve"><value>无法连接举报服务。请检查网络后重新提交。</value></data>
   <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>举报服务返回了异常响应，请刷新后稍后重试。</value></data>
   <data name="CommunityReportFailedError" xml:space="preserve"><value>举报未能提交。请检查说明后稍后重试。</value></data>
+  <data name="BillingTitle.Text" xml:space="preserve"><value>国内加速订阅</value></data>
+  <data name="BillingSubtitle.Text" xml:space="preserve"><value>由 Microsoft Store 处理的 LocaleSmith 月度订阅；只有 MCTX 后端验证成功后才会启用权益。</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Title" xml:space="preserve"><value>订阅暂不可用</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Message" xml:space="preserve"><value>MCTX 服务尚未启用 Microsoft Store 计费能力，购买入口已隐藏。</value></data>
+  <data name="BillingLoginRequiredInfo.Title" xml:space="preserve"><value>请先登录 LocaleSmith/MCTX</value></data>
+  <data name="BillingLoginRequiredInfo.Message" xml:space="preserve"><value>购买、恢复或验证前，必须先使用现有账号和 PAT 完成登录。</value></data>
+  <data name="BillingAccountLink.Content" xml:space="preserve"><value>管理账号和 PAT</value></data>
+  <data name="BillingBackendUnavailableInfo.Title" xml:space="preserve"><value>权益服务不可用</value></data>
+  <data name="BillingBackendUnavailableInfo.Message" xml:space="preserve"><value>无法确认 MCTX 权益状态，因此购买保持禁用。</value></data>
+  <data name="BillingStoreUnavailableInfo.Title" xml:space="preserve"><value>Microsoft Store 商品不可用</value></data>
+  <data name="BillingStoreUnavailableInfo.Message" xml:space="preserve"><value>请使用已从 Microsoft Store 安装且关联正确账号的 LocaleSmith，并确认应用未以管理员身份运行。</value></data>
+  <data name="BillingActiveInfo.Title" xml:space="preserve"><value>国内加速权益已启用</value></data>
+  <data name="BillingActiveInfo.Message" xml:space="preserve"><value>此状态来自 MCTX 后端验证，不以本机 Store 结果直接解锁。</value></data>
+  <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>尚无有效权益</value></data>
+  <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>可以购买订阅，或恢复已有 Microsoft Store 购买并交由后端重新验证。</value></data>
+  <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>符合资格的新订阅用户可享 7 天免费试用；资格与最终条款以 Microsoft 购买界面为准。</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>试用结束后按 Microsoft Store 当时显示的月费自动续费，直至取消；中国市场配置价为 CNY 30.00/月，最终以购买界面为准。</value></data>
+  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>全球基础价格档位为 US$4.99/月；Microsoft Store 会按市场显示本地价格，其他市场并非固定 5 美元。</value></data>
+  <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>由 Microsoft 计费；可在 Microsoft 账户的“服务和订阅”中取消或管理。</value></data>
+  <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Microsoft Store 当前显示的月度续费价格</value></data>
+  <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>通过 Microsoft 订阅</value></data>
+  <data name="BillingRestoreButton.Content" xml:space="preserve"><value>恢复购买</value></data>
+  <data name="BillingRefreshButton.Content" xml:space="preserve"><value>刷新状态</value></data>
+  <data name="BillingProgress.AutomationProperties.Name" xml:space="preserve"><value>正在刷新订阅状态</value></data>
+  <data name="BillingErrorInfo.Title" xml:space="preserve"><value>订阅操作失败</value></data>
+  <data name="BillingStatusInfo.Title" xml:space="preserve"><value>订阅状态</value></data>
+  <data name="BillingManageSubscriptionsLink.Content" xml:space="preserve"><value>在 Microsoft 中管理或取消订阅</value></data>
+  <data name="BillingPrivacyLink.Content" xml:space="preserve"><value>隐私政策</value></data>
+  <data name="BillingPurchasePendingVerificationStatus" xml:space="preserve"><value>Microsoft 已完成购买步骤，LocaleSmith 正在通过 MCTX 验证权益。</value></data>
+  <data name="BillingEntitlementVerifiedStatus" xml:space="preserve"><value>MCTX 权益已启用。</value></data>
+  <data name="BillingEntitlementPendingStatus" xml:space="preserve"><value>Microsoft 已报告购买，但 MCTX 尚未启用权益。请使用“恢复购买”重试验证。</value></data>
+  <data name="BillingPurchaseCancelledStatus" xml:space="preserve"><value>Microsoft 购买未完成，权益没有变化。</value></data>
+  <data name="BillingStoreNetworkError" xml:space="preserve"><value>无法连接 Microsoft Store，权益没有变化。</value></data>
+  <data name="BillingStoreUnavailableError" xml:space="preserve"><value>Microsoft Store 无法完成请求，权益没有变化。</value></data>
+  <data name="BillingRestoreVerifiedStatus" xml:space="preserve"><value>购买验证已刷新，MCTX 权益已启用。</value></data>
+  <data name="BillingRestoreNoEntitlementStatus" xml:space="preserve"><value>MCTX 未返回有效权益；仅在 Microsoft 中找到购买不会直接解锁加速。</value></data>
+  <data name="BillingCapabilityUnavailableError" xml:space="preserve"><value>无法确认订阅能力，购买保持禁用。</value></data>
+  <data name="BillingCapabilityUnavailableStatus" xml:space="preserve"><value>MCTX 服务尚未启用 Microsoft Store 计费，购买入口已隐藏。</value></data>
+  <data name="BillingLoginRequiredStatus" xml:space="preserve"><value>购买或恢复前，请先使用 LocaleSmith/MCTX 账号和 PAT 登录。</value></data>
+  <data name="BillingBackendUnavailableError" xml:space="preserve"><value>MCTX 权益状态不可用，购买保持禁用。</value></data>
+  <data name="BillingVerificationFailedError" xml:space="preserve"><value>无法完成购买验证，未解锁任何权益；请使用“恢复购买”重试。</value></data>
+  <data name="BillingAlreadyEntitledStatus" xml:space="preserve"><value>MCTX 权益已经有效，因此未打开 Microsoft 购买界面。</value></data>
+  <data name="BillingScopeRequiredInfo.Title" xml:space="preserve"><value>PAT 缺少加速下载权限</value></data>
+  <data name="BillingScopeRequiredInfo.Message" xml:space="preserve"><value>请重新创建包含 downloads:accelerated scope 的普通 PAT；当前购买和加速入口保持禁用。</value></data>
+  <data name="BillingAcceleratedScopeRequiredStatus" xml:space="preserve"><value>已保存的 PAT 必须包含 downloads:accelerated scope 才能使用计费或加速下载。</value></data>
+  <data name="CommunityDownloadTitle.Text" xml:space="preserve"><value>下载所选版本</value></data>
+  <data name="CommunityDefaultDownloadButton.Content" xml:space="preserve"><value>使用默认源下载</value></data>
+  <data name="CommunityAcceleratedDownloadButton.Content" xml:space="preserve"><value>使用国内加速下载</value></data>
+  <data name="CommunityAccelerationDisclosure.Text" xml:space="preserve"><value>仅当 MCTX 服务端确认有效权益、核验新鲜且私有副本就绪时显示；异常会自动回退默认源。</value></data>
+  <data name="CommunityDownloadProgress.AutomationProperties.Name" xml:space="preserve"><value>制品下载进度</value></data>
+  <data name="CommunityCancelDownloadButton.Content" xml:space="preserve"><value>取消下载</value></data>
+  <data name="CommunityDownloadErrorInfo.Title" xml:space="preserve"><value>下载失败</value></data>
+  <data name="CommunityDownloadStatusInfo.Title" xml:space="preserve"><value>下载状态</value></data>
+  <data name="CommunityDownloadFallbackStatus" xml:space="preserve"><value>加速源不可用，已从默认源安全完成下载。</value></data>
+  <data name="CommunityDownloadCompletedStatus" xml:space="preserve"><value>下载完成，SHA-256 校验已通过。</value></data>
+  <data name="CommunityDownloadCancelledStatus" xml:space="preserve"><value>下载已取消；可保留不含凭据的断点文件用于续传。</value></data>
+  <data name="CommunityDownloadFailedError" xml:space="preserve"><value>无法完成或验证下载，未发布任何不完整制品。</value></data>
 </root>

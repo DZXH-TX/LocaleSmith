@@ -123,8 +123,8 @@
                     <ComboBox
                         x:Uid="ModelSourcePreset"
                         ItemsSource="{Binding PresetOptions}"
-                        SelectedItem="{Binding SelectedPreset, Mode=OneWay}"
-                        SelectionChanged="OnPresetSelectionChanged"
+                        SelectedValue="{Binding SelectedPresetId, Mode=TwoWay}"
+                        SelectedValuePath="Id"
                         DisplayMemberPath="DisplayName" />
                     <TextBlock
                         Text="{Binding PresetEndpointHint}"

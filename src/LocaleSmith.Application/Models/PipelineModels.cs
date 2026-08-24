@@ -175,7 +175,8 @@ public sealed record PipelineProgress(
     string Message,
     PipelineStage? NextStage = null,
     IReadOnlyList<PipelineStageProgress>? Stages = null,
-    PipelineStageStatus? RollbackStatus = null);
+    PipelineStageStatus? RollbackStatus = null,
+    ModelTokenUsage? ModelUsage = null);
 
 public sealed record PipelineStageProgress(
     PipelineStage Stage,
@@ -194,4 +195,5 @@ public sealed record PipelineResult(
     ExternalizationReport Externalization,
     IReadOnlyList<PackageArtifact> Artifacts,
     PackageVerification Verification,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    ModelTokenUsage? ModelUsage = null);

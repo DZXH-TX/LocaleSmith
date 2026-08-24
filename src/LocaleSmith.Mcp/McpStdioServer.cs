@@ -22,7 +22,8 @@ public sealed class McpStdioServer : IDisposable
         ICliCommandPolicy commandPolicy,
         ICliRunner? cliRunner = null,
         McpServerOptions? options = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IProjectMcpBackend? projectBackend = null)
     {
         ArgumentNullException.ThrowIfNull(contextProvider);
         ArgumentNullException.ThrowIfNull(commandPolicy);
@@ -36,7 +37,7 @@ public sealed class McpStdioServer : IDisposable
         }
 
         var clock = timeProvider ?? TimeProvider.System;
-        _tools = new McpToolCatalog(contextProvider, commandPolicy, cliRunner, _options);
+        _tools = new McpToolCatalog(contextProvider, commandPolicy, cliRunner, _options, projectBackend);
         _rateLimiter = new FixedWindowRateLimiter(
             _options.MaximumRequestsPerWindow,
             _options.RateLimitWindow,

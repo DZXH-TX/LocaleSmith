@@ -14,17 +14,20 @@ internal sealed partial class McpToolCatalog
     private readonly ICliCommandPolicy _commandPolicy;
     private readonly ICliRunner? _cliRunner;
     private readonly McpServerOptions _options;
+    private readonly IProjectMcpBackend? _projectBackend;
 
     public McpToolCatalog(
         ISystemPromptContextProvider contextProvider,
         ICliCommandPolicy commandPolicy,
         ICliRunner? cliRunner,
-        McpServerOptions options)
+        McpServerOptions options,
+        IProjectMcpBackend? projectBackend = null)
     {
         _contextProvider = contextProvider;
         _commandPolicy = commandPolicy;
         _cliRunner = cliRunner;
         _options = options;
+        _projectBackend = projectBackend;
     }
 
     public object ListTools()
@@ -39,19 +42,169 @@ internal sealed partial class McpToolCatalog
             tools.Add(CreateCliExecuteDefinition());
         }
 
+        if (_projectBackend is not null)
+        {
+            tools.Add(CreateProjectGetActiveDefinition());
+            tools.Add(CreateArchiveInspectDefinition());
+            tools.Add(CreateTranslationStartDefinition());
+            tools.Add(CreateTaskStatusDefinition());
+            tools.Add(CreateTaskCancelDefinition());
+        }
+
         return new { tools };
     }
 
-    public async Task<object> CallAsync(string name, JsonElement arguments, CancellationToken cancellationToken)
+    public Task<object> CallAsync(
+        string name,
+        JsonElement arguments,
+        CancellationToken cancellationToken) =>
+        CallAsync(name, arguments, projectScopeId: null, cancellationToken);
+
+    public async Task<object> CallAsync(
+        string name,
+        JsonElement arguments,
+        Guid? projectScopeId,
+        CancellationToken cancellationToken)
     {
-        return name switch
+        try
         {
-            "system.context" => await GetSystemContextAsync(arguments, cancellationToken).ConfigureAwait(false),
-            "cli.propose" => ProposeCli(arguments),
-            "cli.execute" when _options.EnableCliExecution =>
-                await ExecuteCliAsync(arguments, cancellationToken).ConfigureAwait(false),
-            _ => throw new McpUnknownToolException(name)
-        };
+            return name switch
+            {
+                "system.context" => await GetSystemContextAsync(arguments, cancellationToken).ConfigureAwait(false),
+                "cli.propose" => ProposeCli(arguments),
+                "cli.execute" when _options.EnableCliExecution =>
+                    await ExecuteCliAsync(arguments, cancellationToken).ConfigureAwait(false),
+                "project.get_active" when _projectBackend is not null =>
+                    await GetActiveProjectAsync(arguments, projectScopeId, cancellationToken).ConfigureAwait(false),
+                "archive.inspect" when _projectBackend is not null =>
+                    await InspectArchiveAsync(arguments, projectScopeId, cancellationToken).ConfigureAwait(false),
+                "translation.start" when _projectBackend is not null =>
+                    await StartTranslationAsync(arguments, projectScopeId, cancellationToken).ConfigureAwait(false),
+                "task.status" when _projectBackend is not null =>
+                    await GetTaskStatusAsync(arguments, projectScopeId, cancellationToken).ConfigureAwait(false),
+                "task.cancel" when _projectBackend is not null =>
+                    await CancelTaskAsync(arguments, projectScopeId, cancellationToken).ConfigureAwait(false),
+                _ => throw new McpUnknownToolException(name)
+            };
+        }
+        catch (ProjectMcpBackendException exception)
+        {
+            return ToolFailure(exception.Message);
+        }
+    }
+
+    private async Task<object> GetActiveProjectAsync(
+        JsonElement arguments,
+        Guid? projectScopeId,
+        CancellationToken cancellationToken)
+    {
+        RequireObjectWithOnly(arguments, []);
+        ProjectMcpSnapshot? project = projectScopeId is { } scopedProjectId
+            ? await _projectBackend!.GetProjectAsync(scopedProjectId, cancellationToken).ConfigureAwait(false)
+            : await _projectBackend!.GetActiveProjectAsync(cancellationToken).ConfigureAwait(false);
+        project = project is null ? null : Sanitize(project);
+        return project is null
+            ? ToolFailure("No active LocaleSmith project is available. Add or select a package in the application first.")
+            : ToolSuccess(project, $"Active project: {project.ProjectId}. Source: {project.SourceName}.");
+    }
+
+    private async Task<object> InspectArchiveAsync(
+        JsonElement arguments,
+        Guid? projectScopeId,
+        CancellationToken cancellationToken)
+    {
+        RequireObjectWithOnly(arguments, ["projectId"]);
+        Guid projectId = RequireGuid(arguments, "projectId");
+        RequireProjectScope(projectScopeId, projectId);
+        ArchiveMcpInspection inspection = await _projectBackend!
+            .InspectArchiveAsync(projectId, cancellationToken)
+            .ConfigureAwait(false);
+        inspection = Sanitize(inspection);
+        return ToolSuccess(
+            inspection,
+            $"Inspected active project {inspection.ProjectId}: {inspection.Loader}/{inspection.ModId}, " +
+            $"{inspection.EntryCount} archive entries and {inspection.ResourceCount} resources.");
+    }
+
+    private async Task<object> StartTranslationAsync(
+        JsonElement arguments,
+        Guid? projectScopeId,
+        CancellationToken cancellationToken)
+    {
+        RequireObjectWithOnly(
+            arguments,
+            ["projectId", "objective", "modelSourceId", "targetLanguage", "style"]);
+        string objective = RequireString(arguments, "objective", 1, 2048);
+        string? modelSourceId = OptionalString(arguments, "modelSourceId", 1, 256);
+        string? targetLanguage = OptionalString(arguments, "targetLanguage", 2, 32);
+        string? style = OptionalString(arguments, "style", 1, 32);
+        RejectUnsafeText(objective, "objective");
+        RejectUnsafeText(modelSourceId ?? string.Empty, "modelSourceId");
+        RejectUnsafeText(targetLanguage ?? string.Empty, "targetLanguage");
+        RejectUnsafeText(style ?? string.Empty, "style");
+        Guid projectId = RequireGuid(arguments, "projectId");
+        RequireProjectScope(projectScopeId, projectId);
+        var request = new TranslationMcpStartRequest(
+            projectId,
+            objective,
+            modelSourceId,
+            targetLanguage,
+            style);
+        TaskMcpSnapshot task = await _projectBackend!
+            .StartTranslationAsync(request, cancellationToken)
+            .ConfigureAwait(false);
+        task = Sanitize(task);
+        return ToolSuccess(
+            task,
+            $"Translation task {task.TaskId} was accepted for active project {task.ProjectId}. " +
+            $"Current status: {task.Status}.");
+    }
+
+    private async Task<object> GetTaskStatusAsync(
+        JsonElement arguments,
+        Guid? projectScopeId,
+        CancellationToken cancellationToken)
+    {
+        RequireObjectWithOnly(arguments, ["taskId"]);
+        Guid taskId = RequireGuid(arguments, "taskId");
+        TaskMcpSnapshot? task = projectScopeId is { } scopedProjectId
+            ? await _projectBackend!
+                .GetTaskAsync(scopedProjectId, taskId, cancellationToken)
+                .ConfigureAwait(false)
+            : await _projectBackend!.GetTaskAsync(taskId, cancellationToken).ConfigureAwait(false);
+        task = task is null ? null : Sanitize(task);
+        return task is null
+            ? ToolFailure("The task was not found in the active LocaleSmith project.")
+            : ToolSuccess(
+                task,
+                $"Task {task.TaskId}: {task.Status}, stage {task.Stage}, progress {task.Progress:P0}.");
+    }
+
+    private async Task<object> CancelTaskAsync(
+        JsonElement arguments,
+        Guid? projectScopeId,
+        CancellationToken cancellationToken)
+    {
+        RequireObjectWithOnly(arguments, ["taskId"]);
+        Guid taskId = RequireGuid(arguments, "taskId");
+        TaskMcpSnapshot task = projectScopeId is { } scopedProjectId
+            ? await _projectBackend!
+                .CancelTaskAsync(scopedProjectId, taskId, cancellationToken)
+                .ConfigureAwait(false)
+            : await _projectBackend!.CancelTaskAsync(taskId, cancellationToken).ConfigureAwait(false);
+        task = Sanitize(task);
+        return ToolSuccess(
+            task,
+            $"Cancellation was requested for task {task.TaskId}. The transactional pipeline will roll back safely.");
+    }
+
+    private static void RequireProjectScope(Guid? expectedProjectId, Guid requestedProjectId)
+    {
+        if (expectedProjectId is { } expected && expected != requestedProjectId)
+        {
+            throw new ProjectMcpBackendException(
+                "The opaque project id does not identify this assistant session's project.");
+        }
     }
 
     private async Task<object> GetSystemContextAsync(JsonElement arguments, CancellationToken cancellationToken)
@@ -290,6 +443,40 @@ internal sealed partial class McpToolCatalog
         return value;
     }
 
+    private static string? OptionalString(
+        JsonElement source,
+        string propertyName,
+        int minimumLength,
+        int maximumLength)
+    {
+        if (!source.TryGetProperty(propertyName, out JsonElement element))
+        {
+            return null;
+        }
+
+        if (element.ValueKind != JsonValueKind.String ||
+            element.GetString() is not { } value ||
+            value.Length < minimumLength ||
+            value.Length > maximumLength)
+        {
+            throw new McpToolInputException(
+                $"{propertyName} must be a string between {minimumLength} and {maximumLength} characters when supplied.");
+        }
+
+        return value;
+    }
+
+    private static Guid RequireGuid(JsonElement source, string propertyName)
+    {
+        string value = RequireString(source, propertyName, 36, 36);
+        if (!Guid.TryParseExact(value, "D", out Guid result) || result == Guid.Empty)
+        {
+            throw new McpToolInputException($"{propertyName} must be a non-empty UUID in canonical form.");
+        }
+
+        return result;
+    }
+
     private static void RequireObjectWithOnly(JsonElement source, IReadOnlyCollection<string> allowedProperties)
     {
         if (source.ValueKind != JsonValueKind.Object)
@@ -316,6 +503,47 @@ internal sealed partial class McpToolCatalog
 
     private static string SanitizeExceptionMessage(Exception exception) =>
         OutputSanitizer.Sanitize(exception.Message, 1024);
+
+    private static ProjectMcpSnapshot Sanitize(ProjectMcpSnapshot value) => value with
+    {
+        SourceName = OutputSanitizer.Sanitize(value.SourceName, 512),
+        ModId = value.ModId is null ? null : OutputSanitizer.Sanitize(value.ModId, 256),
+        Loader = value.Loader is null ? null : OutputSanitizer.Sanitize(value.Loader, 128),
+        ActiveTaskStatus = value.ActiveTaskStatus is null
+            ? null
+            : OutputSanitizer.Sanitize(value.ActiveTaskStatus, 128)
+    };
+
+    private static ArchiveMcpInspection Sanitize(ArchiveMcpInspection value) => value with
+    {
+        SourceName = OutputSanitizer.Sanitize(value.SourceName, 512),
+        ModId = OutputSanitizer.Sanitize(value.ModId, 256),
+        Loader = OutputSanitizer.Sanitize(value.Loader, 128),
+        SignatureStatus = OutputSanitizer.Sanitize(value.SignatureStatus, 128),
+        Warnings = value.Warnings
+            .Take(32)
+            .Select(static warning => OutputSanitizer.Sanitize(warning, 1024))
+            .ToArray()
+    };
+
+    private static TaskMcpSnapshot Sanitize(TaskMcpSnapshot value) => value with
+    {
+        Objective = OutputSanitizer.Sanitize(value.Objective, 2048),
+        ModelSourceId = OutputSanitizer.Sanitize(value.ModelSourceId, 256),
+        TargetLanguage = OutputSanitizer.Sanitize(value.TargetLanguage, 32),
+        Style = OutputSanitizer.Sanitize(value.Style, 32),
+        Stage = OutputSanitizer.Sanitize(value.Stage, 128),
+        Status = OutputSanitizer.Sanitize(value.Status, 128),
+        ModId = value.ModId is null ? null : OutputSanitizer.Sanitize(value.ModId, 256),
+        Loader = value.Loader is null ? null : OutputSanitizer.Sanitize(value.Loader, 128),
+        ArtifactNames = value.ArtifactNames
+            .Take(16)
+            .Select(static artifact => OutputSanitizer.Sanitize(artifact, 512))
+            .ToArray(),
+        FailureType = value.FailureType is null
+            ? null
+            : OutputSanitizer.Sanitize(value.FailureType, 256)
+    };
 
     private static object CreateSystemContextDefinition() => new
     {
@@ -381,11 +609,214 @@ internal sealed partial class McpToolCatalog
         execution = new { taskSupport = "forbidden" }
     };
 
+    private static object CreateProjectGetActiveDefinition() => new
+    {
+        name = "project.get_active",
+        title = "Get the active LocaleSmith project",
+        description = "Returns the application-selected project and opaque task identifiers. Never accepts or exposes an arbitrary host path.",
+        inputSchema = EmptyObjectSchema(),
+        outputSchema = ProjectOutputSchema(),
+        annotations = new
+        {
+            title = "Get active project",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        },
+        execution = new { taskSupport = "forbidden" }
+    };
+
+    private static object CreateArchiveInspectDefinition() => new
+    {
+        name = "archive.inspect",
+        title = "Inspect the active project archive",
+        description = "Safely scans only the source artifact already registered for the active LocaleSmith project. No host path argument is accepted.",
+        inputSchema = IdentifierInputSchema("projectId"),
+        outputSchema = ArchiveInspectionOutputSchema(),
+        annotations = new
+        {
+            title = "Inspect active project archive",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        },
+        execution = new { taskSupport = "forbidden" }
+    };
+
+    private static object CreateTranslationStartDefinition() => new
+    {
+        name = "translation.start",
+        title = "Start a project translation",
+        description = "Starts LocaleSmith's full inspect, extract, translate, repack, verify, and commit pipeline for the active project. The source remains immutable.",
+        inputSchema = new
+        {
+            type = "object",
+            properties = new
+            {
+                projectId = IdentifierSchema(),
+                objective = new { type = "string", minLength = 1, maxLength = 2048 },
+                modelSourceId = new { type = "string", minLength = 1, maxLength = 256 },
+                targetLanguage = new { type = "string", minLength = 2, maxLength = 32 },
+                style = new
+                {
+                    type = "string",
+                    @enum = new[] { "formal", "informal" }
+                }
+            },
+            required = new[] { "projectId", "objective" },
+            additionalProperties = false
+        },
+        outputSchema = TaskOutputSchema(),
+        annotations = new
+        {
+            title = "Start active-project translation",
+            readOnlyHint = false,
+            destructiveHint = false,
+            idempotentHint = false,
+            openWorldHint = true
+        },
+        execution = new { taskSupport = "forbidden" }
+    };
+
+    private static object CreateTaskStatusDefinition() => new
+    {
+        name = "task.status",
+        title = "Read project task status",
+        description = "Returns the real pipeline status of an opaque task belonging to the active LocaleSmith project.",
+        inputSchema = IdentifierInputSchema("taskId"),
+        outputSchema = TaskOutputSchema(),
+        annotations = new
+        {
+            title = "Read project task status",
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = false
+        },
+        execution = new { taskSupport = "forbidden" }
+    };
+
+    private static object CreateTaskCancelDefinition() => new
+    {
+        name = "task.cancel",
+        title = "Cancel a project task",
+        description = "Requests cancellation through the task's real queue handle. LocaleSmith performs transactional rollback before reporting cancellation.",
+        inputSchema = IdentifierInputSchema("taskId"),
+        outputSchema = TaskOutputSchema(),
+        annotations = new
+        {
+            title = "Cancel project task",
+            readOnlyHint = false,
+            destructiveHint = true,
+            idempotentHint = false,
+            openWorldHint = false
+        },
+        execution = new { taskSupport = "forbidden" }
+    };
+
     private static object EmptyObjectSchema() => new
     {
         type = "object",
         additionalProperties = false
     };
+
+    private static object IdentifierSchema() => new
+    {
+        type = "string",
+        minLength = 36,
+        maxLength = 36,
+        pattern = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    };
+
+    private static object IdentifierInputSchema(string propertyName) => new
+    {
+        type = "object",
+        properties = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            [propertyName] = IdentifierSchema()
+        },
+        required = new[] { propertyName },
+        additionalProperties = false
+    };
+
+    private static object ProjectOutputSchema() => new
+    {
+        type = "object",
+        properties = new
+        {
+            projectId = IdentifierSchema(),
+            sourceName = new { type = "string" },
+            modId = NullableStringSchema(),
+            loader = NullableStringSchema(),
+            activeTaskId = new { type = new[] { "string", "null" } },
+            activeTaskStatus = NullableStringSchema()
+        },
+        required = new[] { "projectId", "sourceName", "modId", "loader", "activeTaskId", "activeTaskStatus" },
+        additionalProperties = false
+    };
+
+    private static object ArchiveInspectionOutputSchema() => new
+    {
+        type = "object",
+        properties = new
+        {
+            projectId = IdentifierSchema(),
+            sourceName = new { type = "string" },
+            modId = new { type = "string" },
+            loader = new { type = "string" },
+            entryCount = new { type = "integer", minimum = 0 },
+            resourceCount = new { type = "integer", minimum = 0 },
+            signatureStatus = new { type = "string" },
+            usedFilenameFallback = new { type = "boolean" },
+            warnings = new { type = "array", items = new { type = "string" } }
+        },
+        required = new[]
+        {
+            "projectId", "sourceName", "modId", "loader", "entryCount", "resourceCount",
+            "signatureStatus", "usedFilenameFallback", "warnings"
+        },
+        additionalProperties = false
+    };
+
+    private static object TaskOutputSchema() => new
+    {
+        type = "object",
+        properties = new
+        {
+            taskId = IdentifierSchema(),
+            projectId = IdentifierSchema(),
+            jobId = new { type = new[] { "string", "null" } },
+            objective = new { type = "string" },
+            modelSourceId = new { type = "string" },
+            targetLanguage = new { type = "string" },
+            style = new { type = "string" },
+            stage = new { type = "string" },
+            progress = new { type = "number", minimum = 0, maximum = 1 },
+            status = new { type = "string" },
+            modId = NullableStringSchema(),
+            loader = NullableStringSchema(),
+            artifactNames = new { type = "array", items = new { type = "string" } },
+            failureType = NullableStringSchema(),
+            inputTokens = NullableIntegerSchema(),
+            outputTokens = NullableIntegerSchema(),
+            totalTokens = NullableIntegerSchema(),
+            providerCallCount = new { type = "integer", minimum = 0 },
+            usageComplete = new { type = "boolean" }
+        },
+        required = new[]
+        {
+            "taskId", "projectId", "jobId", "objective", "modelSourceId", "targetLanguage", "style",
+            "stage", "progress", "status", "modId", "loader", "artifactNames", "failureType",
+            "inputTokens", "outputTokens", "totalTokens", "providerCallCount", "usageComplete"
+        },
+        additionalProperties = false
+    };
+
+    private static object NullableStringSchema() => new { type = new[] { "string", "null" } };
+
+    private static object NullableIntegerSchema() => new { type = new[] { "integer", "null" }, minimum = 0 };
 
     private static object CommandInputSchema(bool includeApprovalToken)
     {

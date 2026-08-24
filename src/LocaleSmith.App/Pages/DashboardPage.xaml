@@ -77,6 +77,11 @@
                             Visibility="{Binding HasNextAction, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <TextBlock Text="{Binding TranslationProfile}" TextWrapping="WrapWholeWords" />
                         <TextBlock Text="{Binding ArtifactStatus}" TextWrapping="WrapWholeWords" />
+                        <TextBlock
+                            Text="{Binding ModelUsageSummary}"
+                            Style="{ThemeResource CaptionTextBlockStyle}"
+                            TextWrapping="WrapWholeWords"
+                            Visibility="{Binding HasModelUsage, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </StackPanel>
                     <TextBlock
                         Grid.Row="4"

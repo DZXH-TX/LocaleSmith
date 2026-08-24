@@ -122,7 +122,7 @@ public sealed class SecureAppStateServiceTests
     }
 
     [Fact]
-    public async Task InitializationPersistsLegacyPresetDefaultsBeforeBuildingRuntimeRegistry()
+    public async Task InitializationDemotesLegacyMismatchedPresetWithoutChangingConnectionFields()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var events = new ConcurrentQueue<string>();
@@ -157,11 +157,14 @@ public sealed class SecureAppStateServiceTests
         await service.InitializeAsync(cancellationToken);
 
         var persisted = Assert.Single(configurationStore.Persisted.ModelSources);
-        Assert.Equal("https://api.minimax.io/v1", persisted.Endpoint.TrimEnd('/'));
-        Assert.Equal("MiniMax-M2.7", persisted.ModelName);
+        Assert.Equal(ModelProviderPresets.CustomId, persisted.PresetId);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, persisted.TokenLimitParameter);
+        Assert.Equal("http://127.0.0.1:11434", persisted.Endpoint.TrimEnd('/'));
+        Assert.Equal("llama3", persisted.ModelName);
         Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, service.SelectedSource?.TokenLimitParameter);
-        Assert.Equal("https://api.minimax.io/v1", service.SelectedSource?.Endpoint.AbsoluteUri.TrimEnd('/'));
-        Assert.Equal("MiniMax-M2.7", service.SelectedSource?.ModelName);
+        Assert.Equal(ModelProviderPresets.CustomId, service.SelectedSource?.PresetId);
+        Assert.Equal("http://127.0.0.1:11434", service.SelectedSource?.Endpoint.AbsoluteUri.TrimEnd('/'));
+        Assert.Equal("llama3", service.SelectedSource?.ModelName);
         Assert.Equal(existingLogDirectory, configurationStore.Persisted.LogDirectoryPath);
         Assert.Equal(1, events.Count(static entry => entry == "configuration:save"));
     }
@@ -240,7 +243,7 @@ public sealed class SecureAppStateServiceTests
     }
 
     [Fact]
-    public async Task InitializationPreservesCurrentSchemaEditablePresetValues()
+    public async Task InitializationRepairsCurrentSchemaMismatchedPresetWithoutChangingConnectionFields()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var events = new ConcurrentQueue<string>();
@@ -265,9 +268,15 @@ public sealed class SecureAppStateServiceTests
 
         await service.InitializeAsync(cancellationToken);
 
+        var persisted = Assert.Single(configurationStore.Persisted.ModelSources);
+        Assert.Equal(ModelProviderPresets.CustomId, persisted.PresetId);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, persisted.TokenLimitParameter);
+        Assert.Equal("http://127.0.0.1:11434", persisted.Endpoint.TrimEnd('/'));
+        Assert.Equal("llama3", persisted.ModelName);
+        Assert.Equal(ModelProviderPresets.CustomId, service.SelectedSource?.PresetId);
         Assert.Equal("http://127.0.0.1:11434", service.SelectedSource?.Endpoint.AbsoluteUri.TrimEnd('/'));
         Assert.Equal("llama3", service.SelectedSource?.ModelName);
-        Assert.Empty(events);
+        Assert.Equal(1, events.Count(static entry => entry == "configuration:save"));
     }
 
     [Fact]
@@ -682,6 +691,118 @@ public sealed class SecureAppStateServiceTests
     }
 
     [Fact]
+    public async Task SaveDemotesNamedPresetOnCustomGatewayAndPreservesConfiguredTokenDefault()
+    {
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var harness = await CreateHarnessAsync(configurationStore, secretStore);
+
+        var saved = await harness.Service.SaveAsync(
+            new ModelSourceDraft(
+                "custom-kimi-gateway",
+                "Custom Kimi gateway",
+                ModelProviderKind.OpenAiCompatible,
+                new Uri("https://gateway.example.test/v1"),
+                "kimi-new-model",
+                null,
+                ModelProviderPresets.KimiId),
+            "gateway-secret".AsMemory(),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(ModelProviderPresets.CustomId, saved.PresetId);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, saved.TokenLimitParameter);
+        Assert.Equal("https://gateway.example.test/v1", saved.Endpoint.TrimEnd('/'));
+        Assert.Equal("kimi-new-model", saved.ModelName);
+        Assert.Equal(ModelProviderPresets.CustomId, harness.Registry.Sources.Single().PresetId);
+    }
+
+    [Fact]
+    public async Task ConnectionTestUsesEffectiveCustomPresetAndPreservesRequestedTokenDefault()
+    {
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var handler = new DelegateHttpHandler(async (request, cancellationToken) =>
+        {
+            Assert.Equal("https://gateway.example.test/v1/chat/completions", request.RequestUri?.AbsoluteUri);
+            var requestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+            Assert.Contains("\"max_completion_tokens\":64", requestBody, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"max_tokens\"", requestBody, StringComparison.Ordinal);
+            return JsonResponse("""{"choices":[{"message":{"content":"OK"}}]}""");
+        });
+        using var harness = await CreateHarnessAsync(configurationStore, secretStore, handler);
+
+        var result = await harness.Service.TestConnectionAsync(
+            new ModelSourceDraft(
+                "custom-kimi-test",
+                "Custom Kimi test",
+                ModelProviderKind.OpenAiCompatible,
+                new Uri("https://gateway.example.test/v1"),
+                "kimi-new-model",
+                null,
+                ModelProviderPresets.KimiId),
+            "temporary-secret".AsMemory(),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccessful, result.Message);
+    }
+
+    [Fact]
+    public async Task CustomOpenAiLoopbackRequiresV1BeforeSecretMutation()
+    {
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var harness = await CreateHarnessAsync(configurationStore, secretStore);
+        events.Clear();
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => harness.Service.SaveAsync(
+            new ModelSourceDraft(
+                "local-openai-without-v1",
+                "Local OpenAI-compatible",
+                ModelProviderKind.OpenAiCompatible,
+                new Uri("http://127.0.0.1:11434"),
+                "llama3",
+                null,
+                ModelProviderPresets.CustomId),
+            "temporary-secret".AsMemory(),
+            TestContext.Current.CancellationToken));
+
+        Assert.Contains("/v1", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(events);
+        Assert.Empty(configurationStore.Persisted.ModelSources);
+    }
+
+    [Fact]
+    public async Task CustomOpenAiLoopbackV1UsesOpenAiCompatibleRoute()
+    {
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var handler = new DelegateHttpHandler((request, _) =>
+        {
+            Assert.Equal("http://127.0.0.1:11434/v1/chat/completions", request.RequestUri?.AbsoluteUri);
+            return Task.FromResult(JsonResponse("""{"choices":[{"message":{"content":"OK"}}]}"""));
+        });
+        using var harness = await CreateHarnessAsync(configurationStore, secretStore, handler);
+
+        var result = await harness.Service.TestConnectionAsync(
+            new ModelSourceDraft(
+                "local-openai-v1",
+                "Local OpenAI-compatible",
+                ModelProviderKind.OpenAiCompatible,
+                new Uri("http://127.0.0.1:11434/v1"),
+                "llama3",
+                null,
+                ModelProviderPresets.CustomId),
+            "temporary-secret".AsMemory(),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccessful, result.Message);
+    }
+
+    [Fact]
     public async Task ConnectionTestHonorsExplicitTokenLimitOmission()
     {
         var events = new ConcurrentQueue<string>();
@@ -835,6 +956,39 @@ public sealed class SecureAppStateServiceTests
             harness.Registry.Sources.Single().TokenLimitParameter);
         Assert.Equal(directories.LogDirectoryPath, configurationStore.Persisted.LogDirectoryPath);
         Assert.True(Directory.Exists(directories.LogDirectoryPath));
+    }
+
+    [Fact]
+    public async Task OnboardingDemotesNamedPresetForCustomGatewayWithoutChangingConnectionFields()
+    {
+        const string apiKey = "onboarding-custom-gateway-secret";
+        var events = new ConcurrentQueue<string>();
+        var configurationStore = new RecordingConfigurationStore(new AppConfiguration(), events);
+        using var secretStore = new FaultInjectingSecretStore(events);
+        using var harness = await CreateHarnessAsync(configurationStore, secretStore);
+        using var directories = new TemporaryTestDirectory();
+
+        await harness.Service.CompleteAsync(
+            new OnboardingSubmission(
+                directories.WorkspacePath,
+                directories.SandboxPath,
+                ConfigureOllama: false,
+                new Uri("http://127.0.0.1:11434"),
+                "llama3",
+                ModelProviderPresets.DeepSeekId,
+                new Uri("https://gateway.example.test/openai/v1"),
+                "account-model",
+                apiKey.AsMemory(),
+                LogDirectoryPath: directories.LogDirectoryPath),
+            TestContext.Current.CancellationToken);
+
+        var profile = Assert.Single(configurationStore.Persisted.ModelSources);
+        Assert.Equal("preset-custom", profile.Id);
+        Assert.Equal(ModelProviderPresets.CustomId, profile.PresetId);
+        Assert.Equal("https://gateway.example.test/openai/v1", profile.Endpoint.TrimEnd('/'));
+        Assert.Equal("account-model", profile.ModelName);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxTokens, profile.TokenLimitParameter);
+        Assert.Equal(ModelProviderPresets.CustomId, harness.Registry.Sources.Single().PresetId);
     }
 
     [Fact]

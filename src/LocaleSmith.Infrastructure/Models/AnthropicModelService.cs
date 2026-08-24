@@ -89,20 +89,29 @@ public sealed class AnthropicModelService : HttpModelServiceBase
                 throw new ModelServiceException("Anthropic response did not contain text or a tool_use content block.");
             }
 
-            int? inputTokens = null;
-            int? outputTokens = null;
-            if (root.TryGetProperty("usage", out var usage))
+            ModelTokenUsage? tokenUsage = null;
+            if (root.TryGetProperty("usage", out var usage) &&
+                usage.ValueKind == System.Text.Json.JsonValueKind.Object)
             {
-                inputTokens = OptionalInt32(usage, "input_tokens");
-                outputTokens = OptionalInt32(usage, "output_tokens");
+                try
+                {
+                    tokenUsage = ModelTokenUsage.FromProviderResponse(
+                        OptionalInt64(usage, "input_tokens"),
+                        OptionalInt64(usage, "output_tokens"));
+                }
+                catch (Exception exception) when (exception is ArgumentException or OverflowException)
+                {
+                    throw new ModelServiceException(
+                        "Anthropic response usage contained invalid token counts.",
+                        innerException: exception);
+                }
             }
 
             return new ModelResponse(
                 text,
                 OptionalString(root, "model"),
-                inputTokens,
-                outputTokens,
-                toolCalls);
+                toolCalls: toolCalls,
+                usage: tokenUsage);
         }
     }
 

@@ -196,7 +196,7 @@
   <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>CLI security boundary</value></data>
   <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>Allowed sandbox root</value></data>
   <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>The policy always retains the system temp root and rejects drive roots, system directories, reparse paths, excessive timeouts, and blacklisted commands.</value></data>
-  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>The built-in MCP CLI execution tool is hidden and disabled by default; only context and read-only capabilities are enabled.</value></data>
+  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>The MCP CLI execution tool always stays hidden and disabled; project mutations are enabled only when the user explicitly authorizes the current assistant turn.</value></data>
   <data name="SaveSettingsButton.Content" xml:space="preserve"><value>Save settings</value></data>
   <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>Model-proposed command</value></data>
   <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>Run command</value></data>
@@ -230,7 +230,8 @@
   <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>Enter an absolute HTTP or HTTPS Ollama address.</value></data>
   <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>Unencrypted HTTP is allowed only for a loopback Ollama service.</value></data>
   <data name="OnboardingModelRequired" xml:space="preserve"><value>Enter an installed Ollama model name.</value></data>
-  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>Enter an absolute HTTPS address for the selected network provider.</value></data>
+  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>Enter an absolute HTTPS address, or a loopback HTTP OpenAI-compatible /v1 address.</value></data>
+  <data name="OnboardingLoopbackOpenAiV1Required" xml:space="preserve"><value>Loopback HTTP OpenAI-compatible sources must use an explicit /v1 base address.</value></data>
   <data name="OnboardingNetworkModelRequired" xml:space="preserve"><value>Enter a network model name.</value></data>
   <data name="OnboardingNetworkApiKeyRequired" xml:space="preserve"><value>Enter the API key for the selected provider.</value></data>
   <data name="QueueStatusQueued" xml:space="preserve"><value>Queued</value></data>
@@ -303,6 +304,12 @@
   <data name="QueueStageTimingStarted" xml:space="preserve"><value>Started {0:t}</value></data>
   <data name="QueueStageTimingCompleted" xml:space="preserve"><value>{0:t}–{1:t} ({2})</value></data>
   <data name="QueueStageDurationSeconds" xml:space="preserve"><value>{0:0.#} s</value></data>
+  <data name="QueueDefaultObjective" xml:space="preserve"><value>Translate {0} to {1} using {2}.</value></data>
+  <data name="QueueUsageNoModelCalls" xml:space="preserve"><value>Tokens: no model call was needed; all translations were reused from verified memory.</value></data>
+  <data name="QueueUsageNoCompletedCalls" xml:space="preserve"><value>Tokens: no provider call completed before the task ended.</value></data>
+  <data name="QueueUsageUnavailable" xml:space="preserve"><value>Tokens: the provider did not return usage for {0} call(s).</value></data>
+  <data name="QueueUsageComplete" xml:space="preserve"><value>Tokens · input {0} · output {1} · total {2} · {3} provider call(s)</value></data>
+  <data name="QueueUsagePartial" xml:space="preserve"><value>Partial Token usage · input {0} · output {1} · reported total {2} · {3}/{4} call(s) complete</value></data>
   <data name="QueueCancelling" xml:space="preserve"><value>Cancelling… rollback will complete before the job stops.</value></data>
   <data name="ModelSourcesLoadFailed" xml:space="preserve"><value>Model sources could not be loaded: {0}</value></data>
   <data name="ModelSourceSaved" xml:space="preserve"><value>Model source saved. The API key was moved to Windows Credential Manager.</value></data>
@@ -318,7 +325,8 @@
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>Model source could not be deleted: {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>Display name and model name are required.</value></data>
   <data name="ModelSourceAddressInvalid" xml:space="preserve"><value>Enter an absolute HTTP or HTTPS service address.</value></data>
-  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>Remote model sources must use HTTPS; HTTP is allowed only for loopback Ollama.</value></data>
+  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>Remote model sources must use HTTPS; HTTP is allowed only for loopback services.</value></data>
+  <data name="ModelSourceLoopbackOpenAiV1Required" xml:space="preserve"><value>Loopback HTTP OpenAI-compatible sources must use an explicit /v1 base address.</value></data>
   <data name="ModelPresetDeepSeekHint" xml:space="preserve"><value>DeepSeek accepts the host base URL; /v1 and full chat/completions inputs are normalized.</value></data>
   <data name="ModelPresetQwenHint" xml:space="preserve"><value>The default is China pay-as-you-go. Replace it with the matching workspace, region, or plan endpoint when needed.</value></data>
   <data name="ModelPresetXiaomiMimoHint" xml:space="preserve"><value>For Xiaomi MiMo Token Plan, replace the endpoint with https://token-plan-cn.xiaomimimo.com/v1.</value></data>
@@ -373,18 +381,24 @@
   <data name="SettingsRestartBlockedByActiveTranslations" xml:space="preserve"><value>Wait for active translation jobs to finish or cancel them before restarting the app.</value></data>
   <data name="SettingsNavigationLabel" xml:space="preserve"><value>Settings</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>The command review could not be opened: {0}</value></data>
-  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>Model assistant</value></data>
-  <data name="AssistantTitle.Text" xml:space="preserve"><value>Model and terminal assistant</value></data>
-  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Prepare diagnostics for the current Windows and shell environment. Every command requires separate review and confirmation.</value></data>
+  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>Mod project assistant</value></data>
+  <data name="AssistantTitle.Text" xml:space="preserve"><value>Mod project assistant</value></data>
+  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Keep one conversation per mod project, inspect archives and manage translation tasks with real project-scoped MCP tools, and review the public processing activity. Private chain-of-thought is never shown.</value></data>
+  <data name="AssistantProjectSelector.Header" xml:space="preserve"><value>Mod project context</value></data>
+  <data name="AssistantProjectSelector.AutomationProperties.Name" xml:space="preserve"><value>Mod project used by the assistant</value></data>
+  <data name="AssistantAllowProjectChanges.Content" xml:space="preserve"><value>Allow this message to start or cancel project translation tasks</value></data>
+  <data name="AssistantAllowProjectChanges.AutomationProperties.Name" xml:space="preserve"><value>Authorize project changes for this message</value></data>
   <data name="AssistantModelSelector.Header" xml:space="preserve"><value>Model for this request</value></data>
   <data name="AssistantModelSelector.AutomationProperties.Name" xml:space="preserve"><value>Model source used by the assistant</value></data>
   <data name="AssistantToolBoundary.Title" xml:space="preserve"><value>Tool safety boundary</value></data>
-  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>The model can read sanitized system context and submit command drafts. It cannot execute commands or issue approval tokens.</value></data>
+  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>Project tools act only on the selected mod and expose sanitized public activity. Raw arguments, results, and private chain-of-thought stay hidden. Commands still require separate review and confirmation.</value></data>
   <data name="AssistantError.Title" xml:space="preserve"><value>Assistant request failed</value></data>
   <data name="AssistantStatus.Title" xml:space="preserve"><value>Assistant status</value></data>
   <data name="AssistantConversationList.AutomationProperties.Name" xml:space="preserve"><value>Model assistant conversation</value></data>
+  <data name="AssistantActiveProjectLabel.Text" xml:space="preserve"><value>Active project</value></data>
+  <data name="AssistantProcessLabel.Text" xml:space="preserve"><value>Public processing activity</value></data>
   <data name="AssistantEmptyTitle.Text" xml:space="preserve"><value>Start with a specific question</value></data>
-  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Ask about mod localization, package structure, the current terminal environment, or a safe diagnostic command. Commands never run automatically.</value></data>
+  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Select a mod project to restore its conversation, inspect its archive, and start or monitor translation tasks, or use the general assistant for terminal guidance. Public tool activity is shown; private chain-of-thought is not.</value></data>
   <data name="AssistantDraft.Header" xml:space="preserve"><value>Message</value></data>
   <data name="AssistantDraft.PlaceholderText" xml:space="preserve"><value>Example: prepare a read-only Java version check for my current shell</value></data>
   <data name="AssistantDraft.AutomationProperties.Name" xml:space="preserve"><value>Message to the model assistant</value></data>
@@ -405,8 +419,40 @@
   <data name="AssistantRequestFailed" xml:space="preserve"><value>The assistant request failed. Check the selected model source and try again.</value></data>
   <data name="AssistantRequestFailedWithDetails" xml:space="preserve"><value>The assistant request failed: {0}</value></data>
   <data name="AssistantCleared" xml:space="preserve"><value>Conversation cleared.</value></data>
-  <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>Model source changed. The previous conversation was cleared to prevent cross-provider disclosure.</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>The command proposal could not be opened for review. Nothing was executed.</value></data>
+  <data name="AssistantUsageUnknownModel" xml:space="preserve"><value>model</value></data>
+  <data name="AssistantUsageUnavailable" xml:space="preserve"><value>{0} did not return Token usage for {1} provider call(s).</value></data>
+  <data name="AssistantUsageComplete" xml:space="preserve"><value>{0} · input {1} · output {2} · total {3} Tokens · {4} provider call(s)</value></data>
+  <data name="AssistantUsagePartial" xml:space="preserve"><value>{0} returned partial usage · input {1} · output {2} · reported total {3} · {4}/{5} call(s) complete</value></data>
+  <data name="AssistantActivityModelStarted" xml:space="preserve"><value>Requesting model · round {0}</value></data>
+  <data name="AssistantActivityModelCompleted" xml:space="preserve"><value>Model round {0} returned</value></data>
+  <data name="AssistantActivityToolStarted" xml:space="preserve"><value>Running {0}</value></data>
+  <data name="AssistantActivityToolCompleted" xml:space="preserve"><value>{0} completed</value></data>
+  <data name="AssistantActivityToolFailed" xml:space="preserve"><value>{0} was rejected or failed</value></data>
+  <data name="AssistantActivityCancelled" xml:space="preserve"><value>Request cancelled</value></data>
+  <data name="AssistantActivityFailed" xml:space="preserve"><value>Request failed</value></data>
+  <data name="AssistantActivityComplete" xml:space="preserve"><value>Response completed</value></data>
+  <data name="AssistantActivityToolSafeDetail" xml:space="preserve"><value>Arguments and raw results stay hidden; only the public tool state is shown.</value></data>
+  <data name="AssistantActivityCompleteDetail" xml:space="preserve"><value>The final response and provider-reported usage are ready.</value></data>
+  <data name="AssistantActivityUsageMissing" xml:space="preserve"><value>This provider round did not return usage.</value></data>
+  <data name="AssistantActivityUsageReported" xml:space="preserve"><value>Provider usage received for this round.</value></data>
+  <data name="AssistantToolSystemContext" xml:space="preserve"><value>safe system context</value></data>
+  <data name="AssistantToolCliProposal" xml:space="preserve"><value>command proposal validation</value></data>
+  <data name="AssistantToolProjectContext" xml:space="preserve"><value>active project context</value></data>
+  <data name="AssistantToolArchiveInspect" xml:space="preserve"><value>archive inspection</value></data>
+  <data name="AssistantToolTranslationStart" xml:space="preserve"><value>transactional translation</value></data>
+  <data name="AssistantToolTaskStatus" xml:space="preserve"><value>task status</value></data>
+  <data name="AssistantToolTaskCancel" xml:space="preserve"><value>task cancellation</value></data>
+  <data name="AssistantToolUnknown" xml:space="preserve"><value>approved tool</value></data>
+  <data name="AssistantGeneralProject" xml:space="preserve"><value>General assistant</value></data>
+  <data name="AssistantGeneralProjectDetail" xml:space="preserve"><value>No package context; project tools are unavailable.</value></data>
+  <data name="AssistantModelChangedConversationPreserved" xml:space="preserve"><value>Model source changed. Each provider keeps an independent conversation; the previous context was preserved and was not disclosed.</value></data>
+  <data name="AssistantGeneralContextSelected" xml:space="preserve"><value>General assistant selected. Mod project tools are unavailable in this conversation.</value></data>
+  <data name="AssistantProjectContextSelected" xml:space="preserve"><value>Project context changed. Its conversation was restored without mixing another mod's history.</value></data>
+  <data name="AssistantProjectReady" xml:space="preserve"><value>{0} · ready</value></data>
+  <data name="AssistantProjectTaskDetail" xml:space="preserve"><value>{0} · {1} · {2:P0}</value></data>
+  <data name="AssistantProjectNoObjective" xml:space="preserve"><value>No translation task has been created for this project yet.</value></data>
+  <data name="AssistantProjectIdle" xml:space="preserve"><value>Idle</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Mod community</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Mod community</value></data>
   <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Sign in to browse Mod discussions in LocaleSmith and post securely with an application token.</value></data>
@@ -563,4 +609,61 @@
   <data name="CommunityReportNetworkError" xml:space="preserve"><value>The report service could not be reached. Check the network and submit it again.</value></data>
   <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>The report service returned an unexpected response. Refresh and try again later.</value></data>
   <data name="CommunityReportFailedError" xml:space="preserve"><value>The report could not be submitted. Review the details and try again later.</value></data>
+  <data name="BillingTitle.Text" xml:space="preserve"><value>Domestic acceleration subscription</value></data>
+  <data name="BillingSubtitle.Text" xml:space="preserve"><value>A monthly LocaleSmith subscription handled by Microsoft Store. Access starts only after MCTX backend verification.</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Title" xml:space="preserve"><value>Subscription unavailable</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Message" xml:space="preserve"><value>MCTX has not enabled Microsoft Store billing, so the purchase entry is hidden.</value></data>
+  <data name="BillingLoginRequiredInfo.Title" xml:space="preserve"><value>Sign in to LocaleSmith/MCTX first</value></data>
+  <data name="BillingLoginRequiredInfo.Message" xml:space="preserve"><value>Your existing account and PAT must be verified before purchase, restore, or entitlement verification.</value></data>
+  <data name="BillingAccountLink.Content" xml:space="preserve"><value>Manage account and PAT</value></data>
+  <data name="BillingBackendUnavailableInfo.Title" xml:space="preserve"><value>Entitlement service unavailable</value></data>
+  <data name="BillingBackendUnavailableInfo.Message" xml:space="preserve"><value>MCTX entitlement status cannot be confirmed, so purchasing remains disabled.</value></data>
+  <data name="BillingStoreUnavailableInfo.Title" xml:space="preserve"><value>Microsoft Store product unavailable</value></data>
+  <data name="BillingStoreUnavailableInfo.Message" xml:space="preserve"><value>Use LocaleSmith installed from Microsoft Store with the correct Store account, and do not run the app elevated.</value></data>
+  <data name="BillingActiveInfo.Title" xml:space="preserve"><value>Domestic acceleration is active</value></data>
+  <data name="BillingActiveInfo.Message" xml:space="preserve"><value>This status comes from MCTX backend verification; a local Store result never unlocks access directly.</value></data>
+  <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>No active entitlement</value></data>
+  <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>Subscribe, or restore an existing Microsoft Store purchase for backend verification.</value></data>
+  <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>Eligible new subscribers can receive a 7-day free trial; eligibility and final terms are shown by Microsoft during purchase.</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>After an eligible trial, the subscription renews at the monthly price Microsoft Store then shows until cancelled. China is configured at CNY 30.00/month; the purchase UI is final.</value></data>
+  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>The global base price tier is US$4.99/month. Microsoft Store displays local market pricing; other markets are not guaranteed a fixed US$5 price.</value></data>
+  <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>Billed by Microsoft. Cancel or manage it under Services &amp; subscriptions in your Microsoft account.</value></data>
+  <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Current monthly renewal price shown by Microsoft Store</value></data>
+  <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>Subscribe with Microsoft</value></data>
+  <data name="BillingRestoreButton.Content" xml:space="preserve"><value>Restore purchase</value></data>
+  <data name="BillingRefreshButton.Content" xml:space="preserve"><value>Refresh status</value></data>
+  <data name="BillingProgress.AutomationProperties.Name" xml:space="preserve"><value>Refreshing subscription status</value></data>
+  <data name="BillingErrorInfo.Title" xml:space="preserve"><value>Subscription operation failed</value></data>
+  <data name="BillingStatusInfo.Title" xml:space="preserve"><value>Subscription status</value></data>
+  <data name="BillingManageSubscriptionsLink.Content" xml:space="preserve"><value>Manage or cancel with Microsoft</value></data>
+  <data name="BillingPrivacyLink.Content" xml:space="preserve"><value>Privacy policy</value></data>
+  <data name="BillingPurchasePendingVerificationStatus" xml:space="preserve"><value>Microsoft completed the purchase step. LocaleSmith is verifying the entitlement with MCTX.</value></data>
+  <data name="BillingEntitlementVerifiedStatus" xml:space="preserve"><value>The MCTX entitlement is active.</value></data>
+  <data name="BillingEntitlementPendingStatus" xml:space="preserve"><value>Microsoft reported the purchase, but MCTX has not activated the entitlement yet. Use Restore purchase to retry verification.</value></data>
+  <data name="BillingPurchaseCancelledStatus" xml:space="preserve"><value>The Microsoft purchase was not completed. No entitlement changed.</value></data>
+  <data name="BillingStoreNetworkError" xml:space="preserve"><value>Microsoft Store could not be reached. No entitlement changed.</value></data>
+  <data name="BillingStoreUnavailableError" xml:space="preserve"><value>Microsoft Store could not complete the request. No entitlement changed.</value></data>
+  <data name="BillingRestoreVerifiedStatus" xml:space="preserve"><value>Purchase verification was refreshed and the MCTX entitlement is active.</value></data>
+  <data name="BillingRestoreNoEntitlementStatus" xml:space="preserve"><value>No active MCTX entitlement was returned. Microsoft purchase presence alone does not unlock acceleration.</value></data>
+  <data name="BillingCapabilityUnavailableError" xml:space="preserve"><value>Subscription availability could not be confirmed. Purchasing remains disabled.</value></data>
+  <data name="BillingCapabilityUnavailableStatus" xml:space="preserve"><value>Microsoft Store billing is not enabled by the MCTX service. Purchasing is hidden.</value></data>
+  <data name="BillingLoginRequiredStatus" xml:space="preserve"><value>Sign in to the LocaleSmith/MCTX account with a PAT before purchasing or restoring.</value></data>
+  <data name="BillingBackendUnavailableError" xml:space="preserve"><value>MCTX entitlement status is unavailable. Purchasing remains disabled.</value></data>
+  <data name="BillingVerificationFailedError" xml:space="preserve"><value>Purchase verification could not be completed. No entitlement was unlocked; use Restore purchase to retry.</value></data>
+  <data name="BillingAlreadyEntitledStatus" xml:space="preserve"><value>The MCTX entitlement is already active; Microsoft purchase UI was not opened.</value></data>
+  <data name="BillingScopeRequiredInfo.Title" xml:space="preserve"><value>PAT lacks accelerated-download access</value></data>
+  <data name="BillingScopeRequiredInfo.Message" xml:space="preserve"><value>Create a regular PAT with the downloads:accelerated scope. Purchase and acceleration remain disabled.</value></data>
+  <data name="BillingAcceleratedScopeRequiredStatus" xml:space="preserve"><value>The saved PAT needs the downloads:accelerated scope before billing or acceleration can be used.</value></data>
+  <data name="CommunityDownloadTitle.Text" xml:space="preserve"><value>Download selected version</value></data>
+  <data name="CommunityDefaultDownloadButton.Content" xml:space="preserve"><value>Download from default source</value></data>
+  <data name="CommunityAcceleratedDownloadButton.Content" xml:space="preserve"><value>Use domestic acceleration</value></data>
+  <data name="CommunityAccelerationDisclosure.Text" xml:space="preserve"><value>Shown only when MCTX confirms a valid, fresh entitlement and a ready private replica. Failures fall back to the default source.</value></data>
+  <data name="CommunityDownloadProgress.AutomationProperties.Name" xml:space="preserve"><value>Artifact download progress</value></data>
+  <data name="CommunityCancelDownloadButton.Content" xml:space="preserve"><value>Cancel download</value></data>
+  <data name="CommunityDownloadErrorInfo.Title" xml:space="preserve"><value>Download failed</value></data>
+  <data name="CommunityDownloadStatusInfo.Title" xml:space="preserve"><value>Download status</value></data>
+  <data name="CommunityDownloadFallbackStatus" xml:space="preserve"><value>The acceleration source was unavailable. The file was downloaded safely from the default source.</value></data>
+  <data name="CommunityDownloadCompletedStatus" xml:space="preserve"><value>Download completed and SHA-256 verification passed.</value></data>
+  <data name="CommunityDownloadCancelledStatus" xml:space="preserve"><value>Download cancelled. A credential-free partial file may be retained for resume.</value></data>
+  <data name="CommunityDownloadFailedError" xml:space="preserve"><value>The download could not be completed or verified. No partial artifact was published.</value></data>
 </root>

@@ -1,4 +1,3 @@
-using LocaleSmith.Core.Models;
 using LocaleSmith.Presentation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
@@ -37,23 +36,6 @@ public sealed partial class ModelSourcesPage : Page
         finally
         {
             _loading = false;
-        }
-    }
-
-    private void OnPresetSelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        if (!_loaded || sender is not ComboBox comboBox)
-        {
-            return;
-        }
-
-        if (ModelOptionSelectionMap.TryResolvePreset(
-                comboBox.SelectedItem,
-                ViewModel.PresetOptions,
-                out var preset) &&
-            !ReferenceEquals(ViewModel.SelectedPreset, preset))
-        {
-            ViewModel.SelectedPreset = preset;
         }
     }
 

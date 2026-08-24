@@ -89,6 +89,7 @@ public sealed class TranslationPipeline
             var (pending, reused) = SelectPendingEntries(entries, previous, request.Styles);
 
             IReadOnlyList<TranslatedEntry> newTranslations = Array.Empty<TranslatedEntry>();
+            ModelTokenUsage? modelUsage = null;
             if (pending.Count > 0)
             {
                 progressTracker.Advance(
@@ -102,17 +103,26 @@ public sealed class TranslationPipeline
                             request.Styles,
                             request.ModelSourceId,
                             inspection.ContentKind),
+                        new DirectModelUsageProgress(usage =>
+                        {
+                            modelUsage = usage;
+                            progressTracker.UpdateModelUsage(usage);
+                        }),
                         cancellationToken)
                     .ConfigureAwait(false);
                 newTranslations = translated.Entries;
+                modelUsage = translated.ModelUsage;
+                progressTracker.UpdateModelUsage(modelUsage);
             }
             else
             {
+                modelUsage = ModelTokenUsage.Empty;
+                progressTracker.UpdateModelUsage(modelUsage);
                 progressTracker.Skip(PipelineStage.Translating);
             }
 
             var merged = MergeTranslations(entries, previous, newTranslations);
-            var batchResult = new TranslationBatchResult(request.TargetLanguage, merged);
+            var batchResult = new TranslationBatchResult(request.TargetLanguage, merged, modelUsage);
 
             progressTracker.Advance(stage = PipelineStage.Writing, "正在写入所选风格的语言资源");
             await workspace.ApplyTranslationsAsync(batchResult, cancellationToken).ConfigureAwait(false);
@@ -181,7 +191,8 @@ public sealed class TranslationPipeline
                 externalization,
                 artifacts,
                 verification,
-                resultWarnings.AsReadOnly());
+                resultWarnings.AsReadOnly(),
+                modelUsage);
         }
         catch (OperationCanceledException)
         {
@@ -433,6 +444,7 @@ public sealed class TranslationPipeline
             static stage => new MutableStageProgress(stage));
         private PipelineStage? _currentStage;
         private PipelineStageStatus? _rollbackOutcome;
+        private ModelTokenUsage? _modelUsage;
 
         public PipelineProgressTracker(Guid jobId, IProgress<PipelineProgress>? progress)
         {
@@ -463,6 +475,8 @@ public sealed class TranslationPipeline
             target.Status = PipelineStageStatus.Skipped;
             target.FinishedAtUtc = TimeProvider.System.GetUtcNow();
         }
+
+        public void UpdateModelUsage(ModelTokenUsage? usage) => _modelUsage = usage;
 
         public void BeginRollback(PipelineStageStatus outcome, string action)
         {
@@ -584,7 +598,8 @@ public sealed class TranslationPipeline
                 snapshots,
                 rollbackStatus is PipelineStageStatus.Pending or PipelineStageStatus.Skipped
                     ? null
-                    : rollbackStatus));
+                    : rollbackStatus,
+                _modelUsage));
         }
 
         private double CalculateFraction(PipelineStage stage)
@@ -642,5 +657,10 @@ public sealed class TranslationPipeline
                 StartedAtUtc,
                 FinishedAtUtc);
         }
+    }
+
+    private sealed class DirectModelUsageProgress(Action<ModelTokenUsage> report) : IProgress<ModelTokenUsage>
+    {
+        public void Report(ModelTokenUsage value) => report(value);
     }
 }

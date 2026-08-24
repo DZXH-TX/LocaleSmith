@@ -1,3 +1,4 @@
+using LocaleSmith.Core.Models;
 using LocaleSmith.Presentation.Models;
 
 namespace LocaleSmith.App.Services;
@@ -7,7 +8,6 @@ internal static class LegacyDefaultPathNormalizer
     private const string LegacyProductDirectoryName = "JaxI18n";
     private const string CurrentProductDirectoryName = "LocaleSmith";
     private const int LogDirectorySchemaVersion = 2;
-    private const int ProviderDefaultsSchemaVersion = 3;
 
     public static AppConfiguration Normalize(
         AppConfiguration configuration,
@@ -42,11 +42,10 @@ internal static class LegacyDefaultPathNormalizer
         var initializeLogDirectory = configuration.SchemaVersion < LogDirectorySchemaVersion
             || string.IsNullOrWhiteSpace(configuration.LogDirectoryPath);
         var normalizedModelSources = configuration.ModelSources
-            .Select(NormalizeLegacyProviderDefaults)
+            .Select(NormalizeModelSourcePreset)
             .ToArray();
-        var migrateModelDefaults = configuration.SchemaVersion < ProviderDefaultsSchemaVersion
-            && !configuration.ModelSources.SequenceEqual(normalizedModelSources);
-        changed = migrateWorkspace || migrateSandbox || initializeLogDirectory || upgradeSchema || migrateModelDefaults;
+        var normalizeModelPresets = !configuration.ModelSources.SequenceEqual(normalizedModelSources);
+        changed = migrateWorkspace || migrateSandbox || initializeLogDirectory || upgradeSchema || normalizeModelPresets;
         if (!changed)
         {
             return configuration;
@@ -62,33 +61,39 @@ internal static class LegacyDefaultPathNormalizer
             LogDirectoryPath = initializeLogDirectory
                 ? currentLogDirectory
                 : configuration.LogDirectoryPath,
-            ModelSources = migrateModelDefaults
+            ModelSources = normalizeModelPresets
                 ? normalizedModelSources
                 : configuration.ModelSources
         };
     }
 
-    private static ModelSourceProfile NormalizeLegacyProviderDefaults(ModelSourceProfile profile)
+    internal static ModelSourceProfile NormalizeModelSourcePreset(ModelSourceProfile profile)
     {
-        if (profile.Provider != LocaleSmith.Core.Models.ModelProviderKind.OpenAiCompatible ||
-            !LocaleSmith.Core.Models.ModelProviderPresets.TryGet(profile.PresetId, out var preset) ||
-            preset.IsCustom ||
-            preset.DefaultEndpoint is null ||
-            string.IsNullOrWhiteSpace(preset.DefaultModelName) ||
-            !string.Equals(
-                profile.Endpoint?.TrimEnd('/'),
-                "http://127.0.0.1:11434",
-                StringComparison.OrdinalIgnoreCase) ||
-            !string.Equals(profile.ModelName?.Trim(), "llama3", StringComparison.OrdinalIgnoreCase))
+        ArgumentNullException.ThrowIfNull(profile);
+        var configuredPreset = ModelProviderPresets.ResolveOrCustom(profile.PresetId);
+        var endpointIsValid = Uri.TryCreate(profile.Endpoint, UriKind.Absolute, out var endpoint);
+        var effectivePreset = endpointIsValid
+            ? ModelProviderPresets.ResolveEffective(profile.Provider, configuredPreset.Id, endpoint!)
+            : ModelProviderPresets.Custom;
+        var normalizedPresetId = profile.Provider == ModelProviderKind.OpenAiCompatible
+            ? effectivePreset.Id
+            : ModelProviderPresets.CustomId;
+        var normalizedTokenParameter = profile.TokenLimitParameter;
+        if (profile.Provider == ModelProviderKind.OpenAiCompatible &&
+            normalizedTokenParameter is null &&
+            !string.Equals(configuredPreset.Id, normalizedPresetId, StringComparison.Ordinal))
         {
-            return profile;
+            normalizedTokenParameter = configuredPreset.DefaultTokenLimitParameter;
         }
 
-        return profile with
-        {
-            Endpoint = preset.DefaultEndpoint.AbsoluteUri,
-            ModelName = preset.DefaultModelName
-        };
+        return string.Equals(profile.PresetId, normalizedPresetId, StringComparison.Ordinal) &&
+            profile.TokenLimitParameter == normalizedTokenParameter
+            ? profile
+            : profile with
+            {
+                PresetId = normalizedPresetId,
+                TokenLimitParameter = normalizedTokenParameter
+            };
     }
 
     private static bool PathsEqual(string candidate, string expected)

@@ -269,8 +269,8 @@
                                 x:Uid="OnboardingNetworkPresetSelector"
                                 DisplayMemberPath="DisplayName"
                                 ItemsSource="{Binding NetworkPresetOptions}"
-                                SelectedItem="{Binding SelectedNetworkPreset, Mode=OneWay}"
-                                SelectionChanged="OnNetworkPresetSelectionChanged" />
+                                SelectedValue="{Binding SelectedNetworkPresetId, Mode=TwoWay}"
+                                SelectedValuePath="Id" />
                             <TextBox
                                 x:Uid="OnboardingNetworkEndpointInput"
                                 Text="{Binding NetworkEndpoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />

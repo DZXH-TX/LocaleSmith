@@ -20,7 +20,8 @@ public sealed record TranslationQueueResult(
     IReadOnlyList<HardcodedStringCandidate> HardcodedCandidates,
     int ExternalizedCount,
     TranslationStyle Style = TranslationStyle.Formal,
-    string TargetLanguage = TranslationLanguageCatalog.DefaultLocale);
+    string TargetLanguage = TranslationLanguageCatalog.DefaultLocale,
+    ModelTokenUsage? ModelUsage = null);
 
 public sealed class TranslationQueueHandle(
     Guid jobId,
@@ -48,8 +49,11 @@ public sealed record TranslationQueueProgress(
     double Fraction,
     PipelineStage? NextStage = null,
     IReadOnlyList<PipelineStageProgress>? Stages = null,
-    PipelineStageStatus? RollbackStatus = null);
+    PipelineStageStatus? RollbackStatus = null,
+    ModelTokenUsage? ModelUsage = null);
 
 public sealed record ModelAssistantCompletion(
     string Content,
-    IReadOnlyList<LocaleSmith.Core.Models.CliCommand> ProposedCommands);
+    IReadOnlyList<LocaleSmith.Core.Models.CliCommand> ProposedCommands,
+    ModelTokenUsage? ModelUsage = null,
+    string? Model = null);
