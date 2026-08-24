@@ -1,19 +1,45 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>LocaleSmith.McpHost</RootNamespace>
     <AssemblyName>LocaleSmith.McpHost</AssemblyName>
     <AssemblyTitle>LocaleSmith MCP Host</AssemblyTitle>
     <Product>LocaleSmith</Product>
-    <Description>LocaleSmith 本地安全 MCP 工具宿主</Description>
+    <Description>Windows x64 stdio MCP host for LocaleSmith safety-gated system context and CLI proposals.</Description>
+    <Version>0.1.0</Version>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>localesmith-mcp</ToolCommandName>
+    <PackageId>CRTech.LocaleSmith.McpHost</PackageId>
+    <Title>LocaleSmith MCP Host</Title>
+    <Authors>DZXH-TX</Authors>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/DZXH-TX/LocaleSmith</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DZXH-TX/LocaleSmith</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags>localesmith;minecraft;localization;mcp;model-context-protocol;dotnet-tool;windows</PackageTags>
+    <PackageReleaseNotes>https://github.com/DZXH-TX/LocaleSmith/tags</PackageReleaseNotes>
+    <Copyright>Copyright © 2026 DZXH-TX（道泽星河-天仙）</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LocaleSmith.Infrastructure\LocaleSmith.Infrastructure.csproj" />
     <ProjectReference Include="..\LocaleSmith.Mcp\LocaleSmith.Mcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\.github\package-readmes\LocaleSmith.McpHost.md"
+          Pack="true"
+          PackagePath="README.md" />
+    <None Include="..\..\packaging\LocaleSmith.Package\Assets\Square150x150Logo.png"
+          Pack="true"
+          PackagePath="icon.png" />
   </ItemGroup>
 </Project>

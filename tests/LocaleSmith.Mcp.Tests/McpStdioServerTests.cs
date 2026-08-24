@@ -17,7 +17,8 @@ public sealed class McpStdioServerTests
     [Fact]
     public async Task InitializationSequenceIsRequiredBeforeTools()
     {
-        using var server = CreateServer();
+        using var server = CreateServer(
+            options: new McpServerOptions { ServerVersion = "9.8.7-test" });
         var responses = await ExchangeAsync(
             server,
             """{"jsonrpc":"2.0","id":1,"method":"tools/list"}""",
@@ -32,6 +33,9 @@ public sealed class McpStdioServerTests
         Assert.Equal(
             "LocaleSmith Local Tools",
             responses[1].GetProperty("result").GetProperty("serverInfo").GetProperty("title").GetString());
+        Assert.Equal(
+            "9.8.7-test",
+            responses[1].GetProperty("result").GetProperty("serverInfo").GetProperty("version").GetString());
         Assert.Equal(-32002, ErrorCode(responses[2]));
         Assert.True(responses[3].GetProperty("result").GetProperty("tools").GetArrayLength() >= 2);
     }

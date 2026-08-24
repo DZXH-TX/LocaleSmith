@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using LocaleSmith.Infrastructure.Cli;
 using LocaleSmith.Infrastructure.Environment;
@@ -35,7 +36,11 @@ internal static class Program
             contextProvider,
             commandPolicy,
             cliRunner: null,
-            new McpServerOptions { EnableCliExecution = false });
+            new McpServerOptions
+            {
+                EnableCliExecution = false,
+                ServerVersion = GetServerVersion()
+            });
 
         try
         {
@@ -58,5 +63,22 @@ internal static class Program
                 .ConfigureAwait(false);
             return 1;
         }
+    }
+
+    private static string GetServerVersion()
+    {
+        var assembly = typeof(Program).Assembly;
+        var informationalVersion = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            var metadataSeparator = informationalVersion.IndexOf('+', StringComparison.Ordinal);
+            return metadataSeparator >= 0
+                ? informationalVersion[..metadataSeparator]
+                : informationalVersion;
+        }
+
+        return assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 }

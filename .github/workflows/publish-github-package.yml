@@ -1,0 +1,128 @@
+name: Publish GitHub Package
+
+on:
+  push:
+    tags:
+      - "mcp-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: NuGet SemVer to publish, without the mcp-v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-github-package-${{ github.ref }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_NOLOGO: "true"
+
+jobs:
+  publish-mcp-tool:
+    name: Pack, verify, and publish MCP tool
+    runs-on: windows-2025
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Resolve package version
+        id: version
+        env:
+          DISPATCH_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq "push") {
+            if (-not $env:GITHUB_REF_NAME.StartsWith("mcp-v", [StringComparison]::Ordinal)) {
+              throw "Package tags must start with mcp-v."
+            }
+            git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+            if ($LASTEXITCODE -ne 0) {
+              throw "Package tags must point to a commit reachable from origin/main."
+            }
+            $packageVersion = $env:GITHUB_REF_NAME.Substring("mcp-v".Length)
+          }
+          else {
+            if ($env:GITHUB_REF -ne "refs/heads/main") {
+              throw "Manual package publication must run from the main branch."
+            }
+            $packageVersion = $env:DISPATCH_VERSION
+          }
+
+          $packageVersion = $packageVersion.Trim()
+          $semVerPattern = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*)|(?:[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))(?:\.(?:(?:0|[1-9]\d*)|(?:[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)))*)?$'
+          if ($packageVersion -notmatch $semVerPattern) {
+            throw "Invalid NuGet SemVer: $packageVersion"
+          }
+
+          "package-version=$packageVersion" >> $env:GITHUB_OUTPUT
+          Write-Output "Publishing CRTech.LocaleSmith.McpHost $packageVersion"
+
+      - name: Restore package and test projects
+        run: |
+          dotnet restore src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj
+          dotnet restore tests/LocaleSmith.Mcp.Tests/LocaleSmith.Mcp.Tests.csproj
+
+      - name: Run MCP tests
+        run: dotnet test tests/LocaleSmith.Mcp.Tests/LocaleSmith.Mcp.Tests.csproj --configuration Release --no-restore
+
+      - name: Pack MCP tool
+        run: |
+          dotnet pack src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj `
+            --configuration Release `
+            --no-restore `
+            --output artifacts/packages `
+            -p:Version=${{ steps.version.outputs.package-version }} `
+            -p:PackageVersion=${{ steps.version.outputs.package-version }} `
+            -p:ContinuousIntegrationBuild=true `
+            -p:RepositoryCommit=${{ github.sha }}
+
+      - name: Install and smoke-test package
+        run: |
+          ./.github/scripts/Test-McpToolPackage.ps1 `
+            -PackageDirectory artifacts/packages `
+            -PackageVersion "${{ steps.version.outputs.package-version }}" `
+            -InstallDirectory artifacts/mcp-tool-smoke
+
+      - name: Upload verified package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: localesmith-mcp-nuget-${{ steps.version.outputs.package-version }}
+          path: artifacts/packages/*.nupkg
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_SOURCE: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        run: |
+          $packages = @(Get-ChildItem -LiteralPath "artifacts/packages" -Filter "*.nupkg" -File)
+          if ($packages.Count -ne 1) {
+            throw "Expected exactly one package to publish, found $($packages.Count)."
+          }
+
+          dotnet nuget push $packages[0].FullName `
+            --api-key $env:GITHUB_TOKEN `
+            --source $env:PACKAGE_SOURCE
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Packages publish failed with exit code $LASTEXITCODE."
+          }
