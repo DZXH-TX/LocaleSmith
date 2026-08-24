@@ -200,7 +200,7 @@ App 组合根注入 `ProjectMcpBackend`。助手选中项目后增加三个只�
 
 生产发布仍需可信签名/时间戳、干净机安装/升级/卸载、真实 provider、Minecraft loader/version、WinUI 键盘/读屏/高对比度，以及 x64 之外架构的验证。MSIX 签名要求见 [MSIX package signing overview](https://learn.microsoft.com/windows/msix/package/signing-package-overview)。
 
-本文当前源码自动化基线为 .NET Release 854/854、0 warnings/0 errors、format clean，Rust 28/28，五种 App `.resw` 各 676 个 key 且对齐。源码复审未发现仍存在的高/中优先级问题；这不等于外部渗透测试，也不改变 Low IL、同用户、网络、归档签名和真实 Minecraft 兼容性残余风险。
+本文当前源码自动化基线为 .NET Release 855/855、0 warnings/0 errors、format clean，Rust 28/28，五种 App `.resw` 各 676 个 key 且对齐。源码复审未发现仍存在的高/中优先级问题；这不等于外部渗透测试，也不改变 Low IL、同用户、网络、归档签名和真实 Minecraft 兼容性残余风险。
 
 ## 10. 相关文档
 

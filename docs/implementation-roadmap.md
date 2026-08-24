@@ -1,7 +1,7 @@
 # LocaleSmith | 译匠 实施路线图与当前状态
 
 > 状态日：2026-08-24
-> 本文用“已实现 / 有限实现 / 待完成”区分源码事实与发布目标。本文当前源码自动化基线为 .NET Release **854/854**、Rust **28/28**。
+> 本文用“已实现 / 有限实现 / 待完成”区分源码事实与发布目标。本文当前源码自动化基线为 .NET Release **855/855**、Rust **28/28**。
 
 ## 1. 当前里程碑总览
 
@@ -191,7 +191,7 @@ dotnet format LocaleSmith.slnx --verify-no-changes --no-restore
 dotnet list LocaleSmith.slnx package --vulnerable --include-transitive
 ```
 
-本文当前源码基线：Rust **28/28**；.NET Release **854/854**（Core 84、Application 58、Presentation 178、App 215、Archive 73、Infrastructure 222、MCP 20、NativeInterop 4），build 0 warnings/0 errors，`dotnet format` clean。App 五种语言 `.resw` 各 676 个 key。当前源码复审未发现仍存在的高/中优先级问题；这不是外部 penetration test，也不消除已列 residual risk。MSIX 另按 `packaging/README.md` 验证，不包含在 solution test count 中。
+本文当前源码基线：Rust **28/28**；.NET Release **855/855**（Core 84、Application 58、Presentation 178、App 216、Archive 73、Infrastructure 222、MCP 20、NativeInterop 4），build 0 warnings/0 errors，`dotnet format` clean。App 五种语言 `.resw` 各 676 个 key。当前源码复审未发现仍存在的高/中优先级问题；这不是外部 penetration test，也不消除已列 residual risk。MSIX 另按 `packaging/README.md` 验证，不包含在 solution test count 中。
 
 ## 8. 不承诺事项
 

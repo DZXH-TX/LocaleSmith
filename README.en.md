@@ -243,7 +243,7 @@ The following figures are the validation baseline recorded in the current source
 
 | Check | Baseline |
 | --- | --- |
-| .NET Release | `854 / 854` tests, `0` warnings, `0` errors |
+| .NET Release | `855 / 855` tests, `0` warnings, `0` errors |
 | Rust | `28 / 28` tests; `rustfmt` and `clippy -D warnings` passed |
 | Five-language resources | `676` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
 | Source security audit | Regression gates for local paths, archives, CLI, credentials, and migrations passed; GitHub CodeQL results depend on a fresh remote scan of the current commit, and the README does not claim zero alerts |

@@ -243,7 +243,7 @@ App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模�
 
 | 检查项 | 基线 |
 | --- | --- |
-| .NET Release | `854 / 854` tests，`0` warnings，`0` errors |
+| .NET Release | `855 / 855` tests，`0` warnings，`0` errors |
 | Rust | `28 / 28` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
 | 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `676` 个 key，完全对齐 |
 | 源码安全审计 | 本地路径、归档、CLI、凭据和迁移回归门通过；GitHub CodeQL 结果以当前提交的远端重扫为准，不在 README 中宣称零告警 |

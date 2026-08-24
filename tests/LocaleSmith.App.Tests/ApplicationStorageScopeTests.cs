@@ -5,6 +5,19 @@ namespace LocaleSmith.App.Tests;
 public sealed class ApplicationStorageScopeTests
 {
     [Fact]
+    public void UnpackagedProcessUsesTheUnredirectedDevelopmentRoot()
+    {
+        var scope = ApplicationStorageScope.Detect();
+
+        Assert.False(scope.IsProduction);
+        Assert.Equal(
+            Path.Combine(
+                LegacyAppDataLocator.GetUnredirectedLocalApplicationDataPath(),
+                ApplicationStorageScope.DevelopmentDirectoryName),
+            scope.AppDataRoot);
+    }
+
+    [Fact]
     public void ProductionPackageUsesProductionStateAndCredentialNamespace()
     {
         var localAppData = Path.Combine(Path.GetTempPath(), "storage-scope-root");
