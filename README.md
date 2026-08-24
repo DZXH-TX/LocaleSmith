@@ -41,6 +41,7 @@
     <a href="#项目概览">项目概览</a> ·
     <a href="#核心能力">核心能力</a> ·
     <a href="#支持范围">支持范围</a> ·
+    <a href="#已知限制">已知限制</a> ·
     <a href="#处理流程">处理流程</a> ·
     <a href="#快速开始">快速开始</a> ·
     <a href="#安全边界">安全边界</a> ·
@@ -50,6 +51,16 @@
 
 > [!IMPORTANT]
 > **LocaleSmith v1.1.0 已在 [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) 正式上架。** 推荐通过商店安装，以自动处理依赖和后续更新；[GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) 同时提供经 Microsoft Marketplace 签名的正式 MSIX，无需安装开发测试证书。
+
+## 三十秒了解
+
+| 重点 | 实际行为 |
+| --- | --- |
+| **先扫描，再改包** | Rust 原生核心解析 JAR / ZIP / Loader 元数据、路径、签名证据与语言资源；原始输入始终只读。 |
+| **只翻新增内容** | 按内容哈希复用译文，逐项校验 EntryId、占位符和结构；失败/取消不提交半成品。 |
+| **不仅是 lang 文件** | 支持资源包、光影包语言文件与经结构证明的 `Component.literal` 精确外部化；不安全候选只报告或跳过。 |
+| **模型可选且可控** | Ollama、OpenAI-compatible、Anthropic；显式刷新模型列表、设置 Token/分批预算，私有推理只在同源协议轮次回放。 |
+| **凭据和执行有边界** | API Key 在 Credential Manager，配置 AES-256-GCM；模型只能提议命令，执行仍需策略复核和用户确认。 |
 
 ## 项目概览
 
@@ -67,7 +78,7 @@
 | **专业提示与术语** | 自动区分模组、资源包与光影包，使用独立领域提示；简体中文任务附带各自的专业术语对照表。 |
 | **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
 | **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
-| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；Ollama 与支持 `/models` 的 OpenAI-compatible 服务可显式刷新模型列表，始终保留手填回退。每个模型源还可设置单次响应 Tokens 与翻译分批字符目标。 |
+| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；Ollama 与支持 `/models` 的 OpenAI-compatible 服务可显式刷新模型列表，始终保留手填回退。每个模型源还可设置单次响应 Tokens 与翻译分批字符目标；需要跨工具轮次连续思考的 Provider 会在协议层私下回放推理状态，不显示到 UI。 |
 | **联机模组社区** | 可搜索和分页浏览公开模组与讨论；使用保存在 Windows Credential Manager 中的 PAT 发帖、回复和举报，并可直接查看服务条款与社区规范。 |
 | **Microsoft 订阅与安全加速** | 使用 Windows 原生 Microsoft Store 购买界面、MCTX 后端权威权益核验与一次性下载 grant；加速不可用时始终保留并回退默认下载源。 |
 | **持久化诊断日志** | 日志目录可写时，每次翻译都会尝试通过有界后台写入器持久化一对 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
@@ -89,6 +100,19 @@
 | 目标语言 | `zh_CN`、`en_US`、`ja_JP`、`fr_FR`、`ru_RU` |
 | 输出 | 当前作业选择的一种目标语言与一种翻译风格；包内资源名使用小写 Minecraft locale，如 `ja_jp` |
 | 平台 | Windows x64，最低 Windows 10 1809 |
+
+## 已知限制
+
+| 限制 | 当前边界 |
+| --- | --- |
+| 任务书与脚本 | FTB Quests `.snbt`、Better Questing、KubeJS、CraftTweaker `.zs` 不在当前翻译范围。 |
+| 整合包容器 | `.mrpack` 等整合包格式尚未作为单个输入处理；含多个 JAR/ZIP 的目录应使用“添加包”多选。 |
+| 项目持久化 | 模组项目、任务与助手项目会话只驻留当前进程，重启后不恢复。 |
+| 单作业输出 | 一个作业只冻结并输出一种目标语言与一种风格；其他语言/风格需单独入队。 |
+| 归档重压缩 | 不保证 ZIP 压缩流、extra field、条目顺序、注释或原签名在字节级保持不变。 |
+| 字节码范围 | 不是通用 Java 重写器；窄 `ldc` 容量不足等候选会安全跳过，不做不完整的控制流/StackMap 重写。 |
+| 运行时矩阵 | 自动化不等于真实 Minecraft/Loader 游戏内兼容认证，仍需按目标版本实测。 |
+| 平台 | 当前仅提供 Windows x64，不提供 Linux、macOS 或 ARM64 成品。 |
 
 ## 处理流程
 
@@ -121,7 +145,7 @@ LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应�
 
 左侧导航中的“日志”页按翻译作业列出持久化记录，并默认显示 Debug 视图；切换到 All levels 可查看包含细粒度进度在内的完整级别记录。日志是最大限度的后台诊断功能：目录正常可写且写入器有容量时，作业会创建一对 `.debug.log` / `.all.log` 文件并增量刷新到磁盘；慢设备或队列已满时可能跳过文件或丢弃部分诊断条目，但不会阻塞翻译。进程异常退出后，已经成功刷新的内容仍可用于定位最后一个阶段。
 
-默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
+正式 Store 包的逻辑默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`；unpackaged/Dev 包使用隔离的 `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations`，配置、凭据、Sandbox 与安全锁也不会和正式版混用。registered MSIX 的物理文件可能由 Windows 放入各自 PFN 的 `LocalCache\Local`，仍保持包间隔离。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
 
 ## 快速开始
 
@@ -144,7 +168,7 @@ GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C5
 | .NET SDK | `10.0.302`，由 `global.json` 固定 |
 | Rust | 仓库工具链 `1.97.1`（MSVC），包含 `rustfmt` 与 `clippy` |
 | Windows SDK | `10.0.26100`，并安装 MSVC / C++ 构建工具 |
-| UI 依赖 | Windows App SDK `2.3.1`、CommunityToolkit.Mvvm `8.4.2`，由 NuGet 还原 |
+| UI 依赖 | Windows App SDK `2.3.1`、CommunityToolkit.Mvvm `8.4.2` 由 NuGet 还原；运行 unpackaged WinUI 应用前还需注册 Windows App Runtime `2.3.1` |
 | MSIX 构建 | 需要包含 Desktop Bridge / WAP targets 的 Visual Studio Developer PowerShell |
 
 ### 从源码构建
@@ -155,7 +179,7 @@ GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C5
 git clone https://github.com/DZXH-TX/LocaleSmith.git
 Set-Location LocaleSmith
 
-cargo build --manifest-path native/localesmith_core/Cargo.toml --release
+cargo build --manifest-path native/localesmith_core/Cargo.toml --locked --release
 dotnet restore LocaleSmith.slnx
 dotnet build LocaleSmith.slnx -c Release
 ```
@@ -168,8 +192,8 @@ dotnet build LocaleSmith.slnx -c Release
 
 ```powershell
 cargo fmt --manifest-path native/localesmith_core/Cargo.toml --all -- --check
-cargo clippy --manifest-path native/localesmith_core/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/localesmith_core/Cargo.toml --all-targets
+cargo clippy --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets --all-features -- -D warnings
+cargo test --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets
 
 dotnet test LocaleSmith.slnx -c Release
 dotnet format LocaleSmith.slnx --verify-no-changes --no-restore
@@ -231,6 +255,8 @@ App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模�
 
 当前公开正式版本为 `v1.1.0`，Store 程序包版本为 `1.1.0.0`，产品 ID 为 `9NP8V6WQNGT0`，并使用 Partner Center 分配的 Identity `CRTech.LocaleSmith`。Microsoft Store 负责正式分发和自动更新；GitHub Release 中的 x64 MSIX 已通过 Microsoft Marketplace 签名链、可信时间戳、程序包 Identity、架构与 SHA-256 校验，不需要历史开发包使用的自签名测试证书。公开程序包声明 `runFullTrust` 桌面功能，模型提出的命令仍必须经过策略复核与用户明确确认。
 
+当前源码准备下一版 `1.2.0.0`，但尚未作为正式版发布。WAP 默认生成隔离的未签名 `CRTech.LocaleSmith.Dev` 验证包；只有显式 `PackageFlavor=Store` 才生成正式 Identity 的未签名提交候选。两种包都必须通过解包、PRI、版本和全 payload 哈希审计，未签名包不等同于 Store 发布件。
+
 正式 Identity `CRTech.LocaleSmith` 不会原位升级早期的 `LocaleSmith.Desktop` / `JaxI18n.Desktop` 开发包，Windows 会暂时并列安装。切换时请关闭旧程序；新程序会继续使用用户级 `%LOCALAPPDATA%\LocaleSmith`，并只读检查仍已注册的旧包重定向数据。确认新版本工作正常后再卸载旧开发包。
 
 </details>
@@ -241,9 +267,9 @@ App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模�
 
 | 检查项 | 基线 |
 | --- | --- |
-| .NET Release | `807 / 807` tests，`0` warnings，`0` errors |
+| .NET Release | `855 / 855` tests，`0` warnings，`0` errors |
 | Rust | `28 / 28` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
-| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `661` 个 key，完全对齐 |
+| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `676` 个 key，完全对齐 |
 | 源码安全审计 | 本地路径、归档、CLI、凭据和迁移回归门通过；GitHub CodeQL 结果以当前提交的远端重扫为准，不在 README 中宣称零告警 |
 
 这些结果证明当前自动化覆盖的源码行为，不替代外部渗透测试、真实 Provider 验证或 Minecraft / Loader 运行时兼容测试。

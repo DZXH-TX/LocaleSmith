@@ -69,6 +69,8 @@ sandbox/
 *.md
 !/README.md
 !/README.en.md
+!/docs/**/*.md
+!/packaging/README.md
 !/.github/*.md
 !/.github/**/*.md
 

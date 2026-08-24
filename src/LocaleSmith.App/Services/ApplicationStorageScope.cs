@@ -20,14 +20,9 @@ internal sealed record ApplicationStorageScope(
 
     public static ApplicationStorageScope Detect()
     {
-        var localApplicationData = System.Environment.GetFolderPath(
-            System.Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localApplicationData))
-        {
-            throw new InvalidOperationException("The per-user application-data directory is unavailable.");
-        }
-
-        return Resolve(localApplicationData, TryGetPackageFamilyName());
+        return Resolve(
+            LegacyAppDataLocator.GetUnredirectedLocalApplicationDataPath(),
+            TryGetPackageFamilyName());
     }
 
     internal static ApplicationStorageScope Resolve(

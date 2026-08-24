@@ -41,6 +41,7 @@
     <a href="#project-overview">Project Overview</a> ·
     <a href="#core-capabilities">Core Capabilities</a> ·
     <a href="#supported-scope">Supported Scope</a> ·
+    <a href="#known-limitations">Known Limitations</a> ·
     <a href="#processing-pipeline">Processing Pipeline</a> ·
     <a href="#quick-start">Quick Start</a> ·
     <a href="#security-boundaries">Security Boundaries</a> ·
@@ -50,6 +51,16 @@
 
 > [!IMPORTANT]
 > **LocaleSmith v1.1.0 is officially available from [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0).** Installing from the Store is recommended so that dependencies and future updates are handled automatically; the [GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) also provides the production MSIX signed by Microsoft Marketplace, with no development test certificate required.
+
+## Thirty-second overview
+
+| Focus | Actual behavior |
+| --- | --- |
+| **Scan before modifying** | The native Rust core parses JAR / ZIP paths, Loader metadata, signature evidence, and language resources; original inputs remain read-only. |
+| **Translate only new content** | Content hashes reuse translations while EntryIds, placeholders, and structure are validated; failure/cancellation never commits a partial artifact. |
+| **Beyond lang files** | Handles resource/shader language files and structurally proven `Component.literal` externalization; unsafe candidates are reported or skipped. |
+| **Choice with control** | Ollama, OpenAI-compatible, and Anthropic; explicit model refresh and Token/batch budgets, with private reasoning replayed only inside the same provider protocol loop. |
+| **Credential and execution boundaries** | API keys stay in Credential Manager and configuration uses AES-256-GCM; models can propose commands, but policy and explicit user confirmation still gate execution. |
 
 ## Project Overview
 
@@ -67,7 +78,7 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 | **Specialized prompts and terminology** | Automatically distinguishes mods, resource packs, and shader packs and applies dedicated domain prompts; Simplified Chinese jobs include a specialized terminology glossary for each content type. |
 | **Multiple target languages** | Initially supports Simplified Chinese, English, Japanese, French, and Russian; the language catalog is centrally defined and can be extended. |
 | **Multiple model integrations** | Provides unified support for Ollama, OpenAI-compatible Chat Completions, and Anthropic Messages. |
-| **Provider presets** | Presets for DeepSeek, Qwen, Xiaomi MiMo, MiniMax, OpenAI, Doubao, Zhipu GLM, Kimi, and others fill in the endpoint, model name, and completion-token parameter. Ollama and OpenAI-compatible services that expose `/models` support explicit catalog refresh with manual fallback. Each source can also set response Tokens and the translation batch character target. |
+| **Provider presets** | Presets for DeepSeek, Qwen, Xiaomi MiMo, MiniMax, OpenAI, Doubao, Zhipu GLM, Kimi, and others fill in the endpoint, model name, and completion-token parameter. Ollama and OpenAI-compatible services that expose `/models` support explicit catalog refresh with manual fallback. Each source can also set response Tokens and the translation batch character target; providers that require cross-tool reasoning continuity replay private protocol state without displaying it in the UI. |
 | **Online mod community** | Searches and paginates public mods and discussions; a PAT stored in Windows Credential Manager enables posting, replies, and reports, with direct access to the terms and community guidelines. |
 | **Microsoft subscription and safe acceleration** | Uses native Microsoft Store purchase UI, authoritative MCTX backend entitlements, and one-time download grants; the default source always remains available and is used as a safe fallback. |
 | **Persistent diagnostic logs** | When the log directory is writable, each translation attempts to persist a pair of Debug and All levels `.log` files through a bounded background writer; logs can be viewed from the left-hand “Logs” page, and the directory can be changed during onboarding or in Settings. |
@@ -89,6 +100,19 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 | Target languages | `zh_CN`, `en_US`, `ja_JP`, `fr_FR`, `ru_RU` |
 | Output | One target language and one translation style selected for the current job; resource names inside the package use lowercase Minecraft locales such as `ja_jp` |
 | Platform | Windows x64, minimum Windows 10 1809 |
+
+## Known Limitations
+
+| Limitation | Current boundary |
+| --- | --- |
+| Quest/script formats | FTB Quests `.snbt`, Better Questing, KubeJS, and CraftTweaker `.zs` are outside the current translation scope. |
+| Modpack containers | `.mrpack` and similar modpack formats are not processed as one input; use multi-select Add package for folders containing several JAR/ZIP files. |
+| Project persistence | Mod projects, tasks, and project-scoped assistant sessions live only for the current process and are not restored after restart. |
+| One output per job | A job freezes one target language and one style; enqueue separate jobs for other languages or styles. |
+| Archive recompression | ZIP streams, extra fields, entry order/comments, and original signatures are not guaranteed byte-for-byte identical. |
+| Bytecode subset | This is not a general Java rewriter; candidates that exceed narrow `ldc` capacity are safely skipped rather than receiving incomplete control-flow/StackMap rewrites. |
+| Runtime matrix | Automated validation is not real in-game certification across Minecraft and Loader versions; test the intended target matrix. |
+| Platform | Current deliverables are Windows x64 only, with no Linux, macOS, or ARM64 build. |
 
 ## Processing Pipeline
 
@@ -121,7 +145,7 @@ Local automation covers the capability/PAT/scope/entitlement refusal matrix, pur
 
 The “Logs” page in the left navigation lists persistent records by translation job and displays the Debug view by default; switch to All levels to inspect records across all log levels, including fine-grained progress. Logging is a best-effort background diagnostic feature: when the directory is writable and the writer has capacity, a job creates a pair of `.debug.log` / `.all.log` files and incrementally flushes them to disk. On slow devices or when the queue is full, files or individual diagnostic entries may be skipped, but translation is never blocked. After an abnormal process exit, content that was successfully flushed remains available for identifying the last recorded stage.
 
-The default directory is `%LOCALAPPDATA%\LocaleSmith\logs\translations`. During first-run onboarding and from the “Settings” page, you can browse for or manually enter a local directory. Once saved, a change takes effect with the next translation and is written to the encrypted configuration when the application closes, together with the last valid settings for language, theme, workspace, and other options. The application retains and lists only the latest 500 sessions; cleanup matches only LocaleSmith's own naming format and does not delete other files in the directory. Logs record only the task ID, package file name, stage, progress, result, and error type. They do not record API keys, full prompts, or the parent directory of a user-selected path. Common bearer, token, and API key patterns are redacted again before being written to disk.
+The production Store package uses the logical `%LOCALAPPDATA%\LocaleSmith\logs\translations` default; unpackaged and Dev packages use the isolated `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations` root, with separate settings, credentials, Sandbox, and security locks. Windows may physically virtualize registered MSIX data under each PFN's `LocalCache\Local`, which remains package-isolated. During first-run onboarding and from the “Settings” page, you can browse for or manually enter a local directory. Once saved, a change takes effect with the next translation and is written to the encrypted configuration when the application closes, together with the last valid settings for language, theme, workspace, and other options. The application retains and lists only the latest 500 sessions; cleanup matches only LocaleSmith's own naming format and does not delete other files in the directory. Logs record only the task ID, package file name, stage, progress, result, and error type. They do not record API keys, full prompts, or the parent directory of a user-selected path. Common bearer, token, and API key patterns are redacted again before being written to disk.
 
 ## Quick Start
 
@@ -144,7 +168,7 @@ The standalone stdio MCP Host is maintained as the `CRTech.LocaleSmith.McpHost` 
 | .NET SDK | `10.0.302`, pinned by `global.json` |
 | Rust | Repository toolchain `1.97.1` (MSVC), including `rustfmt` and `clippy` |
 | Windows SDK | `10.0.26100`, with MSVC / C++ build tools installed |
-| UI dependencies | Windows App SDK `2.3.1` and CommunityToolkit.Mvvm `8.4.2`, restored through NuGet |
+| UI dependencies | Windows App SDK `2.3.1` and CommunityToolkit.Mvvm `8.4.2` are restored through NuGet; running the unpackaged WinUI app also requires Windows App Runtime `2.3.1` to be registered |
 | MSIX build | Requires Visual Studio Developer PowerShell with Desktop Bridge / WAP targets |
 
 ### Build from source
@@ -155,7 +179,7 @@ Build the Rust release DLL first, then restore and build the .NET solution:
 git clone https://github.com/DZXH-TX/LocaleSmith.git
 Set-Location LocaleSmith
 
-cargo build --manifest-path native/localesmith_core/Cargo.toml --release
+cargo build --manifest-path native/localesmith_core/Cargo.toml --locked --release
 dotnet restore LocaleSmith.slnx
 dotnet build LocaleSmith.slnx -c Release
 ```
@@ -168,8 +192,8 @@ dotnet build LocaleSmith.slnx -c Release
 
 ```powershell
 cargo fmt --manifest-path native/localesmith_core/Cargo.toml --all -- --check
-cargo clippy --manifest-path native/localesmith_core/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/localesmith_core/Cargo.toml --all-targets
+cargo clippy --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets --all-features -- -D warnings
+cargo test --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets
 
 dotnet test LocaleSmith.slnx -c Release
 dotnet format LocaleSmith.slnx --verify-no-changes --no-restore
@@ -231,6 +255,8 @@ The in-app assistant always retains `system.context` and `cli.propose`. Selectin
 
 The current public release is `v1.1.0`; its Store package version is `1.1.0.0`, its product ID is `9NP8V6WQNGT0`, and it uses the Partner Center identity `CRTech.LocaleSmith`. Microsoft Store provides the production distribution and automatic updates. The x64 MSIX attached to the GitHub Release has been verified for its Microsoft Marketplace signature chain, trusted timestamp, package identity, architecture, and SHA-256, and it does not require the self-signed test certificate used by historical development packages. The public package declares the `runFullTrust` desktop capability; commands proposed by a model still require policy revalidation and explicit user confirmation.
 
+The current source prepares the next `1.2.0.0` package but does not present it as a public release. WAP defaults to an isolated, unsigned `CRTech.LocaleSmith.Dev` validation package; an unsigned Store-identity submission candidate is produced only with explicit `PackageFlavor=Store`. Both flavors must pass unpacking, PRI, version, and complete payload-hash audits. An unsigned package is not a Store release.
+
 The official `CRTech.LocaleSmith` identity cannot update the earlier `LocaleSmith.Desktop` / `JaxI18n.Desktop` development packages in place, so Windows temporarily installs them side by side. Close the older application during the transition. The new application continues to use the per-user `%LOCALAPPDATA%\LocaleSmith` root and performs read-only discovery of redirected data belonging to any still-registered legacy package. Uninstall the development package only after confirming that the official-identity build works correctly.
 
 </details>
@@ -241,9 +267,9 @@ The following figures are the validation baseline recorded in the current source
 
 | Check | Baseline |
 | --- | --- |
-| .NET Release | `807 / 807` tests, `0` warnings, `0` errors |
+| .NET Release | `855 / 855` tests, `0` warnings, `0` errors |
 | Rust | `28 / 28` tests; `rustfmt` and `clippy -D warnings` passed |
-| Five-language resources | `661` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
+| Five-language resources | `676` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
 | Source security audit | Regression gates for local paths, archives, CLI, credentials, and migrations passed; GitHub CodeQL results depend on a fresh remote scan of the current commit, and the README does not claim zero alerts |
 
 These results demonstrate the source behavior covered by the current automation. They do not replace external penetration testing, real provider validation, or Minecraft / Loader runtime compatibility testing.
