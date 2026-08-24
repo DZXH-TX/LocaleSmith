@@ -5,12 +5,58 @@ using LocaleSmith.Core.Models;
 using LocaleSmith.Core.Services;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
+using LocaleSmith.Presentation.Services;
 using LocaleSmith.Presentation.ViewModels;
 
 namespace LocaleSmith.Presentation.Tests;
 
 public sealed class DashboardViewModelTests
 {
+    [Fact]
+    public async Task EnqueuedPackageIsMirroredIntoSharedProjectWorkspace()
+    {
+        var source = CreateSource("one", "First");
+        var queue = new ControllableQueueService();
+        var workspace = new InMemoryModProjectWorkspace();
+        var viewModel = new DashboardViewModel(
+            new RecordingSelectionService(source),
+            queue,
+            new FixedOutputPathStrategy(),
+            new InlineUiDispatcher(),
+            projectWorkspace: workspace);
+        string input = Path.GetTempFileName();
+        try
+        {
+            await viewModel.EnqueuePackagesAsync([input], TestContext.Current.CancellationToken);
+
+            PendingJob pending = Assert.Single(queue.Pending);
+            ModProjectSnapshot project = Assert.IsType<ModProjectSnapshot>(workspace.ActiveProject);
+            ModProjectTaskSnapshot task = Assert.IsType<ModProjectTaskSnapshot>(project.ActiveTask);
+            Assert.Equal(pending.JobId, task.JobId);
+            Assert.Equal(source.Id, task.ModelSourceId);
+            Assert.Equal(Path.GetFullPath(input), task.SourcePath);
+
+            pending.Completion.SetResult(new TranslationQueueResult(
+                pending.JobId,
+                pending.Request.OutputPath,
+                "examplemod",
+                "Fabric",
+                [pending.Request.OutputPath],
+                [],
+                0));
+            await WaitUntilAsync(
+                () => workspace.ActiveProject?.LatestTask?.Status == ModProjectTaskStatus.Completed,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal("examplemod", workspace.ActiveProject?.ModId);
+            Assert.Equal(ModProjectTaskStatus.Completed, workspace.ActiveProject?.LatestTask?.Status);
+        }
+        finally
+        {
+            File.Delete(input);
+        }
+    }
+
     [Fact]
     public async Task SelectionIsImmediateAndQueueReportsCompletion()
     {
@@ -221,6 +267,56 @@ public sealed class DashboardViewModelTests
         item.Fail("backend technical detail");
         Assert.Equal("任务安全失败，源文件未改变。", item.ErrorDetails);
         Assert.Equal("backend technical detail", item.TechnicalErrorDetails);
+    }
+
+    [Fact]
+    public void CompletedQueueItemDisplaysProviderReportedModelUsage()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "usage-test.jar"),
+            Path.Combine(Path.GetTempPath(), "usage-test-output.jar"));
+        var usage = ModelTokenUsage.FromProviderResponse(1_200, 300, 1_500)!;
+        item.Complete(new TranslationQueueResult(
+            item.JobId,
+            item.OutputPath,
+            "usage-test",
+            "Fabric",
+            [item.OutputPath],
+            [],
+            0,
+            ModelUsage: usage));
+
+        Assert.Same(usage, item.ModelUsage);
+        Assert.True(item.HasModelUsage);
+        Assert.Contains("1,500", item.ModelUsageSummary, StringComparison.Ordinal);
+        Assert.Contains("Tokens", item.ModelUsageSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FailedQueueItemRetainsUsageReportedBeforeRollback()
+    {
+        var item = new QueueItemViewModel(
+            Guid.NewGuid(),
+            Path.Combine(Path.GetTempPath(), "failed-usage-test.jar"),
+            Path.Combine(Path.GetTempPath(), "failed-usage-test-output.jar"));
+        var usage = new ModelTokenUsage(
+            inputTokens: 400,
+            outputTokens: 50,
+            totalTokens: 450,
+            providerCallCount: 2,
+            callsWithUsage: 1,
+            callsWithCompleteUsage: 1);
+        item.Update(new TranslationQueueProgress(
+            item.JobId,
+            PipelineStage.Failed,
+            0.5,
+            ModelUsage: usage));
+        item.Fail("simulated failure");
+
+        Assert.Same(usage, item.ModelUsage);
+        Assert.True(item.HasModelUsage);
+        Assert.Contains("1/2", item.ModelUsageSummary, StringComparison.Ordinal);
     }
 
     [Fact]

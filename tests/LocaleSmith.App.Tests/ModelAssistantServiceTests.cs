@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using LocaleSmith.App.Services;
+using LocaleSmith.Application.Models;
 using LocaleSmith.Application.Services;
 using LocaleSmith.Core.Abstractions;
 using LocaleSmith.Core.Models;
@@ -11,6 +12,7 @@ using LocaleSmith.Infrastructure.Security;
 using LocaleSmith.Mcp;
 using LocaleSmith.Presentation.Abstractions;
 using LocaleSmith.Presentation.Models;
+using LocaleSmith.Presentation.Services;
 
 namespace LocaleSmith.App.Tests;
 
@@ -172,6 +174,189 @@ public sealed class ModelAssistantServiceTests
     }
 
     [Fact]
+    public async Task ProjectContextPublicEventsAndProviderUsageReachTheUiContract()
+    {
+        var model = new SequenceModelService(new ModelResponse(
+            "Project answer.",
+            model: "provider-model",
+            inputTokens: 90,
+            outputTokens: 10,
+            totalTokens: 100));
+        using var registry = new ModelServiceRegistry();
+        registry.AddOrUpdate(model);
+        var context = new FixedContextProvider("Windows");
+        var workspace = new InMemoryModProjectWorkspace();
+        ModProjectSnapshot project = workspace.RegisterProject(Path.Combine(Path.GetTempPath(), "project-mod.jar"));
+        _ = workspace.RegisterTask(
+            project.ProjectId,
+            new ModProjectTaskRegistration(
+                project.SourceArtifactPath,
+                Path.Combine(Path.GetTempPath(), "project-mod-output.jar"),
+                model.Source.Id,
+                "zh_cn",
+                TranslationStyle.Formal,
+                "Translate the active mod and preserve placeholders."));
+        project = workspace.ActiveProject!;
+        var events = new RecordingProgress<ModelRunEvent>();
+        var assistant = new ModelAssistantService(
+            registry,
+            context,
+            new FixedConfigurationService(@"C:\sandbox"),
+            new McpModelToolExecutor(context, new PermitPolicy()),
+            new ModelToolOrchestrator());
+
+        ModelAssistantCompletion completion = await assistant.CompleteAsync(
+            model.Source.Id,
+            [new ModelMessage(ModelMessageRole.User, "Work on this project.")],
+            project,
+            events,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(100, completion.ModelUsage?.TotalTokens);
+        Assert.True(completion.ModelUsage?.IsComplete);
+        Assert.Equal("provider-model", completion.Model);
+        Assert.Equal(
+            [
+                ModelRunEventKind.ModelRoundStarted,
+                ModelRunEventKind.ModelRoundCompleted,
+                ModelRunEventKind.RunCompleted
+            ],
+            events.Values.Select(static item => item.Kind));
+        string systemPrompt = Assert.Single(model.Requests).Messages[0].Content;
+        Assert.Contains(project.ProjectId.ToString("D"), systemPrompt, StringComparison.Ordinal);
+        Assert.Contains("Translate the active mod", systemPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain(project.SourceArtifactPath, systemPrompt, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ProjectMutationToolsAreUnavailableWithoutOneTurnAuthorization()
+    {
+        var backend = new RecordingProjectBackend();
+        using var arguments = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            projectId = backend.ProjectId,
+            objective = "Translate now"
+        }));
+        var model = new SequenceModelService(
+            new ModelResponse(
+                string.Empty,
+                toolCalls: [new ModelToolCall("call-1", "translation_start", arguments.RootElement)]),
+            new ModelResponse("No mutation ran."));
+        using var registry = new ModelServiceRegistry();
+        registry.AddOrUpdate(model);
+        var context = new FixedContextProvider("Windows");
+        var assistant = new ModelAssistantService(
+            registry,
+            context,
+            new FixedConfigurationService(@"C:\sandbox"),
+            new McpModelToolExecutor(context, new PermitPolicy(), projectBackend: backend),
+            new ModelToolOrchestrator());
+        ModProjectSnapshot project = CreateProject(backend.ProjectId);
+
+        ModelAssistantCompletion completion = await assistant.CompleteAsync(
+            model.Source.Id,
+            [new ModelMessage(ModelMessageRole.User, "Describe the project only.")],
+            project,
+            progress: null,
+            allowProjectChanges: false,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("No mutation ran.", completion.Content);
+        Assert.Equal(0, backend.StartCount);
+        Assert.DoesNotContain(model.Requests[0].Tools, static tool => tool.Name == "translation_start");
+        Assert.DoesNotContain(model.Requests[0].Tools, static tool => tool.Name == "task_cancel");
+        Assert.Contains(model.Requests[0].Tools, static tool => tool.Name == "archive_inspect");
+    }
+
+    [Fact]
+    public async Task AuthorizedTranslationBindsCapturedProjectAndAssistantModelSource()
+    {
+        var backend = new RecordingProjectBackend();
+        using var arguments = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            projectId = Guid.NewGuid(),
+            objective = "Translate the selected project",
+            modelSourceId = "attacker-selected-source",
+            targetLanguage = "ja_jp",
+            style = "informal"
+        }));
+        var model = new SequenceModelService(
+            new ModelResponse(
+                string.Empty,
+                toolCalls: [new ModelToolCall("call-1", "translation_start", arguments.RootElement)]),
+            new ModelResponse("Translation accepted."));
+        using var registry = new ModelServiceRegistry();
+        registry.AddOrUpdate(model);
+        var context = new FixedContextProvider("Windows");
+        var assistant = new ModelAssistantService(
+            registry,
+            context,
+            new FixedConfigurationService(@"C:\sandbox"),
+            new McpModelToolExecutor(context, new PermitPolicy(), projectBackend: backend),
+            new ModelToolOrchestrator());
+
+        await assistant.CompleteAsync(
+            model.Source.Id,
+            [new ModelMessage(ModelMessageRole.User, "Start this translation.")],
+            CreateProject(backend.ProjectId),
+            progress: null,
+            allowProjectChanges: true,
+            TestContext.Current.CancellationToken);
+
+        TranslationMcpStartRequest request = Assert.IsType<TranslationMcpStartRequest>(backend.LastStartRequest);
+        Assert.Equal(1, backend.StartCount);
+        Assert.Equal(backend.ProjectId, request.ProjectId);
+        Assert.Equal(model.Source.Id, request.ModelSourceId);
+        Assert.Equal("ja_jp", request.TargetLanguage);
+        Assert.Equal("informal", request.Style);
+    }
+
+    [Fact]
+    public async Task ProjectToolsRemainBoundWhenGlobalActiveProjectChangesMidTurn()
+    {
+        var backend = new RecordingProjectBackend
+        {
+            ActiveProjectId = Guid.NewGuid()
+        };
+        using var emptyArguments = JsonDocument.Parse("{}");
+        using var taskArguments = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            taskId = Guid.NewGuid()
+        }));
+        var model = new SequenceModelService(
+            new ModelResponse(
+                string.Empty,
+                toolCalls: [new ModelToolCall("call-1", "project_get_active", emptyArguments.RootElement)]),
+            new ModelResponse(
+                string.Empty,
+                toolCalls: [new ModelToolCall("call-2", "task_cancel", taskArguments.RootElement)]),
+            new ModelResponse("Scoped operations complete."));
+        using var registry = new ModelServiceRegistry();
+        registry.AddOrUpdate(model);
+        var context = new FixedContextProvider("Windows");
+        var assistant = new ModelAssistantService(
+            registry,
+            context,
+            new FixedConfigurationService(@"C:\sandbox"),
+            new McpModelToolExecutor(context, new PermitPolicy(), projectBackend: backend),
+            new ModelToolOrchestrator());
+
+        await assistant.CompleteAsync(
+            model.Source.Id,
+            [new ModelMessage(ModelMessageRole.User, "Cancel the captured project's task.")],
+            CreateProject(backend.ProjectId),
+            progress: null,
+            allowProjectChanges: true,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(backend.ProjectId, backend.ScopedCancelProjectId);
+        Assert.Equal(0, backend.LegacyCancelCount);
+        string projectToolResult = model.Requests[1].Messages[^1].Content;
+        Assert.Contains(backend.ProjectId.ToString("D"), projectToolResult, StringComparison.Ordinal);
+        Assert.DoesNotContain(backend.ActiveProjectId.ToString("D"), projectToolResult, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ConversationBeyondFormerCountAndCharacterLimitsIsForwardedInFull()
     {
         var model = new SequenceModelService(new ModelResponse("accepted"));
@@ -294,6 +479,131 @@ public sealed class ModelAssistantServiceTests
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(value);
         }
+    }
+
+    private sealed class RecordingProgress<T> : IProgress<T>
+    {
+        public List<T> Values { get; } = [];
+
+        public void Report(T value) => Values.Add(value);
+    }
+
+    private static ModProjectSnapshot CreateProject(Guid projectId) => new(
+        projectId,
+        Path.Combine(Path.GetTempPath(), "scoped-project.jar"),
+        "scoped-project",
+        "Fabric",
+        [],
+        DateTimeOffset.UtcNow,
+        DateTimeOffset.UtcNow);
+
+    private sealed class RecordingProjectBackend : IProjectMcpBackend
+    {
+        public Guid ProjectId { get; } = Guid.NewGuid();
+
+        public Guid ActiveProjectId { get; init; }
+
+        public int StartCount { get; private set; }
+
+        public int LegacyCancelCount { get; private set; }
+
+        public Guid? ScopedCancelProjectId { get; private set; }
+
+        public TranslationMcpStartRequest? LastStartRequest { get; private set; }
+
+        public ValueTask<ProjectMcpSnapshot?> GetActiveProjectAsync(
+            CancellationToken cancellationToken = default)
+        {
+            Guid activeProjectId = ActiveProjectId == Guid.Empty ? ProjectId : ActiveProjectId;
+            return ValueTask.FromResult<ProjectMcpSnapshot?>(new ProjectMcpSnapshot(
+                activeProjectId,
+                "global-active.jar",
+                "global-active",
+                "Fabric",
+                null,
+                null));
+        }
+
+        public ValueTask<ProjectMcpSnapshot?> GetProjectAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<ProjectMcpSnapshot?>(projectId == ProjectId
+                ? new ProjectMcpSnapshot(ProjectId, "scoped-project.jar", "scoped-project", "Fabric", null, null)
+                : null);
+
+        public ValueTask<ArchiveMcpInspection> InspectArchiveAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(new ArchiveMcpInspection(
+                projectId,
+                "scoped-project.jar",
+                "scoped-project",
+                "Fabric",
+                1,
+                1,
+                "none",
+                false,
+                []));
+
+        public ValueTask<TaskMcpSnapshot> StartTranslationAsync(
+            TranslationMcpStartRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            StartCount++;
+            LastStartRequest = request;
+            return ValueTask.FromResult(CreateTask(request.ProjectId, request.Objective));
+        }
+
+        public ValueTask<TaskMcpSnapshot?> GetTaskAsync(
+            Guid taskId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<TaskMcpSnapshot?>(CreateTask(ProjectId, "status"));
+
+        public ValueTask<TaskMcpSnapshot?> GetTaskAsync(
+            Guid projectId,
+            Guid taskId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<TaskMcpSnapshot?>(projectId == ProjectId
+                ? CreateTask(projectId, "status")
+                : null);
+
+        public ValueTask<TaskMcpSnapshot> CancelTaskAsync(
+            Guid taskId,
+            CancellationToken cancellationToken = default)
+        {
+            LegacyCancelCount++;
+            return ValueTask.FromResult(CreateTask(ActiveProjectId, "cancel"));
+        }
+
+        public ValueTask<TaskMcpSnapshot> CancelTaskAsync(
+            Guid projectId,
+            Guid taskId,
+            CancellationToken cancellationToken = default)
+        {
+            ScopedCancelProjectId = projectId;
+            return ValueTask.FromResult(CreateTask(projectId, "cancel"));
+        }
+
+        private static TaskMcpSnapshot CreateTask(Guid projectId, string objective) => new(
+            Guid.NewGuid(),
+            projectId,
+            Guid.NewGuid(),
+            objective,
+            "assistant-model",
+            "zh_CN",
+            "Formal",
+            "Queued",
+            0,
+            "Queued",
+            null,
+            null,
+            [],
+            null,
+            null,
+            null,
+            null,
+            0,
+            false);
     }
 
     private sealed class FixedConfigurationService(string sandboxPath) : IAppConfigurationService

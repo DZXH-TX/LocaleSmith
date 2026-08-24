@@ -1,3 +1,4 @@
+using LocaleSmith.Application.Models;
 using LocaleSmith.Core.Abstractions;
 using LocaleSmith.Core.Models;
 
@@ -23,10 +24,18 @@ public sealed class ModelToolOrchestrator
         _maximumRounds = maximumRounds;
     }
 
+    public Task<ModelResponse> CompleteAsync(
+        IModelService service,
+        ModelRequest request,
+        IModelToolExecutor toolExecutor,
+        CancellationToken cancellationToken = default) =>
+        CompleteAsync(service, request, toolExecutor, progress: null, cancellationToken);
+
     public async Task<ModelResponse> CompleteAsync(
         IModelService service,
         ModelRequest request,
         IModelToolExecutor toolExecutor,
+        IProgress<ModelRunEvent>? progress,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -79,139 +88,223 @@ public sealed class ModelToolOrchestrator
 
         var seenCallIds = new HashSet<string>(StringComparer.Ordinal);
         var totalCalls = 0;
-        var inputTokens = 0;
-        var outputTokens = 0;
-        var inputKnown = false;
-        var outputKnown = false;
+        ModelTokenUsage usage = ModelTokenUsage.Empty;
+        var eventSequence = 0;
+        var currentRound = 0;
+        var providerCallInFlight = false;
 
-        for (var round = 0; round < _maximumRounds; round++)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var roundRequest = new ModelRequest(
-                messages,
-                request.Temperature,
-                request.MaxTokens,
-                exposedTools);
-            ModelResponse response = await service
-                .CompleteAsync(roundRequest, cancellationToken)
-                .ConfigureAwait(false);
-            if (response.Content.Length > MaximumAssistantContentCharacters)
+            for (var round = 0; round < _maximumRounds; round++)
             {
-                throw new ModelServiceException(
-                    $"The model response exceeds {MaximumAssistantContentCharacters} characters.");
-            }
-
-            if (response.ReasoningContent is { Length: > MaximumReasoningContentCharacters })
-            {
-                throw new ModelServiceException(
-                    $"The model reasoning content exceeds {MaximumReasoningContentCharacters} characters.");
-            }
-
-            Accumulate(response.InputTokens, ref inputTokens, ref inputKnown);
-            Accumulate(response.OutputTokens, ref outputTokens, ref outputKnown);
-
-            if (response.ToolCalls.Count == 0)
-            {
-                return new ModelResponse(
-                    response.Content,
-                    response.Model,
-                    inputKnown ? inputTokens : null,
-                    outputKnown ? outputTokens : null,
-                    reasoningContent: response.ReasoningContent);
-            }
-
-            totalCalls = checked(totalCalls + response.ToolCalls.Count);
-            if (totalCalls > MaximumTotalCalls)
-            {
-                throw new ModelServiceException(
-                    $"The model requested more than {MaximumTotalCalls} tool calls in one conversation.");
-            }
-
-            foreach (ModelToolCall call in response.ToolCalls)
-            {
-                if (!seenCallIds.Add(call.Id))
+                cancellationToken.ThrowIfCancellationRequested();
+                currentRound = round + 1;
+                Report(
+                    progress,
+                    ref eventSequence,
+                    ModelRunEventKind.ModelRoundStarted,
+                    currentRound);
+                var roundRequest = new ModelRequest(
+                    messages,
+                    request.Temperature,
+                    request.MaxTokens,
+                    exposedTools);
+                providerCallInFlight = true;
+                ModelResponse response = await service
+                    .CompleteAsync(roundRequest, cancellationToken)
+                    .ConfigureAwait(false);
+                providerCallInFlight = false;
+                usage = usage.AddProviderCall(response.Usage);
+                Report(
+                    progress,
+                    ref eventSequence,
+                    ModelRunEventKind.ModelRoundCompleted,
+                    currentRound,
+                    usage: response.Usage ?? ModelTokenUsage.MissingProviderCall);
+                if (response.Content.Length > MaximumAssistantContentCharacters)
                 {
-                    throw new ModelServiceException($"The model reused tool-call id '{call.Id}'.");
+                    throw new ModelServiceException(
+                        $"The model response exceeds {MaximumAssistantContentCharacters} characters.");
                 }
-            }
 
-            AddMessageWithinBudget(
-                messages,
-                new ModelMessage(
-                    ModelMessageRole.Assistant,
-                    response.Content,
-                    response.ToolCalls,
-                    reasoningContent: response.ReasoningContent),
-                ref transcriptCharacters);
-            foreach (ModelToolCall call in response.ToolCalls)
-            {
-                ModelToolResult result;
-                if (!availableTools.ContainsKey(call.Name) || !exposedTools.Any(tool => tool.Name == call.Name))
+                if (response.ReasoningContent is { Length: > MaximumReasoningContentCharacters })
                 {
-                    result = new ModelToolResult(
-                        call.Id,
-                        call.Name,
-                        "The requested tool is not available in this conversation.",
-                        IsError: true);
+                    throw new ModelServiceException(
+                        $"The model reasoning content exceeds {MaximumReasoningContentCharacters} characters.");
                 }
-                else
+
+                if (response.ToolCalls.Count == 0)
                 {
-                    try
+                    Report(
+                        progress,
+                        ref eventSequence,
+                        ModelRunEventKind.RunCompleted,
+                        currentRound,
+                        usage: usage);
+                    return new ModelResponse(
+                        response.Content,
+                        response.Model,
+                        reasoningContent: response.ReasoningContent,
+                        usage: usage);
+                }
+
+                totalCalls = checked(totalCalls + response.ToolCalls.Count);
+                if (totalCalls > MaximumTotalCalls)
+                {
+                    throw new ModelServiceException(
+                        $"The model requested more than {MaximumTotalCalls} tool calls in one conversation.");
+                }
+
+                foreach (ModelToolCall call in response.ToolCalls)
+                {
+                    if (!seenCallIds.Add(call.Id))
                     {
-                        result = (await toolExecutor
-                                .ExecuteAsync(call, cancellationToken)
-                                .ConfigureAwait(false))
-                            .Normalize();
-                        if (!string.Equals(result.ToolCallId, call.Id, StringComparison.Ordinal) ||
-                            !string.Equals(result.ToolName, call.Name, StringComparison.Ordinal))
-                        {
-                            throw new InvalidOperationException("The tool executor returned a mismatched correlation id or name.");
-                        }
+                        throw new ModelServiceException($"The model reused tool-call id '{call.Id}'.");
                     }
-                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                    {
-                        throw;
-                    }
-                    catch (Exception exception) when (
-                        exception is not OutOfMemoryException and
-                        not AccessViolationException)
+                }
+
+                AddMessageWithinBudget(
+                    messages,
+                    new ModelMessage(
+                        ModelMessageRole.Assistant,
+                        response.Content,
+                        response.ToolCalls,
+                        reasoningContent: response.ReasoningContent),
+                    ref transcriptCharacters);
+                foreach (ModelToolCall call in response.ToolCalls)
+                {
+                    Report(
+                        progress,
+                        ref eventSequence,
+                        ModelRunEventKind.ToolStarted,
+                        currentRound,
+                        call.Name);
+                    ModelToolResult result;
+                    if (!availableTools.ContainsKey(call.Name) || !exposedTools.Any(tool => tool.Name == call.Name))
                     {
                         result = new ModelToolResult(
                             call.Id,
                             call.Name,
-                            $"Tool execution failed: {exception.GetType().Name}.",
+                            "The requested tool is not available in this conversation.",
                             IsError: true);
                     }
+                    else
+                    {
+                        try
+                        {
+                            result = (await toolExecutor
+                                    .ExecuteAsync(call, cancellationToken)
+                                    .ConfigureAwait(false))
+                                .Normalize();
+                            if (!string.Equals(result.ToolCallId, call.Id, StringComparison.Ordinal) ||
+                                !string.Equals(result.ToolName, call.Name, StringComparison.Ordinal))
+                            {
+                                throw new InvalidOperationException("The tool executor returned a mismatched correlation id or name.");
+                            }
+                        }
+                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (Exception exception) when (
+                            exception is not OutOfMemoryException and
+                            not AccessViolationException)
+                        {
+                            result = new ModelToolResult(
+                                call.Id,
+                                call.Name,
+                                $"Tool execution failed: {exception.GetType().Name}.",
+                                IsError: true);
+                        }
+                    }
+
+                    Report(
+                        progress,
+                        ref eventSequence,
+                        result.IsError ? ModelRunEventKind.ToolFailed : ModelRunEventKind.ToolCompleted,
+                        currentRound,
+                        call.Name);
+                    string boundedContent = result.Content.Length <= MaximumToolResultCharacters
+                        ? result.Content
+                        : string.Concat(result.Content.AsSpan(0, MaximumToolResultCharacters), "\n[tool result truncated]");
+                    AddMessageWithinBudget(
+                        messages,
+                        new ModelMessage(
+                            ModelMessageRole.Tool,
+                            boundedContent,
+                            toolCallId: call.Id,
+                            toolName: call.Name,
+                            toolResultIsError: result.IsError),
+                        ref transcriptCharacters);
                 }
-
-                string boundedContent = result.Content.Length <= MaximumToolResultCharacters
-                    ? result.Content
-                    : string.Concat(result.Content.AsSpan(0, MaximumToolResultCharacters), "\n[tool result truncated]");
-                AddMessageWithinBudget(
-                    messages,
-                    new ModelMessage(
-                        ModelMessageRole.Tool,
-                        boundedContent,
-                        toolCallId: call.Id,
-                        toolName: call.Name,
-                        toolResultIsError: result.IsError),
-                    ref transcriptCharacters);
             }
-        }
 
-        throw new ModelServiceException(
-            $"The model did not finish after the configured {_maximumRounds} tool-call rounds.");
+            throw new ModelServiceException(
+                $"The model did not finish after the configured {_maximumRounds} tool-call rounds.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (providerCallInFlight)
+            {
+                usage = usage.AddProviderCall(null);
+            }
+
+            Report(
+                progress,
+                ref eventSequence,
+                ModelRunEventKind.RunCancelled,
+                currentRound,
+                usage: usage);
+            throw;
+        }
+        catch (Exception exception) when (
+            exception is not OutOfMemoryException and
+            not AccessViolationException)
+        {
+            if (providerCallInFlight)
+            {
+                usage = usage.AddProviderCall(null);
+            }
+
+            Report(
+                progress,
+                ref eventSequence,
+                ModelRunEventKind.RunFailed,
+                currentRound,
+                usage: usage);
+            throw;
+        }
     }
 
-    private static void Accumulate(int? value, ref int total, ref bool known)
+    private static void Report(
+        IProgress<ModelRunEvent>? progress,
+        ref int sequence,
+        ModelRunEventKind kind,
+        int round,
+        string? toolName = null,
+        ModelTokenUsage? usage = null)
     {
-        if (value is null)
+        if (progress is null)
         {
             return;
         }
 
-        total = checked(total + value.Value);
-        known = true;
+        var modelEvent = new ModelRunEvent(
+            checked(++sequence),
+            kind,
+            round,
+            toolName,
+            usage);
+        try
+        {
+            progress.Report(modelEvent);
+        }
+        catch (Exception exception) when (
+            exception is not OutOfMemoryException and
+            not AccessViolationException)
+        {
+            // Observability is best effort and must never change the model or tool result.
+        }
     }
 
     private static void AddMessageWithinBudget(

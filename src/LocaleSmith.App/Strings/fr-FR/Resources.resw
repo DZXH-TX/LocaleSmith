@@ -196,7 +196,7 @@
   <data name="SecuritySectionTitle.Text" xml:space="preserve"><value>Périmètre de sécurité CLI</value></data>
   <data name="SettingsSandboxPath.Header" xml:space="preserve"><value>Racine autorisée du bac à sable</value></data>
   <data name="SettingsSecurityHelp.Text" xml:space="preserve"><value>La stratégie conserve toujours la racine temporaire du système et refuse les racines de lecteur, les répertoires système, les chemins de réanalyse, les délais excessifs et les commandes interdites.</value></data>
-  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>L’outil intégré d’exécution CLI MCP est masqué et désactivé par défaut ; seuls le contexte et les fonctionnalités en lecture seule sont activés.</value></data>
+  <data name="McpCliDisabledHelp.Text" xml:space="preserve"><value>L’outil d’exécution CLI MCP reste toujours masqué et désactivé ; les mutations du projet ne sont activées que si l’utilisateur autorise explicitement le tour actuel de l’assistant.</value></data>
   <data name="SaveSettingsButton.Content" xml:space="preserve"><value>Enregistrer les paramètres</value></data>
   <data name="CliConfirmationDialog.Title" xml:space="preserve"><value>Commande proposée par le modèle</value></data>
   <data name="CliConfirmationDialog.PrimaryButtonText" xml:space="preserve"><value>Exécuter la commande</value></data>
@@ -230,7 +230,8 @@
   <data name="OnboardingOllamaAddressInvalid" xml:space="preserve"><value>Saisissez une adresse Ollama HTTP ou HTTPS absolue.</value></data>
   <data name="OnboardingOllamaHttpBlocked" xml:space="preserve"><value>Le protocole HTTP non chiffré n’est autorisé que pour un service Ollama en boucle locale.</value></data>
   <data name="OnboardingModelRequired" xml:space="preserve"><value>Saisissez le nom d’un modèle Ollama installé.</value></data>
-  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>Saisissez une adresse HTTPS absolue pour le fournisseur réseau sélectionné.</value></data>
+  <data name="OnboardingNetworkAddressInvalid" xml:space="preserve"><value>Saisissez une adresse HTTPS absolue, ou une adresse HTTP /v1 OpenAI-compatible en boucle locale.</value></data>
+  <data name="OnboardingLoopbackOpenAiV1Required" xml:space="preserve"><value>Les sources HTTP OpenAI-compatibles en boucle locale doivent utiliser une adresse de base /v1 explicite.</value></data>
   <data name="OnboardingNetworkModelRequired" xml:space="preserve"><value>Saisissez un nom de modèle réseau.</value></data>
   <data name="OnboardingNetworkApiKeyRequired" xml:space="preserve"><value>Saisissez la clé API du fournisseur sélectionné.</value></data>
   <data name="QueueStatusQueued" xml:space="preserve"><value>En attente</value></data>
@@ -303,6 +304,12 @@
   <data name="QueueStageTimingStarted" xml:space="preserve"><value>Démarrée à {0:t}</value></data>
   <data name="QueueStageTimingCompleted" xml:space="preserve"><value>{0:t}–{1:t} ({2})</value></data>
   <data name="QueueStageDurationSeconds" xml:space="preserve"><value>{0:0.#} s</value></data>
+  <data name="QueueDefaultObjective" xml:space="preserve"><value>Traduire {0} en {1} avec {2}.</value></data>
+  <data name="QueueUsageNoModelCalls" xml:space="preserve"><value>Jetons : aucun appel au modèle n’était nécessaire ; toutes les traductions ont été réutilisées depuis la mémoire vérifiée.</value></data>
+  <data name="QueueUsageNoCompletedCalls" xml:space="preserve"><value>Jetons : aucun appel au fournisseur ne s’est terminé avant la fin de la tâche.</value></data>
+  <data name="QueueUsageUnavailable" xml:space="preserve"><value>Jetons : le fournisseur n’a pas renvoyé d’utilisation pour {0} appel(s).</value></data>
+  <data name="QueueUsageComplete" xml:space="preserve"><value>Jetons · entrée {0} · sortie {1} · total {2} · {3} appel(s) au fournisseur</value></data>
+  <data name="QueueUsagePartial" xml:space="preserve"><value>Utilisation partielle des jetons · entrée {0} · sortie {1} · total déclaré {2} · {3}/{4} appel(s) complets</value></data>
   <data name="QueueCancelling" xml:space="preserve"><value>Annulation… la restauration se terminera avant l’arrêt de la tâche.</value></data>
   <data name="ModelSourcesLoadFailed" xml:space="preserve"><value>Impossible de charger les sources de modèles : {0}</value></data>
   <data name="ModelSourceSaved" xml:space="preserve"><value>Source de modèle enregistrée. La clé API a été déplacée vers Windows Credential Manager.</value></data>
@@ -318,7 +325,8 @@
   <data name="ModelSourceDeleteFailed" xml:space="preserve"><value>Impossible de supprimer la source de modèle : {0}</value></data>
   <data name="ModelSourceFieldsRequired" xml:space="preserve"><value>Le nom d’affichage et le nom du modèle sont requis.</value></data>
   <data name="ModelSourceAddressInvalid" xml:space="preserve"><value>Saisissez une adresse de service HTTP ou HTTPS absolue.</value></data>
-  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>Les sources de modèles distantes doivent utiliser HTTPS ; HTTP n’est autorisé que pour Ollama en boucle locale.</value></data>
+  <data name="ModelSourceHttpsRequired" xml:space="preserve"><value>Les sources de modèles distantes doivent utiliser HTTPS ; HTTP n’est autorisé que pour les services en boucle locale.</value></data>
+  <data name="ModelSourceLoopbackOpenAiV1Required" xml:space="preserve"><value>Les sources HTTP OpenAI-compatibles en boucle locale doivent utiliser une adresse de base /v1 explicite.</value></data>
   <data name="ModelPresetDeepSeekHint" xml:space="preserve"><value>DeepSeek accepte l’URL de base de l’hôte ; les entrées /v1 et chat/completions complètes sont normalisées.</value></data>
   <data name="ModelPresetQwenHint" xml:space="preserve"><value>Le mode par défaut est la tarification à l’usage en Chine. Remplacez-le par le point de terminaison correspondant à l’espace de travail, à la région ou à l’offre si nécessaire.</value></data>
   <data name="ModelPresetXiaomiMimoHint" xml:space="preserve"><value>Pour Xiaomi MiMo Token Plan, remplacez le point de terminaison par https://token-plan-cn.xiaomimimo.com/v1.</value></data>
@@ -373,18 +381,24 @@
   <data name="SettingsRestartBlockedByActiveTranslations" xml:space="preserve"><value>Attendez la fin des tâches de traduction actives ou annulez-les avant de redémarrer l’application.</value></data>
   <data name="SettingsNavigationLabel" xml:space="preserve"><value>Paramètres</value></data>
   <data name="CliDiagnosticCreateFailed" xml:space="preserve"><value>Impossible d’ouvrir l’examen de la commande : {0}</value></data>
-  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>Assistant de modèle</value></data>
-  <data name="AssistantTitle.Text" xml:space="preserve"><value>Assistant de modèle et de terminal</value></data>
-  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Préparez des diagnostics pour l’environnement Windows et le shell actuels. Chaque commande doit faire l’objet d’un examen et d’une confirmation distincts.</value></data>
+  <data name="AssistantNavigationItem.Content" xml:space="preserve"><value>Assistant de projet de mod</value></data>
+  <data name="AssistantTitle.Text" xml:space="preserve"><value>Assistant de projet de mod</value></data>
+  <data name="AssistantSubtitle.Text" xml:space="preserve"><value>Conservez une conversation distincte pour chaque projet de mod, inspectez les archives et gérez les tâches de traduction avec de véritables outils MCP limités au projet, puis consultez l’activité publique de traitement. Le raisonnement interne privé n’est jamais affiché.</value></data>
+  <data name="AssistantProjectSelector.Header" xml:space="preserve"><value>Contexte du projet de mod</value></data>
+  <data name="AssistantProjectSelector.AutomationProperties.Name" xml:space="preserve"><value>Projet de mod utilisé par l’assistant</value></data>
+  <data name="AssistantAllowProjectChanges.Content" xml:space="preserve"><value>Autoriser ce message à démarrer ou annuler des tâches de traduction du projet</value></data>
+  <data name="AssistantAllowProjectChanges.AutomationProperties.Name" xml:space="preserve"><value>Autoriser les modifications du projet pour ce message</value></data>
   <data name="AssistantModelSelector.Header" xml:space="preserve"><value>Modèle pour cette demande</value></data>
   <data name="AssistantModelSelector.AutomationProperties.Name" xml:space="preserve"><value>Source de modèle utilisée par l’assistant</value></data>
   <data name="AssistantToolBoundary.Title" xml:space="preserve"><value>Périmètre de sécurité des outils</value></data>
-  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>Le modèle peut lire un contexte système épuré et soumettre des brouillons de commandes. Il ne peut ni exécuter des commandes ni émettre de jetons d’approbation.</value></data>
+  <data name="AssistantToolBoundary.Message" xml:space="preserve"><value>Les outils de projet agissent uniquement sur le mod sélectionné et n’exposent qu’une activité publique épurée. Les arguments, résultats bruts et raisonnements internes privés restent masqués. Toute commande nécessite toujours un examen et une confirmation distincts.</value></data>
   <data name="AssistantError.Title" xml:space="preserve"><value>Échec de la demande à l’assistant</value></data>
   <data name="AssistantStatus.Title" xml:space="preserve"><value>État de l’assistant</value></data>
   <data name="AssistantConversationList.AutomationProperties.Name" xml:space="preserve"><value>Conversation avec l’assistant de modèle</value></data>
+  <data name="AssistantActiveProjectLabel.Text" xml:space="preserve"><value>Projet actif</value></data>
+  <data name="AssistantProcessLabel.Text" xml:space="preserve"><value>Activité publique de traitement</value></data>
   <data name="AssistantEmptyTitle.Text" xml:space="preserve"><value>Commencez par une question précise</value></data>
-  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Posez une question sur la localisation de mods, la structure des paquets, l’environnement de terminal actuel ou une commande de diagnostic sécurisée. Les commandes ne sont jamais exécutées automatiquement.</value></data>
+  <data name="AssistantEmptyBody.Text" xml:space="preserve"><value>Sélectionnez un projet de mod pour restaurer sa conversation, inspecter son archive et lancer ou suivre ses tâches de traduction, ou utilisez l’assistant général pour le terminal. L’activité publique des outils est affichée, jamais le raisonnement interne privé.</value></data>
   <data name="AssistantDraft.Header" xml:space="preserve"><value>Message</value></data>
   <data name="AssistantDraft.PlaceholderText" xml:space="preserve"><value>Exemple : préparer une vérification en lecture seule de la version de Java pour mon shell actuel</value></data>
   <data name="AssistantDraft.AutomationProperties.Name" xml:space="preserve"><value>Message destiné à l’assistant de modèle</value></data>
@@ -405,8 +419,40 @@
   <data name="AssistantRequestFailed" xml:space="preserve"><value>La demande à l’assistant a échoué. Vérifiez la source de modèle sélectionnée et réessayez.</value></data>
   <data name="AssistantRequestFailedWithDetails" xml:space="preserve"><value>La demande à l’assistant a échoué : {0}</value></data>
   <data name="AssistantCleared" xml:space="preserve"><value>Conversation effacée.</value></data>
-  <data name="AssistantModelChangedConversationCleared" xml:space="preserve"><value>La source de modèle a changé. La conversation précédente a été effacée afin d’éviter toute divulgation entre fournisseurs.</value></data>
   <data name="AssistantCliReviewFailed" xml:space="preserve"><value>Impossible d’ouvrir la proposition de commande pour examen. Rien n’a été exécuté.</value></data>
+  <data name="AssistantUsageUnknownModel" xml:space="preserve"><value>modèle</value></data>
+  <data name="AssistantUsageUnavailable" xml:space="preserve"><value>{0} n’a renvoyé aucune utilisation de jetons pour {1} appel(s) au fournisseur.</value></data>
+  <data name="AssistantUsageComplete" xml:space="preserve"><value>{0} · entrée {1} · sortie {2} · total {3} jetons · {4} appel(s) au fournisseur</value></data>
+  <data name="AssistantUsagePartial" xml:space="preserve"><value>{0} a renvoyé une utilisation partielle · entrée {1} · sortie {2} · total déclaré {3} · {4}/{5} appel(s) complets</value></data>
+  <data name="AssistantActivityModelStarted" xml:space="preserve"><value>Demande au modèle · tour {0}</value></data>
+  <data name="AssistantActivityModelCompleted" xml:space="preserve"><value>Le tour {0} du modèle a répondu</value></data>
+  <data name="AssistantActivityToolStarted" xml:space="preserve"><value>Exécution de {0}</value></data>
+  <data name="AssistantActivityToolCompleted" xml:space="preserve"><value>{0} terminé</value></data>
+  <data name="AssistantActivityToolFailed" xml:space="preserve"><value>{0} a été refusé ou a échoué</value></data>
+  <data name="AssistantActivityCancelled" xml:space="preserve"><value>Demande annulée</value></data>
+  <data name="AssistantActivityFailed" xml:space="preserve"><value>Échec de la demande</value></data>
+  <data name="AssistantActivityComplete" xml:space="preserve"><value>Réponse terminée</value></data>
+  <data name="AssistantActivityToolSafeDetail" xml:space="preserve"><value>Les arguments et résultats bruts restent masqués ; seul l’état public de l’outil est affiché.</value></data>
+  <data name="AssistantActivityCompleteDetail" xml:space="preserve"><value>La réponse finale et l’utilisation déclarée par le fournisseur sont prêtes.</value></data>
+  <data name="AssistantActivityUsageMissing" xml:space="preserve"><value>Le fournisseur n’a pas renvoyé d’utilisation pour ce tour.</value></data>
+  <data name="AssistantActivityUsageReported" xml:space="preserve"><value>Utilisation du fournisseur reçue pour ce tour.</value></data>
+  <data name="AssistantToolSystemContext" xml:space="preserve"><value>contexte système sécurisé</value></data>
+  <data name="AssistantToolCliProposal" xml:space="preserve"><value>validation de la proposition de commande</value></data>
+  <data name="AssistantToolProjectContext" xml:space="preserve"><value>contexte du projet actif</value></data>
+  <data name="AssistantToolArchiveInspect" xml:space="preserve"><value>inspection de l’archive</value></data>
+  <data name="AssistantToolTranslationStart" xml:space="preserve"><value>traduction transactionnelle</value></data>
+  <data name="AssistantToolTaskStatus" xml:space="preserve"><value>état de la tâche</value></data>
+  <data name="AssistantToolTaskCancel" xml:space="preserve"><value>annulation de la tâche</value></data>
+  <data name="AssistantToolUnknown" xml:space="preserve"><value>outil approuvé</value></data>
+  <data name="AssistantGeneralProject" xml:space="preserve"><value>Assistant général</value></data>
+  <data name="AssistantGeneralProjectDetail" xml:space="preserve"><value>Aucun contexte de paquet ; les outils de projet sont indisponibles.</value></data>
+  <data name="AssistantModelChangedConversationPreserved" xml:space="preserve"><value>La source de modèle a changé. Chaque fournisseur conserve une conversation indépendante ; le contexte précédent a été préservé sans être divulgué.</value></data>
+  <data name="AssistantGeneralContextSelected" xml:space="preserve"><value>Assistant général sélectionné. Les outils de projet de mod sont indisponibles dans cette conversation.</value></data>
+  <data name="AssistantProjectContextSelected" xml:space="preserve"><value>Le contexte du projet a changé. Sa conversation a été restaurée sans mélanger l’historique d’un autre mod.</value></data>
+  <data name="AssistantProjectReady" xml:space="preserve"><value>{0} · prêt</value></data>
+  <data name="AssistantProjectTaskDetail" xml:space="preserve"><value>{0} · {1} · {2:P0}</value></data>
+  <data name="AssistantProjectNoObjective" xml:space="preserve"><value>Aucune tâche de traduction n’a encore été créée pour ce projet.</value></data>
+  <data name="AssistantProjectIdle" xml:space="preserve"><value>Inactif</value></data>
   <data name="CommunityNavigationItem.Content" xml:space="preserve"><value>Communauté Mod</value></data>
   <data name="CommunityTitle.Text" xml:space="preserve"><value>Communauté Mod</value></data>
   <data name="CommunitySubtitle.Text" xml:space="preserve"><value>Connectez-vous pour consulter les discussions sur les Mods dans LocaleSmith et publier en sécurité avec un jeton d’application.</value></data>
@@ -563,4 +609,61 @@
   <data name="CommunityReportNetworkError" xml:space="preserve"><value>Impossible de joindre le service de signalement. Vérifiez le réseau puis renvoyez-la.</value></data>
   <data name="CommunityReportInvalidResponseError" xml:space="preserve"><value>Le service de signalement a renvoyé une réponse inattendue. Actualisez et réessayez plus tard.</value></data>
   <data name="CommunityReportFailedError" xml:space="preserve"><value>Le signalement n’a pas pu être envoyé. Vérifiez les détails et réessayez plus tard.</value></data>
+  <data name="BillingTitle.Text" xml:space="preserve"><value>Abonnement d’accélération nationale</value></data>
+  <data name="BillingSubtitle.Text" xml:space="preserve"><value>Abonnement mensuel LocaleSmith traité par Microsoft Store. L’accès commence uniquement après vérification par le serveur MCTX.</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Title" xml:space="preserve"><value>Abonnement indisponible</value></data>
+  <data name="BillingCapabilityUnavailableInfo.Message" xml:space="preserve"><value>MCTX n’a pas activé la facturation Microsoft Store ; l’entrée d’achat est masquée.</value></data>
+  <data name="BillingLoginRequiredInfo.Title" xml:space="preserve"><value>Connectez-vous d’abord à LocaleSmith/MCTX</value></data>
+  <data name="BillingLoginRequiredInfo.Message" xml:space="preserve"><value>Votre compte et votre PAT existants doivent être vérifiés avant l’achat, la restauration ou la vérification des droits.</value></data>
+  <data name="BillingAccountLink.Content" xml:space="preserve"><value>Gérer le compte et le PAT</value></data>
+  <data name="BillingBackendUnavailableInfo.Title" xml:space="preserve"><value>Service de droits indisponible</value></data>
+  <data name="BillingBackendUnavailableInfo.Message" xml:space="preserve"><value>L’état des droits MCTX ne peut pas être confirmé ; l’achat reste désactivé.</value></data>
+  <data name="BillingStoreUnavailableInfo.Title" xml:space="preserve"><value>Produit Microsoft Store indisponible</value></data>
+  <data name="BillingStoreUnavailableInfo.Message" xml:space="preserve"><value>Utilisez LocaleSmith installé depuis Microsoft Store avec le bon compte, sans exécuter l’application en mode administrateur.</value></data>
+  <data name="BillingActiveInfo.Title" xml:space="preserve"><value>L’accélération nationale est active</value></data>
+  <data name="BillingActiveInfo.Message" xml:space="preserve"><value>Cet état vient du serveur MCTX ; un résultat Store local ne déverrouille jamais l’accès directement.</value></data>
+  <data name="BillingInactiveInfo.Title" xml:space="preserve"><value>Aucun droit actif</value></data>
+  <data name="BillingInactiveInfo.Message" xml:space="preserve"><value>Abonnez-vous ou restaurez un achat Microsoft Store existant pour vérification par le serveur.</value></data>
+  <data name="BillingTrialDisclosure.Text" xml:space="preserve"><value>Les nouveaux abonnés éligibles peuvent bénéficier d’un essai gratuit de 7 jours ; l’éligibilité et les conditions finales sont affichées par Microsoft lors de l’achat.</value></data>
+  <data name="BillingRenewalDisclosure.Text" xml:space="preserve"><value>Après un essai éligible, l’abonnement est renouvelé au prix mensuel alors affiché par Microsoft Store jusqu’à résiliation. La Chine est configurée à 30,00 CNY/mois ; l’interface d’achat fait foi.</value></data>
+  <data name="BillingRegionalPriceDisclosure.Text" xml:space="preserve"><value>Le palier de prix mondial de base est de 4,99 US$/mois. Microsoft Store affiche le prix local ; les autres marchés ne sont pas garantis à un prix fixe de 5 US$.</value></data>
+  <data name="BillingMicrosoftDisclosure.Text" xml:space="preserve"><value>Facturé par Microsoft. Gérez ou résiliez l’abonnement dans Services et abonnements de votre compte Microsoft.</value></data>
+  <data name="BillingStorePriceCaption.Text" xml:space="preserve"><value>Prix de renouvellement mensuel actuel affiché par Microsoft Store</value></data>
+  <data name="BillingPurchaseButton.Content" xml:space="preserve"><value>S’abonner avec Microsoft</value></data>
+  <data name="BillingRestoreButton.Content" xml:space="preserve"><value>Restaurer l’achat</value></data>
+  <data name="BillingRefreshButton.Content" xml:space="preserve"><value>Actualiser l’état</value></data>
+  <data name="BillingProgress.AutomationProperties.Name" xml:space="preserve"><value>Actualisation de l’état de l’abonnement</value></data>
+  <data name="BillingErrorInfo.Title" xml:space="preserve"><value>Échec de l’opération d’abonnement</value></data>
+  <data name="BillingStatusInfo.Title" xml:space="preserve"><value>État de l’abonnement</value></data>
+  <data name="BillingManageSubscriptionsLink.Content" xml:space="preserve"><value>Gérer ou résilier avec Microsoft</value></data>
+  <data name="BillingPrivacyLink.Content" xml:space="preserve"><value>Politique de confidentialité</value></data>
+  <data name="BillingPurchasePendingVerificationStatus" xml:space="preserve"><value>Microsoft a terminé l’étape d’achat. LocaleSmith vérifie les droits auprès de MCTX.</value></data>
+  <data name="BillingEntitlementVerifiedStatus" xml:space="preserve"><value>Les droits MCTX sont actifs.</value></data>
+  <data name="BillingEntitlementPendingStatus" xml:space="preserve"><value>Microsoft a signalé l’achat, mais MCTX n’a pas encore activé les droits. Utilisez Restaurer l’achat pour réessayer.</value></data>
+  <data name="BillingPurchaseCancelledStatus" xml:space="preserve"><value>L’achat Microsoft n’a pas été terminé. Aucun droit n’a changé.</value></data>
+  <data name="BillingStoreNetworkError" xml:space="preserve"><value>Microsoft Store est inaccessible. Aucun droit n’a changé.</value></data>
+  <data name="BillingStoreUnavailableError" xml:space="preserve"><value>Microsoft Store n’a pas pu terminer la demande. Aucun droit n’a changé.</value></data>
+  <data name="BillingRestoreVerifiedStatus" xml:space="preserve"><value>La vérification de l’achat a été actualisée et les droits MCTX sont actifs.</value></data>
+  <data name="BillingRestoreNoEntitlementStatus" xml:space="preserve"><value>Aucun droit MCTX actif n’a été retourné. La présence d’un achat Microsoft ne déverrouille pas l’accélération.</value></data>
+  <data name="BillingCapabilityUnavailableError" xml:space="preserve"><value>La disponibilité de l’abonnement ne peut pas être confirmée. L’achat reste désactivé.</value></data>
+  <data name="BillingCapabilityUnavailableStatus" xml:space="preserve"><value>La facturation Microsoft Store n’est pas activée par MCTX. L’achat est masqué.</value></data>
+  <data name="BillingLoginRequiredStatus" xml:space="preserve"><value>Connectez-vous au compte LocaleSmith/MCTX avec un PAT avant l’achat ou la restauration.</value></data>
+  <data name="BillingBackendUnavailableError" xml:space="preserve"><value>L’état des droits MCTX est indisponible. L’achat reste désactivé.</value></data>
+  <data name="BillingVerificationFailedError" xml:space="preserve"><value>La vérification de l’achat n’a pas abouti. Aucun droit n’a été déverrouillé ; utilisez Restaurer l’achat pour réessayer.</value></data>
+  <data name="BillingAlreadyEntitledStatus" xml:space="preserve"><value>Les droits MCTX sont déjà actifs ; l’interface d’achat Microsoft n’a pas été ouverte.</value></data>
+  <data name="BillingScopeRequiredInfo.Title" xml:space="preserve"><value>Le PAT n’autorise pas le téléchargement accéléré</value></data>
+  <data name="BillingScopeRequiredInfo.Message" xml:space="preserve"><value>Créez un PAT standard avec le scope downloads:accelerated. L’achat et l’accélération restent désactivés.</value></data>
+  <data name="BillingAcceleratedScopeRequiredStatus" xml:space="preserve"><value>Le PAT enregistré doit inclure le scope downloads:accelerated pour utiliser la facturation ou l’accélération.</value></data>
+  <data name="CommunityDownloadTitle.Text" xml:space="preserve"><value>Télécharger la version sélectionnée</value></data>
+  <data name="CommunityDefaultDownloadButton.Content" xml:space="preserve"><value>Télécharger depuis la source par défaut</value></data>
+  <data name="CommunityAcceleratedDownloadButton.Content" xml:space="preserve"><value>Utiliser l’accélération nationale</value></data>
+  <data name="CommunityAccelerationDisclosure.Text" xml:space="preserve"><value>Affiché uniquement si MCTX confirme un droit valide et récent ainsi qu’une réplique privée prête. En cas d’échec, la source par défaut est utilisée.</value></data>
+  <data name="CommunityDownloadProgress.AutomationProperties.Name" xml:space="preserve"><value>Progression du téléchargement de l’artefact</value></data>
+  <data name="CommunityCancelDownloadButton.Content" xml:space="preserve"><value>Annuler le téléchargement</value></data>
+  <data name="CommunityDownloadErrorInfo.Title" xml:space="preserve"><value>Échec du téléchargement</value></data>
+  <data name="CommunityDownloadStatusInfo.Title" xml:space="preserve"><value>État du téléchargement</value></data>
+  <data name="CommunityDownloadFallbackStatus" xml:space="preserve"><value>La source accélérée était indisponible. Le fichier a été téléchargé en toute sécurité depuis la source par défaut.</value></data>
+  <data name="CommunityDownloadCompletedStatus" xml:space="preserve"><value>Téléchargement terminé et vérification SHA-256 réussie.</value></data>
+  <data name="CommunityDownloadCancelledStatus" xml:space="preserve"><value>Téléchargement annulé. Un fichier partiel sans identifiant peut être conservé pour la reprise.</value></data>
+  <data name="CommunityDownloadFailedError" xml:space="preserve"><value>Le téléchargement ou sa vérification n’a pas abouti. Aucun artefact partiel n’a été publié.</value></data>
 </root>

@@ -104,7 +104,7 @@ public sealed record ModelSourceProfile
 
 public sealed record AppConfiguration
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     public static string GetDefaultLogDirectoryPath()
     {

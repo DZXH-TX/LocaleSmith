@@ -220,8 +220,8 @@ public sealed partial class SecureAppStateService :
         OpenAiTokenLimitParameter? networkTokenLimitParameter = null;
         if (hasNetworkConfiguration)
         {
-            if (!ModelProviderPresets.TryGet(submission.NetworkPresetId, out networkPreset) ||
-                networkPreset.Protocol != ModelProviderKind.OpenAiCompatible)
+            if (!ModelProviderPresets.TryGet(submission.NetworkPresetId, out var configuredNetworkPreset) ||
+                configuredNetworkPreset.Protocol != ModelProviderKind.OpenAiCompatible)
             {
                 throw new ArgumentException("Choose a supported network provider preset.", nameof(submission));
             }
@@ -236,9 +236,18 @@ public sealed partial class SecureAppStateService :
             }
 
             networkTokenLimitParameter = NormalizeTokenLimitParameter(
-                networkPreset.Protocol,
-                networkPreset.Id,
+                configuredNetworkPreset.Protocol,
+                configuredNetworkPreset.Id,
                 submission.NetworkTokenLimitParameter);
+            networkPreset = ModelProviderPresets.ResolveEffective(
+                configuredNetworkPreset.Protocol,
+                configuredNetworkPreset.Id,
+                submission.NetworkEndpoint);
+            ValidateWritableModelEndpoint(
+                configuredNetworkPreset.Protocol,
+                networkPreset.Id,
+                submission.NetworkEndpoint,
+                nameof(submission));
         }
 
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
@@ -412,11 +421,16 @@ public sealed partial class SecureAppStateService :
                     throw new ArgumentException("The model source identifier is invalid.", nameof(source));
                 }
 
-                var normalizedPresetId = NormalizePresetId(source.Provider, source.PresetId);
+                var normalizedPresetId = NormalizePresetId(source.Provider, source.PresetId, source.Endpoint);
                 var normalizedTokenLimitParameter = NormalizeTokenLimitParameter(
                     source.Provider,
-                    normalizedPresetId,
+                    source.PresetId,
                     source.TokenLimitParameter);
+                ValidateWritableModelEndpoint(
+                    source.Provider,
+                    normalizedPresetId,
+                    source.Endpoint,
+                    nameof(source));
 
                 var existing = _configuration.ModelSources.FirstOrDefault(item => item.Id == id);
                 var credentialReference = source.Provider == ModelProviderKind.Ollama
@@ -693,12 +707,18 @@ public sealed partial class SecureAppStateService :
     {
         ArgumentNullException.ThrowIfNull(source);
         await InitializeAsync(cancellationToken).ConfigureAwait(false);
+        var normalizedPresetId = NormalizePresetId(source.Provider, source.PresetId, source.Endpoint);
+        ValidateWritableModelEndpoint(
+            source.Provider,
+            normalizedPresetId,
+            source.Endpoint,
+            nameof(source));
         var profile = new ModelSourceProfile
         {
             Id = source.Id ?? $"connection-test-{Guid.NewGuid():N}",
             DisplayName = source.DisplayName,
             Provider = source.Provider,
-            PresetId = NormalizePresetId(source.Provider, source.PresetId),
+            PresetId = normalizedPresetId,
             TokenLimitParameter = NormalizeTokenLimitParameter(
                 source.Provider,
                 source.PresetId,
@@ -912,11 +932,23 @@ public sealed partial class SecureAppStateService :
                 throw new InvalidDataException("Model source identifiers must be valid and unique.");
             }
 
+            var endpoint = new Uri(profile.Endpoint, UriKind.Absolute);
+            var effectivePreset = ModelProviderPresets.ResolveEffective(
+                profile.Provider,
+                profile.PresetId,
+                endpoint);
+            if (!string.Equals(profile.PresetId, effectivePreset.Id, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    "Named model provider presets must use a recognized official endpoint; custom endpoints " +
+                    "must use the Custom OpenAI-compatible preset.");
+            }
+
             _ = new ModelSource(
                 profile.Id,
                 profile.DisplayName,
                 profile.Provider,
-                new Uri(profile.Endpoint, UriKind.Absolute),
+                endpoint,
                 profile.ModelName,
                 profile.CredentialReference,
                 profile.PresetId,
@@ -955,13 +987,16 @@ public sealed partial class SecureAppStateService :
         LogDirectoryPath = string.IsNullOrWhiteSpace(configuration.LogDirectoryPath)
             ? AppConfiguration.GetDefaultLogDirectoryPath()
             : EnsureLogDirectoryAllowed(configuration.LogDirectoryPath, nameof(configuration)),
-        ModelSources = configuration.ModelSources.ToArray()
+        ModelSources = configuration.ModelSources
+            .Select(LegacyDefaultPathNormalizer.NormalizeModelSourcePreset)
+            .ToArray()
     };
 
-    private static string NormalizePresetId(ModelProviderKind provider, string? presetId) =>
-        provider == ModelProviderKind.OpenAiCompatible
-            ? ModelProviderPresets.ResolveOrCustom(presetId).Id
-            : ModelProviderPresets.CustomId;
+    private static string NormalizePresetId(
+        ModelProviderKind provider,
+        string? presetId,
+        Uri endpoint) =>
+        ModelProviderPresets.ResolveEffective(provider, presetId, endpoint).Id;
 
     private static OpenAiTokenLimitParameter? NormalizeTokenLimitParameter(
         ModelProviderKind provider,
@@ -979,6 +1014,34 @@ public sealed partial class SecureAppStateService :
         return provider == ModelProviderKind.OpenAiCompatible
             ? parameter ?? ModelProviderPresets.ResolveOrCustom(presetId).DefaultTokenLimitParameter
             : null;
+    }
+
+    private static void ValidateWritableModelEndpoint(
+        ModelProviderKind provider,
+        string presetId,
+        Uri endpoint,
+        string parameterName)
+    {
+        if (!endpoint.IsAbsoluteUri ||
+            (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new ArgumentException("Model endpoints must be absolute HTTP or HTTPS URIs.", parameterName);
+        }
+
+        if (endpoint.Scheme == Uri.UriSchemeHttp && !endpoint.IsLoopback)
+        {
+            throw new ArgumentException("Remote model endpoints must use HTTPS.", parameterName);
+        }
+
+        if (provider == ModelProviderKind.OpenAiCompatible &&
+            endpoint.Scheme == Uri.UriSchemeHttp &&
+            (!string.Equals(presetId, ModelProviderPresets.CustomId, StringComparison.Ordinal) ||
+             !ModelProviderPresets.IsSupportedCustomLoopbackEndpoint(endpoint)))
+        {
+            throw new ArgumentException(
+                "Loopback HTTP OpenAI-compatible endpoints must use the Custom preset and an explicit /v1 base address.",
+                parameterName);
+        }
     }
 
     private static string EnsureUserDirectoryAllowed(string path, string parameterName)

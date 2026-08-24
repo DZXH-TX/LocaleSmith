@@ -184,9 +184,21 @@ public partial class App : Microsoft.UI.Xaml.Application
             ModPlatformClient.CreateForApplication(services.GetRequiredService<ISecretStore>()));
         builder.Services.AddSingleton<IModPlatformClient>(static services =>
             services.GetRequiredService<ModPlatformClient>());
+        builder.Services.AddSingleton<IModPlatformBillingClient>(static services =>
+            services.GetRequiredService<ModPlatformClient>());
+        builder.Services.AddSingleton(static _ => new WindowsMicrosoftStorefront(() => MainWindow));
+        builder.Services.AddSingleton<IMicrosoftStorefront>(static services =>
+            services.GetRequiredService<WindowsMicrosoftStorefront>());
         builder.Services.AddSingleton(static _ => ModPlatformArtifactDownloader.CreateForApplication());
         builder.Services.AddSingleton<IModPlatformArtifactDownloader>(static services =>
             services.GetRequiredService<ModPlatformArtifactDownloader>());
+        builder.Services.AddSingleton(static _ =>
+            ModPlatformAcceleratedArtifactDownloader.CreateForApplication());
+        builder.Services.AddSingleton<IModPlatformAcceleratedArtifactDownloader>(static services =>
+            services.GetRequiredService<ModPlatformAcceleratedArtifactDownloader>());
+        builder.Services.AddSingleton<ModPlatformArtifactDownloadCoordinator>();
+        builder.Services.AddSingleton<IModPlatformArtifactDownloadCoordinator>(static services =>
+            services.GetRequiredService<ModPlatformArtifactDownloadCoordinator>());
         builder.Services.AddSingleton<SecretStoreModPlatformCredentialService>();
         builder.Services.AddSingleton<IModPlatformCredentialService>(static services =>
             services.GetRequiredService<SecretStoreModPlatformCredentialService>());
@@ -213,7 +225,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<IAppLanguagePreferenceWriter>(
             _ => new FileAppLanguagePreferenceWriter(appDataRoot));
 
-        builder.Services.AddSingleton<IArchiveWorkspaceBackend, ArchiveWorkspaceBackend>();
+        builder.Services.AddSingleton<IArchiveScanner, NativeArchiveScanner>();
+        builder.Services.AddSingleton<IArchiveWorkspaceBackend>(static services =>
+            new ArchiveWorkspaceBackend(services.GetRequiredService<IArchiveScanner>()));
         builder.Services.AddSingleton<ITranslationMemoryStore>(_ =>
             new FileTranslationMemoryStore(translationMemoryPath, legacyTranslationMemoryPaths));
         builder.Services.AddSingleton<ITranslationEngine, ModelTranslationEngine>();
@@ -222,6 +236,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<TranslationLogService>();
         builder.Services.AddSingleton<ITranslationQueueService, PipelineTranslationQueueService>();
         builder.Services.AddSingleton<IOutputPathStrategy, DefaultOutputPathStrategy>();
+        builder.Services.AddSingleton<IModProjectWorkspace, InMemoryModProjectWorkspace>();
         builder.Services.AddSingleton<IUiTextProvider, WinUiTextProvider>();
         builder.Services.AddSingleton<IUiDispatcher>(_ =>
             new DispatcherQueueUiDispatcher(
@@ -248,10 +263,18 @@ public partial class App : Microsoft.UI.Xaml.Application
             services.GetRequiredService<SafeCliCommandPolicy>());
         builder.Services.AddSingleton<ICliRunner, SafeCliRunner>();
         builder.Services.AddSingleton<ModelToolOrchestrator>();
+        builder.Services.AddSingleton<IProjectMcpBackend, ProjectMcpBackend>();
         builder.Services.AddSingleton(static services => new McpModelToolExecutor(
             services.GetRequiredService<ISystemPromptContextProvider>(),
-            services.GetRequiredService<ICliCommandPolicy>()));
-        builder.Services.AddSingleton<IModelAssistantService, ModelAssistantService>();
+            services.GetRequiredService<ICliCommandPolicy>(),
+            projectBackend: services.GetRequiredService<IProjectMcpBackend>()));
+        builder.Services.AddSingleton<IModelAssistantService>(static services =>
+            new ModelAssistantService(
+                services.GetRequiredService<IModelServiceRegistry>(),
+                services.GetRequiredService<ISystemPromptContextProvider>(),
+                services.GetRequiredService<IAppConfigurationService>(),
+                services.GetRequiredService<McpModelToolExecutor>(),
+                services.GetRequiredService<ModelToolOrchestrator>()));
         builder.Services.AddSingleton(_ => new CliConfirmationViewModelFactory(
             _.GetRequiredService<ICliCommandPolicy>(),
             _.GetRequiredService<ICliApprovalService>(),
@@ -264,6 +287,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<DashboardViewModel>();
         builder.Services.AddSingleton<AssistantViewModel>();
         builder.Services.AddSingleton<CommunityViewModel>();
+        builder.Services.AddSingleton<MicrosoftStoreBillingViewModel>();
+        builder.Services.AddSingleton<ModArtifactDownloadViewModel>();
         builder.Services.AddSingleton<ModelSourcesViewModel>();
         builder.Services.AddSingleton<TranslationLogsViewModel>();
         builder.Services.AddSingleton<SettingsViewModel>();

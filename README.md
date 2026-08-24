@@ -63,15 +63,18 @@
 | --- | --- |
 | **安全归档扫描** | 识别路径穿越、Loader 元数据、语言资源、签名证据与受支持的 Java 字符串引用。 |
 | **增量翻译流水线** | 按内容哈希复用译文，校验占位符与结构，并在失败时回滚整个作业。 |
+| **模组项目同步** | Dashboard 将同一规范化源 artifact 作为一个进程内模组项目，向助手同步任务目标、进度、状态与产物；当前不会跨应用重启持久化项目。 |
 | **专业提示与术语** | 自动区分模组、资源包与光影包，使用独立领域提示；简体中文任务附带各自的专业术语对照表。 |
 | **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
 | **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
 | **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；也可明确选择不发送该参数。 |
 | **联机模组社区** | 可搜索和分页浏览公开模组与讨论；使用保存在 Windows Credential Manager 中的 PAT 发帖、回复和举报，并可直接查看服务条款与社区规范。 |
+| **Microsoft 订阅与安全加速** | 使用 Windows 原生 Microsoft Store 购买界面、MCTX 后端权威权益核验与一次性下载 grant；加速不可用时始终保留并回退默认下载源。 |
 | **持久化诊断日志** | 日志目录可写时，每次翻译都会尝试通过有界后台写入器持久化一对 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
 | **原生桌面体验** | 提供首次引导、处理队列、模型助手、模型源管理、日志、设置和 CLI 风险确认。 |
+| **模型活动与真实用量** | 助手显示由程序产生的模型轮次与工具活动，不展示私有推理；Provider 返回的 Token usage 会贯穿助手与翻译任务，失败/取消前已完成的调用也会保留，缺失或不完整时明确标记且绝不估算。 |
 | **凭据与配置保护** | API Key 存入 Windows Credential Manager，其他配置使用 AES-256-GCM 加密。 |
-| **受控 MCP / CLI** | 模型只能读取安全上下文并提出命令；执行必须经过策略复核和用户明确确认。 |
+| **受控 MCP / CLI** | App 内助手仅在有活动模组项目时增加受限项目工具；独立 stdio Host 仍只能读取安全上下文和提出命令，CLI 执行必须经过策略复核和用户明确确认。 |
 
 ## 支持范围
 
@@ -99,6 +102,20 @@ flowchart LR
 ```
 
 每个作业会在入队时冻结用户选择的目标语言、模型源和一种翻译风格。语言资源优先使用非目标语言的 `en_us`、`en_gb` 或其他现有 locale 作为源文；例如目标为英语但包内只有日语时，会从日语生成 `en_us`。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
+
+Dashboard 添加源 artifact 时，会按规范化源路径在当前进程内注册或复用一个模组项目，并把活动项目及其翻译任务同步到助手。助手为每个 `ProjectId + ModelSourceId` 组合保存独立会话和草稿；切换项目或模型源只恢复对应会话，不会把一个模组的历史混入另一个模组，也不会把上一 Provider 的历史发送给新 Provider。项目工作区当前仅驻留内存，应用重启后不会恢复。
+
+助手的“处理过程”只显示确定性的模型轮次开始/完成、工具开始/完成/失败与运行终态；事件不包含消息正文、工具参数/结果、路径、命令、异常文本或私有 `reasoning_content`。Provider 报告的 Token usage 会汇总到助手答复和翻译任务；任务失败或取消时，已完成 Provider 轮次的用量仍会保留，在途调用未返回 usage 时则标记为部分/不可用。只有 Provider 给出 total，或同时给出 input/output 时才显示可计算总数，不用字符数或其他启发式估算。
+
+## Microsoft Store 订阅与国内加速
+
+LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应用内订阅、显示 Microsoft 购买界面，并通过主窗口 HWND 绑定桌面模态 UI。已保存的 Partner Center 草稿为月度自动续费、符合资格的新订阅用户 7 天免费试用、全球 US$4.99/月基础价格档位并由 Store 本地化、中国市场配置 CNY 30.00/月；最终价格与试用资格以 Microsoft 购买界面为准。订阅由 Microsoft 计费，可在 [Microsoft 服务和订阅](https://account.microsoft.com/services) 中管理或取消；[隐私政策](https://dow.dzxh-tx.cn/privacy) 保持可发现。Microsoft Store 不支持“首月 CNY 24、以后 CNY 30”的原生 introductory price，客户端不会伪造该优惠。
+
+购买、恢复与刷新都要求先用现有 LocaleSmith/MCTX 账号和含 `downloads:accelerated` scope 的 PAT 登录。`Succeeded` 或 `AlreadyPurchased` 只会启动 `service-ticket → Store ID key → backend verify → entitlements`，不会直接解锁；只有后端返回精确的 `domestic_download_acceleration` 有效权益才可进入下一步。缺少 `microsoft_store_billing_v1` / `accelerated_downloads_v1`、PAT、scope、有效权益或后端新鲜核验时，购买或加速入口失败关闭。
+
+下载源发现只接受后端返回的相对默认源和 `additional_source` 判定；客户端不硬编码对象存储主机、bucket、对象 key 或长期 URL。一次性 GET/HEAD 签名 URL 只在内存和对应 HTTPS 请求中短暂存在，不进入日志、配置、诊断、剪贴板、toast、遥测或断点 sidecar；对象存储请求不携带 PAT、Cookie、Authorization、Referer 或代理凭据，也不跟随重定向。传输使用独立 HEAD 取得强 ETag，最多四路 Range + If-Range 下载，grant 过期时重新完成全套后端门控并续签，最终按 API 的 size 与 SHA-256 验证；任何授权、对象存储或完整性异常都会安全回退原有同源默认下载器。
+
+本地自动化已覆盖 capability/PAT/scope/权益拒绝矩阵、购买状态机、秘密请求正文、GET/HEAD 分离、精确 HTTPS origin、四路 Range、续签续传、无秘密断点元数据、SHA-256 与默认源回退。尚未验证真实 Partner Center 商品、购买/续费/退款/跨设备恢复、Microsoft recurrence/service ticket、PostgreSQL/Redis 权益联调或 RainS3 E2E；网站工作树目前仍把权益键写作 `domestic_acceleration`，且尚无把制品复制并验证为 ready replica 的 worker，因此客户端会坚持目标键并保持失败关闭。本次变更没有提交 Partner Center、修改网站仓库或执行生产部署。
 
 ## 翻译日志与持久化设置
 
@@ -179,10 +196,11 @@ packaging/                  x64 WAP / MSIX manifest、五语言资源和图标
 
 以下原则是产品行为的一部分，而不是可选配置：
 
-- **模型不能授权命令执行。** Provider 工具循环只允许读取安全上下文和提出命令，完整命令仍需用户查看、勾选风险确认并批准。
+- **模型不能授权命令执行。** Provider 工具循环可使用当前明确暴露的安全上下文、项目工具和命令提议工具，但完整命令仍需用户查看、勾选风险确认并批准。
 - **签名 JAR 默认只生成明确的 unsigned 副本。** 原 JAR / ZIP 始终保持不动；应用翻译队列只在独立输出中移除签名块、`SIG-*` 与失效的 manifest 摘要声明，底层调用仍可选择完全阻断，且项目绝不冒充原签名或哈希。
 - **CLI 不搜索进程 PATH。** 默认不信任任何进程型可执行文件；后续显式白名单必须使用已批准的绝对路径。私有 CLI 沙箱默认位于 `%LOCALAPPDATA%\LocaleSmith\CliSandbox`，并在创建前后检查重解析点。
 - **客户端不携带 Cloudflare 源站密钥。** `api.dzxh-tx.cn` 使用系统信任库完成普通服务器 TLS 验证；Authenticated Origin Pulls 只认证 Cloudflare 到源站的连接，其证书和私钥不得进入应用、MSIX 或仓库。
+- **Store 与下载 grant 都是秘密。** PAT、Entra service ticket、Microsoft Store ID key 和预签名 GET/HEAD URL 不写日志、配置、遥测、诊断包或持久化断点；客户端不含 Entra client secret，对象存储请求也绝不携带 MCTX Authorization/Cookie。
 - **Low IL 不等于 AppContainer。** 受限 token、私有 desktop 与 Job Object 会缩小执行面，但不会自动阻断网络，也不能阻止读取当前用户 ACL 已允许的文件。
 
 <details>
@@ -202,7 +220,7 @@ packaging/                  x64 WAP / MSIX manifest、五语言资源和图标
 <details>
 <summary><strong>模型工具与 CLI 隔离</strong></summary>
 
-MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.execute`。允许执行的命令必须来自已经批准的绝对路径，并通过绝对拒绝规则、工作目录与敏感参数检查，再绑定一次性确认 token；启动前审计不可写时不会启动进程。Kimi 的私有 `reasoning_content` 仅在同一 Kimi 工具循环内有界回放，不进入用户可见内容，也不会发送给其他 Provider。
+App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模组项目后会增加 `project.get_active`、`archive.inspect` 与 `task.status`，而 `translation.start` / `task.cancel` 只有在用户勾选“允许此条消息更改项目”的一次性授权后才会暴露。所有项目工具都绑定本轮捕获的 `ProjectId`，只接受项目/任务的不透明 ID，不接受任意主机路径；`translation.start` 还会强制使用本轮助手所选模型源，并复用真实的检查、安全解包、翻译、重打包、验证与提交事务流水线。独立 `LocaleSmith.McpHost` 没有 App project backend，因此其 stdio 目录仍只有 `system.context` 与 `cli.propose`。任何入口都不暴露 `cli.execute`；允许执行的命令仍需策略复核、一次性确认 token 与用户明确批准。Kimi 的私有 `reasoning_content` 仅在同一 Kimi 工具循环内有界回放，不进入活动时间线或用户可见内容，也不会发送给其他 Provider。
 
 </details>
 
@@ -221,9 +239,9 @@ MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.exe
 
 | 检查项 | 基线 |
 | --- | --- |
-| .NET Release | `558 / 558` tests，`0` warnings，`0` errors |
+| .NET Release | `800 / 800` tests，`0` warnings，`0` errors |
 | Rust | `27 / 27` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
-| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `485` 个 key，完全对齐 |
+| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `662` 个 key，完全对齐 |
 | 源码安全审计 | 本地路径、归档、CLI、凭据和迁移回归门通过；GitHub CodeQL 结果以当前提交的远端重扫为准，不在 README 中宣称零告警 |
 
 这些结果证明当前自动化覆盖的源码行为，不替代外部渗透测试、真实 Provider 验证或 Minecraft / Loader 运行时兼容测试。

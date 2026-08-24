@@ -1,0 +1,139 @@
+<UserControl
+    x:Class="LocaleSmith.App.Controls.MicrosoftStoreBillingControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="OnLoaded">
+    <Border
+        Padding="16"
+        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1"
+        CornerRadius="8">
+        <StackPanel Spacing="10">
+            <StackPanel Spacing="2">
+                <TextBlock
+                    x:Uid="BillingTitle"
+                    AutomationProperties.HeadingLevel="Level3"
+                    Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                <TextBlock
+                    x:Uid="BillingSubtitle"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextWrapping="WrapWholeWords" />
+            </StackPanel>
+
+            <InfoBar
+                x:Uid="BillingCapabilityUnavailableInfo"
+                IsClosable="False"
+                IsOpen="{Binding ShowCapabilityUnavailable}"
+                Severity="Informational" />
+            <InfoBar
+                x:Uid="BillingLoginRequiredInfo"
+                IsClosable="False"
+                IsOpen="{Binding ShowLoginRequired}"
+                Severity="Warning">
+                <HyperlinkButton
+                    x:Uid="BillingAccountLink"
+                    NavigateUri="{Binding AccountUri}" />
+            </InfoBar>
+            <InfoBar
+                x:Uid="BillingBackendUnavailableInfo"
+                IsClosable="False"
+                IsOpen="{Binding ShowBackendUnavailable}"
+                Severity="Warning" />
+            <InfoBar
+                x:Uid="BillingScopeRequiredInfo"
+                IsClosable="False"
+                IsOpen="{Binding ShowScopeRequired}"
+                Severity="Warning" />
+            <InfoBar
+                x:Uid="BillingStoreUnavailableInfo"
+                IsClosable="False"
+                IsOpen="{Binding ShowStoreUnavailable}"
+                Severity="Warning" />
+            <InfoBar
+                x:Uid="BillingActiveInfo"
+                IsClosable="False"
+                IsOpen="{Binding ShowActiveEntitlement}"
+                Severity="Success" />
+            <InfoBar
+                x:Uid="BillingInactiveInfo"
+                IsClosable="False"
+                IsOpen="{Binding ShowInactiveEntitlement}"
+                Severity="Informational" />
+
+            <StackPanel Spacing="6">
+                <TextBlock
+                    x:Uid="BillingTrialDisclosure"
+                    TextWrapping="WrapWholeWords" />
+                <TextBlock
+                    x:Uid="BillingRenewalDisclosure"
+                    TextWrapping="WrapWholeWords" />
+                <TextBlock
+                    x:Uid="BillingRegionalPriceDisclosure"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextWrapping="WrapWholeWords" />
+                <TextBlock
+                    x:Uid="BillingMicrosoftDisclosure"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextWrapping="WrapWholeWords" />
+                <StackPanel
+                    Spacing="2"
+                    Visibility="{Binding IsProductAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock x:Uid="BillingStorePriceCaption" Style="{ThemeResource CaptionTextBlockStyle}" />
+                    <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}" Text="{Binding FormattedStorePrice}" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <Button
+                    x:Uid="BillingPurchaseButton"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding PurchaseCommand}"
+                    Style="{ThemeResource AccentButtonStyle}"
+                    Visibility="{Binding IsPurchaseEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Button
+                    x:Uid="BillingRestoreButton"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding RestoreCommand}"
+                    Visibility="{Binding AreStoreActionsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Button
+                    x:Uid="BillingRefreshButton"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding RefreshCommand}" />
+                <ProgressRing
+                    x:Uid="BillingProgress"
+                    Width="24"
+                    Height="24"
+                    AutomationProperties.LiveSetting="Polite"
+                    IsActive="{Binding IsBusy}"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </StackPanel>
+
+            <InfoBar
+                x:Uid="BillingErrorInfo"
+                AutomationProperties.LiveSetting="Assertive"
+                IsClosable="False"
+                IsOpen="{Binding HasError}"
+                Message="{Binding ErrorMessage}"
+                Severity="Error" />
+            <InfoBar
+                x:Uid="BillingStatusInfo"
+                AutomationProperties.LiveSetting="Polite"
+                IsClosable="False"
+                IsOpen="{Binding HasStatus}"
+                Message="{Binding StatusMessage}"
+                Severity="Informational" />
+
+            <StackPanel Spacing="4">
+                <HyperlinkButton
+                    x:Uid="BillingManageSubscriptionsLink"
+                    HorizontalAlignment="Left"
+                    NavigateUri="{Binding ManageSubscriptionsUri}" />
+                <HyperlinkButton
+                    x:Uid="BillingPrivacyLink"
+                    HorizontalAlignment="Left"
+                    NavigateUri="{Binding PrivacyPolicyUri}" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

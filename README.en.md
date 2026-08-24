@@ -63,15 +63,18 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 | --- | --- |
 | **Secure archive scanning** | Detects path traversal, Loader metadata, language resources, signature evidence, and supported Java string references. |
 | **Incremental translation pipeline** | Reuses translations by content hash, validates placeholders and structure, and rolls back the entire job on failure. |
+| **Mod project synchronization** | The Dashboard treats the same normalized source artifact as one process-local mod project and synchronizes its task objective, progress, status, and artifacts with the assistant; projects are not currently persisted across application restarts. |
 | **Specialized prompts and terminology** | Automatically distinguishes mods, resource packs, and shader packs and applies dedicated domain prompts; Simplified Chinese jobs include a specialized terminology glossary for each content type. |
 | **Multiple target languages** | Initially supports Simplified Chinese, English, Japanese, French, and Russian; the language catalog is centrally defined and can be extended. |
 | **Multiple model integrations** | Provides unified support for Ollama, OpenAI-compatible Chat Completions, and Anthropic Messages. |
 | **Provider presets** | Presets for DeepSeek, Qwen, Xiaomi MiMo, MiniMax, OpenAI, Doubao, Zhipu GLM, Kimi, and others fill in the service endpoint and model name and select the recommended completion-token parameter; you can also explicitly omit that parameter. |
 | **Online mod community** | Searches and paginates public mods and discussions; a PAT stored in Windows Credential Manager enables posting, replies, and reports, with direct access to the terms and community guidelines. |
+| **Microsoft subscription and safe acceleration** | Uses native Microsoft Store purchase UI, authoritative MCTX backend entitlements, and one-time download grants; the default source always remains available and is used as a safe fallback. |
 | **Persistent diagnostic logs** | When the log directory is writable, each translation attempts to persist a pair of Debug and All levels `.log` files through a bounded background writer; logs can be viewed from the left-hand “Logs” page, and the directory can be changed during onboarding or in Settings. |
 | **Native desktop experience** | Provides first-run onboarding, a processing queue, a model assistant, model source management, logs, settings, and CLI risk confirmation. |
+| **Model activity and real usage** | The assistant shows program-generated model-round and tool activity rather than private reasoning. Provider-reported token usage flows through assistant responses and translation tasks, including completed calls before failure/cancellation; missing or partial usage is marked explicitly and is never estimated. |
 | **Credential and configuration protection** | Stores API keys in Windows Credential Manager and encrypts other configuration with AES-256-GCM. |
-| **Controlled MCP / CLI** | Models can only read safe context and propose commands; execution requires policy revalidation and explicit user confirmation. |
+| **Controlled MCP / CLI** | The in-app assistant adds bounded project tools only when a mod project is active. The standalone stdio Host can still only read safe context and propose commands; CLI execution requires policy revalidation and explicit user confirmation. |
 
 ## Supported Scope
 
@@ -99,6 +102,20 @@ flowchart LR
 ```
 
 Each job captures the user's selected target language, model source, and one translation style when it is queued. Language resources prefer `en_us`, `en_gb`, or another existing locale that differs from the target language as source text; for example, if English is the target but the package contains only Japanese, LocaleSmith generates `en_us` from the Japanese source. The other style can be queued separately and can reuse corresponding translations already cached under the same source-text hash.
+
+When a source artifact is added from the Dashboard, LocaleSmith registers or reuses a process-local mod project by normalized source path and synchronizes the active project and its translation tasks with the assistant. The assistant keeps a separate conversation and draft for every `ProjectId + ModelSourceId` pair. Switching projects or model sources restores only the matching session: one mod's history is not mixed into another mod, and history from one provider is not sent to a different provider. The project workspace is currently memory-only and is not restored after the application restarts.
+
+The assistant's processing view contains only deterministic lifecycle events for model-round start/completion, tool start/completion/failure, and the final run state. Events exclude message content, tool arguments/results, paths, commands, exception text, and private `reasoning_content`. Provider-reported token usage is aggregated into assistant responses and translation tasks; completed provider rounds remain visible when a task later fails or is cancelled, while an in-flight call without usage is marked partial or unavailable. A total is shown only when the provider reports it or when both provider-reported input and output counts are present, with no character-count or heuristic estimate.
+
+## Microsoft Store Subscription and Domestic Acceleration
+
+LocaleSmith uses `Windows.Services.Store.StoreContext` to read the hidden parent-app-only subscription, display Microsoft purchase UI, and bind desktop modal UI to the main-window HWND. The saved Partner Center draft is monthly auto-renewing, offers an eligible new subscriber a seven-day free trial, uses a US$4.99/month global base tier localized by the Store, and configures China at CNY 30.00/month; the Microsoft purchase UI is authoritative for actual price and trial eligibility. Microsoft handles billing, and the subscription can be managed or cancelled under [Microsoft Services & subscriptions](https://account.microsoft.com/services); the [privacy policy](https://dow.dzxh-tx.cn/privacy) remains discoverable. Microsoft Store does not support a native “CNY 24 first month, then CNY 30” introductory price, and the client does not simulate one.
+
+Purchase, restore, and refresh first require the existing LocaleSmith/MCTX account and a PAT with the `downloads:accelerated` scope. `Succeeded` and `AlreadyPurchased` only start `service-ticket → Store ID key → backend verify → entitlements`; they never unlock locally. Only an exact, usable `domestic_download_acceleration` backend entitlement can proceed. Missing `microsoft_store_billing_v1` / `accelerated_downloads_v1`, PAT, scope, entitlement, or fresh backend verification fails closed and hides or disables the paid entry.
+
+Source discovery accepts only the relative default source and `additional_source` decision returned by the API. The client never hard-codes an object-storage host, bucket, object key, or long-lived URL. One-time signed GET/HEAD URLs exist briefly only in memory and their HTTPS requests; they are not written to logs, configuration, diagnostics, clipboard, toasts, telemetry, or resume sidecars. Object-storage requests carry no PAT, Cookie, Authorization, Referer, or proxy credential and do not follow redirects. The transport uses a separate HEAD request for a strong ETag, up to four Range + If-Range requests, complete re-authorization and re-signing on grant expiry, and final API size/SHA-256 verification. Authorization, storage, or integrity failure falls back safely to the existing same-origin downloader.
+
+Local automation covers the capability/PAT/scope/entitlement refusal matrix, purchase state machine, secret request body, separate GET/HEAD signatures, exact HTTPS origin, four-way ranges, re-sign/resume, credential-free sidecars, SHA-256, and default-source fallback. Real Partner Center products, purchase/renewal/refund/cross-device restore, Microsoft recurrence/service tickets, PostgreSQL/Redis entitlement integration, and RainS3 E2E remain unverified. The website worktree still uses `domestic_acceleration` instead of the required entitlement key and has no worker that copies and verifies an artifact into a ready replica, so the client keeps the target key and fails closed. This change did not submit Partner Center changes, modify the website repository, or deploy production.
 
 ## Translation Logs and Persistent Settings
 
@@ -179,10 +196,11 @@ packaging/                  x64 WAP / MSIX manifest, five-language resources, an
 
 The following principles are part of product behavior, not optional configuration:
 
-- **Models cannot authorize command execution.** Provider tool loops may only read safe context and propose commands. The user must still review the complete command, acknowledge the risk, and explicitly approve it.
+- **Models cannot authorize command execution.** Provider tool loops may use only the safe-context, project, and command-proposal tools explicitly exposed for the current session. The user must still review the complete command, acknowledge the risk, and explicitly approve it.
 - **Signed JARs produce an explicit unsigned copy by default.** The original JAR / ZIP always remains unchanged. The application translation queue removes signature blocks, `SIG-*`, and stale manifest digest claims only from an independent output; low-level callers may still choose complete blocking, and the project never impersonates the original signature or hashes.
 - **The CLI does not search the process PATH.** No process executable is trusted by default; any future explicit allowlist must use approved absolute paths. The private CLI sandbox defaults to `%LOCALAPPDATA%\LocaleSmith\CliSandbox`, with reparse points checked both before and after creation.
 - **The client carries no Cloudflare origin key.** `api.dzxh-tx.cn` uses ordinary server TLS validated by the Windows trust store. Authenticated Origin Pulls authenticates only the Cloudflare-to-origin connection; its certificate and private key must not enter the application, MSIX, or repository.
+- **Store and download grants are secrets.** PATs, Entra service tickets, Microsoft Store ID keys, and signed GET/HEAD URLs are not logged, persisted, added to telemetry, or included in diagnostics or resume metadata. The client contains no Entra client secret, and object-storage requests never carry MCTX Authorization or cookies.
 - **Low IL is not the same as AppContainer.** A restricted token, private desktop, and Job Object reduce the execution surface, but do not automatically block network access or prevent access to files permitted by the current user's ACLs.
 
 <details>
@@ -202,7 +220,7 @@ The original input always remains unchanged, and every structural or behavioral 
 <details>
 <summary><strong>Model tool and CLI isolation</strong></summary>
 
-The MCP stdio Host exposes only `system.context` and `cli.propose`, not `cli.execute`. Executable commands must originate from approved absolute paths, pass checks for absolutely prohibited patterns, the working directory, and sensitive arguments, and then be bound to a one-time confirmation token. If the pre-launch audit cannot be written, the process will not start. Kimi's private `reasoning_content` is replayed within bounds only inside the same Kimi tool loop; it never enters user-visible content and is never sent to another provider.
+The in-app assistant always retains `system.context` and `cli.propose`. Selecting a mod project adds `project.get_active`, `archive.inspect`, and `task.status`; `translation.start` and `task.cancel` are exposed only after the user checks the one-turn “allow this message to change the project” authorization. Every project tool is bound to the `ProjectId` captured for that turn, accepts only opaque project/task IDs, and never accepts an arbitrary host path. `translation.start` is also forced to use the model source selected for the assistant turn and reuses the real inspect, safe-extract, translate, repack, verify, and commit transaction pipeline. The standalone `LocaleSmith.McpHost` has no App project backend, so its stdio catalog still contains only `system.context` and `cli.propose`. No entry point exposes `cli.execute`; executable commands still require policy revalidation, a one-time confirmation token, and explicit user approval. Kimi's private `reasoning_content` is replayed within bounds only inside the same Kimi tool loop; it never enters the activity timeline or user-visible content and is never sent to another provider.
 
 </details>
 
@@ -221,9 +239,9 @@ The following figures are the validation baseline recorded in the current source
 
 | Check | Baseline |
 | --- | --- |
-| .NET Release | `558 / 558` tests, `0` warnings, `0` errors |
+| .NET Release | `800 / 800` tests, `0` warnings, `0` errors |
 | Rust | `27 / 27` tests; `rustfmt` and `clippy -D warnings` passed |
-| Five-language resources | `485` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
+| Five-language resources | `662` keys each for `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU`, fully aligned |
 | Source security audit | Regression gates for local paths, archives, CLI, credentials, and migrations passed; GitHub CodeQL results depend on a fresh remote scan of the current commit, and the README does not claim zero alerts |
 
 These results demonstrate the source behavior covered by the current automation. They do not replace external penetration testing, real provider validation, or Minecraft / Loader runtime compatibility testing.

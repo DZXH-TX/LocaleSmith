@@ -43,23 +43,6 @@ public sealed partial class OnboardingPage : Page
         }
     }
 
-    private void OnNetworkPresetSelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        if (!_loaded || sender is not ComboBox comboBox)
-        {
-            return;
-        }
-
-        if (ModelOptionSelectionMap.TryResolvePreset(
-                comboBox.SelectedItem,
-                ViewModel.NetworkPresetOptions,
-                out var preset) &&
-            !ReferenceEquals(ViewModel.SelectedNetworkPreset, preset))
-        {
-            ViewModel.SelectedNetworkPreset = preset;
-        }
-    }
-
     private void OnNetworkTokenLimitParameterSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         if (!_loaded || sender is not ComboBox comboBox)

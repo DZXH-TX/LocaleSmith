@@ -70,7 +70,7 @@ public sealed class ModelSourcesViewModelTests
     }
 
     [Fact]
-    public async Task SelectingPresetPrefillsButDoesNotLockEndpointOrModel()
+    public async Task EditingNamedPresetToCustomGatewayDemotesPresetWithoutChangingConnectionFields()
     {
         var catalog = new MemoryModelSourceCatalog();
         var viewModel = new ModelSourcesViewModel(catalog);
@@ -83,17 +83,22 @@ public sealed class ModelSourcesViewModelTests
         Assert.Equal("https://api.deepseek.com/", viewModel.Endpoint);
         Assert.Equal("deepseek-v4-pro", viewModel.ModelName);
         Assert.Equal(OpenAiTokenLimitParameter.MaxTokens, viewModel.SelectedTokenLimitParameter);
+        viewModel.SelectedTokenLimitParameter = OpenAiTokenLimitParameter.MaxCompletionTokens;
         viewModel.Endpoint = "https://gateway.example.test/deepseek/v1";
         viewModel.ModelName = "account-specific-model";
-        viewModel.SelectedTokenLimitParameter = OpenAiTokenLimitParameter.MaxCompletionTokens;
+
+        Assert.Equal(ModelProviderPresets.CustomId, viewModel.SelectedPresetId);
+        Assert.Equal("https://gateway.example.test/deepseek/v1", viewModel.Endpoint);
+        Assert.Equal("account-specific-model", viewModel.ModelName);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, viewModel.SelectedTokenLimitParameter);
 
         await viewModel.SaveAsync("deepseek-secret", TestContext.Current.CancellationToken);
 
-        Assert.Equal(ModelProviderPresets.DeepSeekId, catalog.LastSavedSource?.PresetId);
+        Assert.Equal(ModelProviderPresets.CustomId, catalog.LastSavedSource?.PresetId);
         Assert.Equal("https://gateway.example.test/deepseek/v1", catalog.LastSavedSource?.Endpoint.AbsoluteUri);
         Assert.Equal("account-specific-model", catalog.LastSavedSource?.ModelName);
         Assert.Equal(OpenAiTokenLimitParameter.MaxCompletionTokens, catalog.LastSavedSource?.TokenLimitParameter);
-        Assert.Equal(ModelProviderPresets.DeepSeekId, viewModel.SelectedPreset.Id);
+        Assert.Equal(ModelProviderPresets.CustomId, viewModel.SelectedPreset.Id);
     }
 
     [Theory]
@@ -182,7 +187,7 @@ public sealed class ModelSourcesViewModelTests
     }
 
     [Fact]
-    public async Task LoadingPresetProfilePreservesEditableConnectionFields()
+    public async Task LoadingMismatchedPresetProfileDemotesPresetAndPreservesConnectionFields()
     {
         var catalog = new MemoryModelSourceCatalog();
         catalog.Seed(new ModelSourceProfile
@@ -198,10 +203,56 @@ public sealed class ModelSourcesViewModelTests
 
         await viewModel.LoadAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(ModelProviderPresets.DeepSeekId, viewModel.SelectedPresetId);
+        Assert.Equal(ModelProviderPresets.CustomId, viewModel.SelectedPresetId);
         Assert.Equal("http://127.0.0.1:11434", viewModel.Endpoint);
         Assert.Equal("llama3", viewModel.ModelName);
+        Assert.Equal(OpenAiTokenLimitParameter.MaxTokens, viewModel.SelectedTokenLimitParameter);
         Assert.False(viewModel.IsDirty);
+    }
+
+    [Fact]
+    public async Task EditingOfficialPresetWithinItsAllowedHostKeepsTheNamedPreset()
+    {
+        var viewModel = new ModelSourcesViewModel(new MemoryModelSourceCatalog());
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+        viewModel.Provider = ModelProviderKind.OpenAiCompatible;
+        viewModel.SelectedPresetId = ModelProviderPresets.DeepSeekId;
+
+        viewModel.Endpoint = "https://api.deepseek.com/v1/chat/completions";
+        viewModel.ModelName = "a-new-model-name";
+
+        Assert.Equal(ModelProviderPresets.DeepSeekId, viewModel.SelectedPresetId);
+        Assert.Equal("a-new-model-name", viewModel.ModelName);
+    }
+
+    [Fact]
+    public async Task CustomOpenAiCompatibleLoopbackAcceptsExplicitV1Base()
+    {
+        var catalog = new MemoryModelSourceCatalog();
+        var viewModel = new ModelSourcesViewModel(catalog);
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+        viewModel.Provider = ModelProviderKind.OpenAiCompatible;
+        viewModel.Endpoint = "http://127.0.0.1:11434/v1";
+
+        await viewModel.TestConnectionAsync("local-key", TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, catalog.TestConnectionCount);
+        Assert.Equal(ModelProviderPresets.CustomId, catalog.LastTestSource?.PresetId);
+        Assert.Equal("http://127.0.0.1:11434/v1", catalog.LastTestSource?.Endpoint.AbsoluteUri.TrimEnd('/'));
+    }
+
+    [Fact]
+    public async Task CustomOpenAiCompatibleLoopbackRejectsProviderNativeRootWithoutV1()
+    {
+        var catalog = new MemoryModelSourceCatalog();
+        var viewModel = new ModelSourcesViewModel(catalog);
+        await viewModel.LoadAsync(TestContext.Current.CancellationToken);
+        viewModel.Provider = ModelProviderKind.OpenAiCompatible;
+
+        await viewModel.TestConnectionAsync("local-key", TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, catalog.TestConnectionCount);
+        Assert.Contains("/v1", viewModel.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

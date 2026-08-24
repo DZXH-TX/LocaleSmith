@@ -71,12 +71,25 @@ public sealed class OllamaModelService : HttpModelServiceBase, IModelCatalogServ
             throw new ModelServiceException("Ollama response contained neither message content nor tool calls.");
         }
 
+        ModelTokenUsage? tokenUsage;
+        try
+        {
+            tokenUsage = ModelTokenUsage.FromProviderResponse(
+                OptionalInt64(root, "prompt_eval_count"),
+                OptionalInt64(root, "eval_count"));
+        }
+        catch (Exception exception) when (exception is ArgumentException or OverflowException)
+        {
+            throw new ModelServiceException(
+                "Ollama response usage contained invalid token counts.",
+                innerException: exception);
+        }
+
         return new ModelResponse(
             content,
             OptionalString(root, "model"),
-            OptionalInt32(root, "prompt_eval_count"),
-            OptionalInt32(root, "eval_count"),
-            toolCalls);
+            toolCalls: toolCalls,
+            usage: tokenUsage);
     }
 
     public async Task<IReadOnlyList<AvailableModelInfo>> ListModelsAsync(

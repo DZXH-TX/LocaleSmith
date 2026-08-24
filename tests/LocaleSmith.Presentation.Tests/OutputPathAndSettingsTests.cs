@@ -73,6 +73,41 @@ public sealed class OutputPathAndSettingsTests
         }
     }
 
+    [Fact]
+    public async Task OutputStrategyReservesDistinctPathsBeforeEarlierJobsCommit()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var sourcePath = Path.Combine(testRoot, "example.jar");
+            await File.WriteAllTextAsync(sourcePath, "archive", TestContext.Current.CancellationToken);
+            var workspace = Path.Combine(testRoot, "workspace");
+            var strategy = new DefaultOutputPathStrategy(
+                new MutableConfigurationService(CreateConfiguration(workspace)));
+
+            string first = await strategy.CreateOutputPathAsync(
+                sourcePath,
+                TranslationLanguageCatalog.DefaultLocale,
+                TestContext.Current.CancellationToken);
+            string second = await strategy.CreateOutputPathAsync(
+                sourcePath,
+                TranslationLanguageCatalog.DefaultLocale,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(
+                Path.Combine(workspace, "LocaleSmith.Output", "example.zh_CN.jar"),
+                first);
+            Assert.Equal(
+                Path.Combine(workspace, "LocaleSmith.Output", "example.zh_CN.2.jar"),
+                second);
+            Assert.NotEqual(first, second, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
+    }
+
     [Theory]
     [InlineData("zh_CN", "zh_CN")]
     [InlineData("en_US", "en_US")]

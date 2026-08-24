@@ -21,25 +21,43 @@
                 <TextBlock x:Uid="AssistantTitle" Style="{ThemeResource PageTitleStyle}" />
                 <TextBlock x:Uid="AssistantSubtitle" TextWrapping="WrapWholeWords" />
             </StackPanel>
-            <ComboBox
-                Grid.Column="1"
-                x:Uid="AssistantModelSelector"
-                Width="280"
-                ItemsSource="{Binding ModelSources}"
-                SelectedItem="{Binding SelectedModelSource, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel>
-                            <TextBlock Text="{Binding DisplayName}" />
-                            <TextBlock Style="{ThemeResource CaptionTextBlockStyle}">
-                                <Run Text="{Binding ProviderName}" />
-                                <Run Text=" · " />
-                                <Run Text="{Binding ModelName}" />
-                            </TextBlock>
-                        </StackPanel>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+            <StackPanel Grid.Column="1" Width="320" Spacing="8">
+                <ComboBox
+                    x:Uid="AssistantProjectSelector"
+                    ItemsSource="{Binding Projects}"
+                    SelectedValue="{Binding SelectedProjectSelectionId, Mode=TwoWay}"
+                    SelectedValuePath="SelectionId">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding DisplayName}" />
+                                <TextBlock
+                                    Style="{ThemeResource CaptionTextBlockStyle}"
+                                    Text="{Binding DetailText}"
+                                    TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox
+                    x:Uid="AssistantModelSelector"
+                    ItemsSource="{Binding ModelSources}"
+                    SelectedValue="{Binding SelectedModelSourceId, Mode=TwoWay}"
+                    SelectedValuePath="Id">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding DisplayName}" />
+                                <TextBlock Style="{ThemeResource CaptionTextBlockStyle}">
+                                    <Run Text="{Binding ProviderName}" />
+                                    <Run Text=" · " />
+                                    <Run Text="{Binding ModelName}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
         </Grid>
 
         <StackPanel Grid.Row="1" Spacing="8">
@@ -49,6 +67,52 @@
                 IsOpen="True"
                 IsClosable="False"
                 Severity="Warning" />
+            <Border
+                Padding="14"
+                Style="{ThemeResource CardBorderStyle}"
+                Visibility="{Binding HasSelectedProject, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid RowSpacing="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            x:Uid="AssistantActiveProjectLabel"
+                            Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="{Binding ActiveProjectTitle}"
+                            Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    </Grid>
+                    <TextBlock
+                        Grid.Row="1"
+                        Text="{Binding ActiveProjectSummary}"
+                        Style="{ThemeResource CaptionTextBlockStyle}"
+                        TextWrapping="WrapWholeWords" />
+                    <TextBlock
+                        Grid.Row="2"
+                        Text="{Binding ActiveProjectObjective}"
+                        TextWrapping="WrapWholeWords" />
+                    <ProgressBar
+                        Grid.Row="3"
+                        Maximum="1"
+                        Value="{Binding ActiveProjectProgress}" />
+                    <TextBlock
+                        Grid.Row="4"
+                        Text="{Binding ActiveProjectUsageSummary}"
+                        Style="{ThemeResource CaptionTextBlockStyle}"
+                        TextWrapping="WrapWholeWords"
+                        Visibility="{Binding HasActiveProjectUsage, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </Border>
             <InfoBar
                 x:Uid="AssistantError"
                 behaviors:AppMotion.StatusFeedback="True"
@@ -84,13 +148,69 @@
                                 BorderThickness="1"
                                 CornerRadius="10">
                                 <StackPanel Spacing="6">
-                                    <TextBlock
-                                        Text="{Binding RoleLabel}"
-                                        Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            Text="{Binding RoleLabel}"
+                                            Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                        <ProgressRing
+                                            Grid.Column="1"
+                                            Width="18"
+                                            Height="18"
+                                            IsActive="{Binding IsRunning}"
+                                            Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </Grid>
+                                    <StackPanel
+                                        Spacing="6"
+                                        Visibility="{Binding HasActivities, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock
+                                            x:Uid="AssistantProcessLabel"
+                                            Style="{ThemeResource CaptionTextBlockStyle}" />
+                                        <ItemsControl ItemsSource="{Binding Activities}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,2" ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="20" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <FontIcon
+                                                            FontSize="13"
+                                                            Glyph="{Binding Glyph}"
+                                                            VerticalAlignment="Top" />
+                                                        <StackPanel Grid.Column="1" Spacing="1">
+                                                            <TextBlock
+                                                                Text="{Binding Title}"
+                                                                TextWrapping="WrapWholeWords" />
+                                                            <TextBlock
+                                                                Text="{Binding Detail}"
+                                                                Style="{ThemeResource CaptionTextBlockStyle}"
+                                                                TextWrapping="WrapWholeWords" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
                                     <TextBlock
                                         Text="{Binding Content}"
                                         IsTextSelectionEnabled="True"
-                                        TextWrapping="WrapWholeWords" />
+                                        TextWrapping="WrapWholeWords"
+                                        Visibility="{Binding HasContent, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <Border
+                                        Margin="0,4,0,0"
+                                        Padding="10,6"
+                                        Background="{ThemeResource SubtleFillColorTertiaryBrush}"
+                                        CornerRadius="6"
+                                        Visibility="{Binding HasUsage, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock
+                                            Text="{Binding UsageSummary}"
+                                            Style="{ThemeResource CaptionTextBlockStyle}"
+                                            TextWrapping="WrapWholeWords" />
+                                    </Border>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -135,12 +255,18 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        Style="{ThemeResource CaptionTextBlockStyle}">
-                        <Run Text="{Binding DraftLength}" />
-                        <Run x:Uid="AssistantLengthSuffix" />
-                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Style="{ThemeResource CaptionTextBlockStyle}">
+                            <Run Text="{Binding DraftLength}" />
+                            <Run x:Uid="AssistantLengthSuffix" />
+                        </TextBlock>
+                        <CheckBox
+                            x:Uid="AssistantAllowProjectChanges"
+                            IsChecked="{Binding AllowProjectChanges, Mode=TwoWay}"
+                            Visibility="{Binding HasSelectedProject, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </StackPanel>
                     <Button
                         Grid.Column="1"
                         x:Uid="AssistantClearButton"

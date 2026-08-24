@@ -53,7 +53,7 @@ public sealed record ModelSource
         Endpoint = endpoint;
         ModelName = modelName.Trim();
         ApiKeyReference = string.IsNullOrWhiteSpace(apiKeyReference) ? null : apiKeyReference.Trim();
-        var preset = ModelProviderPresets.ResolveOrCustom(presetId);
+        var preset = ModelProviderPresets.ResolveEffective(provider, presetId, endpoint);
         PresetId = preset.Id;
         TokenLimitParameter = tokenLimitParameter ?? preset.DefaultTokenLimitParameter;
         SupportsCustomTemperature = preset.SupportsCustomTemperature;

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Net;
@@ -115,6 +116,7 @@ public sealed class QueueItemViewModel : ObservableObject
     private string? _errorDetails;
     private string? _technicalErrorDetails;
     private bool _artifactReady;
+    private ModelTokenUsage? _modelUsage;
     private IReadOnlyList<HardcodedStringCandidate> _hardcodedCandidates = [];
     private int _externalizedCount;
     private string _nextAction = string.Empty;
@@ -188,6 +190,8 @@ public sealed class QueueItemViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(CanCancel));
                 OnPropertyChanged(nameof(CurrentAction));
+                OnPropertyChanged(nameof(HasModelUsage));
+                OnPropertyChanged(nameof(ModelUsageSummary));
             }
         }
     }
@@ -357,6 +361,74 @@ public sealed class QueueItemViewModel : ObservableObject
 
     public string ArtifactStatus => FormatArtifactStatus(ArtifactReady);
 
+    public ModelTokenUsage? ModelUsage
+    {
+        get => _modelUsage;
+        private set
+        {
+            if (SetProperty(ref _modelUsage, value))
+            {
+                OnPropertyChanged(nameof(HasModelUsage));
+                OnPropertyChanged(nameof(ModelUsageSummary));
+            }
+        }
+    }
+
+    public bool HasModelUsage => ModelUsage is not null || Stage is
+        PipelineStage.Completed or
+        PipelineStage.Failed or
+        PipelineStage.Cancelled;
+
+    public string ModelUsageSummary
+    {
+        get
+        {
+            if (ModelUsage is null)
+            {
+                return Stage is PipelineStage.Completed or PipelineStage.Failed or PipelineStage.Cancelled
+                    ? _text.GetText(
+                        "QueueUsageNoCompletedCalls",
+                        "Tokens: no provider call completed before the task ended.")
+                    : string.Empty;
+            }
+
+            if (ModelUsage.ProviderCallCount == 0)
+            {
+                return _text.GetText(
+                    "QueueUsageNoModelCalls",
+                    "Tokens: no model call was needed; all translations were reused from verified memory.");
+            }
+
+            if (ModelUsage.CallsWithUsage == 0)
+            {
+                return _text.GetText(
+                    "QueueUsageUnavailable",
+                    "Tokens: the provider did not return usage for {0} call(s).",
+                    ModelUsage.ProviderCallCount);
+            }
+
+            string input = ModelUsage.InputTokens?.ToString("N0", CultureInfo.CurrentCulture) ?? "—";
+            string output = ModelUsage.OutputTokens?.ToString("N0", CultureInfo.CurrentCulture) ?? "—";
+            string total = ModelUsage.TotalTokens?.ToString("N0", CultureInfo.CurrentCulture) ?? "—";
+            return ModelUsage.IsComplete
+                ? _text.GetText(
+                    "QueueUsageComplete",
+                    "Tokens · input {0} · output {1} · total {2} · {3} provider call(s)",
+                    input,
+                    output,
+                    total,
+                    ModelUsage.ProviderCallCount)
+                : _text.GetText(
+                    "QueueUsagePartial",
+                    "Partial Token usage · input {0} · output {1} · reported total {2} · {3}/{4} call(s) complete",
+                    input,
+                    output,
+                    total,
+                    ModelUsage.CallsWithCompleteUsage,
+                    ModelUsage.ProviderCallCount);
+        }
+    }
+
     public IReadOnlyList<HardcodedStringCandidate> HardcodedCandidates
     {
         get => _hardcodedCandidates;
@@ -402,6 +474,10 @@ public sealed class QueueItemViewModel : ObservableObject
         OnPropertyChanged(nameof(ProgressPercent));
         OnPropertyChanged(nameof(ProgressText));
         Status = ProgressStatus(progress.Stage);
+        if (progress.ModelUsage is not null)
+        {
+            ModelUsage = progress.ModelUsage;
+        }
         NextAction = progress.NextStage is { } nextStage
             ? ProgressStatus(nextStage)
             : string.Empty;
@@ -435,6 +511,7 @@ public sealed class QueueItemViewModel : ObservableObject
         OnPropertyChanged(nameof(ProgressText));
         Status = _text.GetText("QueueStatusCompleted", "Completed");
         ArtifactReady = result.ArtifactPaths.Count == 1;
+        ModelUsage = result.ModelUsage;
         HardcodedCandidates = result.HardcodedCandidates.ToArray();
         ExternalizedCount = result.ExternalizedCount;
     }
@@ -638,8 +715,10 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly IOutputPathStrategy _outputPathStrategy;
     private readonly IUiDispatcher _dispatcher;
     private readonly IUiTextProvider _text;
+    private readonly IModProjectWorkspace? _projectWorkspace;
     private readonly Dictionary<Guid, TranslationQueueHandle> _handles = [];
     private readonly Dictionary<Guid, QueueItemViewModel> _items = [];
+    private readonly ConcurrentDictionary<Guid, Guid> _projectTaskIds = [];
     private ModelSourceOptionViewModel? _selectedModelSource;
     private TranslationStyleOptionViewModel _selectedTranslationStyle;
     private TargetLanguageOptionViewModel _selectedTargetLanguage;
@@ -654,13 +733,15 @@ public sealed class DashboardViewModel : ViewModelBase
         ITranslationQueueService translationQueueService,
         IOutputPathStrategy outputPathStrategy,
         IUiDispatcher dispatcher,
-        IUiTextProvider? text = null)
+        IUiTextProvider? text = null,
+        IModProjectWorkspace? projectWorkspace = null)
     {
         _modelSelectionService = modelSelectionService ?? throw new ArgumentNullException(nameof(modelSelectionService));
         _translationQueueService = translationQueueService ?? throw new ArgumentNullException(nameof(translationQueueService));
         _outputPathStrategy = outputPathStrategy ?? throw new ArgumentNullException(nameof(outputPathStrategy));
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _text = text ?? FallbackUiTextProvider.Instance;
+        _projectWorkspace = projectWorkspace;
         TranslationStyles =
         [
             new TranslationStyleOptionViewModel(
@@ -842,11 +923,32 @@ public sealed class DashboardViewModel : ViewModelBase
                 continue;
             }
 
+            ModProjectTaskSnapshot? projectTask = null;
             try
             {
                 var outputPath = await _outputPathStrategy
                     .CreateOutputPathAsync(fullPath, targetLanguage, cancellationToken)
                     .ConfigureAwait(true);
+                if (_projectWorkspace is not null)
+                {
+                    ModProjectSnapshot project = _projectWorkspace.RegisterProject(fullPath);
+                    projectTask = _projectWorkspace.RegisterTask(
+                        project.ProjectId,
+                        new ModProjectTaskRegistration(
+                            fullPath,
+                            outputPath,
+                            modelSourceId,
+                            targetLanguage,
+                            translationStyle,
+                            Text(
+                                "QueueDefaultObjective",
+                                "Translate {0} to {1} using {2}.",
+                                Path.GetFileName(fullPath),
+                                targetLanguage,
+                                translationStyle)),
+                        rejectIfProjectHasActiveTask: true);
+                }
+
                 var handle = await _translationQueueService.EnqueueAsync(
                     new TranslationQueueRequest(
                         fullPath,
@@ -855,6 +957,12 @@ public sealed class DashboardViewModel : ViewModelBase
                         translationStyle,
                         targetLanguage),
                     cancellationToken).ConfigureAwait(true);
+                if (projectTask is not null)
+                {
+                    _projectWorkspace!.AttachJob(projectTask.TaskId, handle.JobId, handle.Cancel);
+                    _projectTaskIds[handle.JobId] = projectTask.TaskId;
+                }
+
                 var item = new QueueItemViewModel(
                     handle.JobId,
                     fullPath,
@@ -869,12 +977,27 @@ public sealed class DashboardViewModel : ViewModelBase
                 if (handle.LatestProgress is { } latestProgress)
                 {
                     item.Update(latestProgress);
+                    _projectWorkspace?.TryReportProgress(handle.JobId, latestProgress, out _);
                 }
 
                 _ = MonitorAsync(handle, item);
             }
+            catch (OperationCanceledException)
+            {
+                if (projectTask is not null)
+                {
+                    _projectWorkspace?.TryMarkCancelled(projectTask.TaskId, out _);
+                }
+
+                throw;
+            }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
+                if (projectTask is not null)
+                {
+                    _projectWorkspace?.TryFailTask(projectTask.TaskId, exception.GetType().Name, out _);
+                }
+
                 ErrorMessage = Text(
                     "QueueEnqueueFailed",
                     "Could not enqueue {0}. Check the output workspace safety settings and retry.",
@@ -1056,17 +1179,33 @@ public sealed class DashboardViewModel : ViewModelBase
 
     private async Task MonitorAsync(TranslationQueueHandle handle, QueueItemViewModel item)
     {
+        _projectTaskIds.TryGetValue(handle.JobId, out Guid projectTaskId);
         try
         {
             var result = await handle.Completion.ConfigureAwait(false);
+            if (projectTaskId != Guid.Empty)
+            {
+                _projectWorkspace?.TryCompleteTask(projectTaskId, result, out _);
+            }
+
             _dispatcher.Post(() => item.Complete(result));
         }
         catch (OperationCanceledException)
         {
+            if (projectTaskId != Guid.Empty)
+            {
+                _projectWorkspace?.TryMarkCancelled(projectTaskId, out _);
+            }
+
             _dispatcher.Post(item.Cancelled);
         }
         catch (Exception exception)
         {
+            if (projectTaskId != Guid.Empty)
+            {
+                _projectWorkspace?.TryFailTask(projectTaskId, exception.GetType().Name, out _);
+            }
+
             _dispatcher.Post(() => item.Fail(exception));
         }
         finally
@@ -1074,6 +1213,7 @@ public sealed class DashboardViewModel : ViewModelBase
             _dispatcher.Post(() =>
             {
                 _handles.Remove(handle.JobId);
+                _projectTaskIds.TryRemove(handle.JobId, out _);
                 CancelCommand.NotifyCanExecuteChanged();
             });
         }
@@ -1086,13 +1226,23 @@ public sealed class DashboardViewModel : ViewModelBase
             return;
         }
 
-        handle.Cancel();
+        if (!_projectTaskIds.TryGetValue(item.JobId, out Guid taskId) ||
+            _projectWorkspace?.TryRequestCancellation(taskId, out _) != true)
+        {
+            handle.Cancel();
+        }
+
         item.RequestCancellation();
         CancelCommand.NotifyCanExecuteChanged();
     }
 
     private void OnProgressChanged(object? sender, TranslationQueueProgress progress)
     {
+        if (_projectTaskIds.ContainsKey(progress.JobId))
+        {
+            _projectWorkspace?.TryReportProgress(progress.JobId, progress, out _);
+        }
+
         _dispatcher.Post(() =>
         {
             if (!_items.TryGetValue(progress.JobId, out var item))

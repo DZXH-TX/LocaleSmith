@@ -16,6 +16,7 @@ namespace LocaleSmith.App.Pages;
 public sealed partial class CommunityPage : Page
 {
     private CommunityViewModel ViewModel { get; }
+    private MicrosoftStoreBillingViewModel BillingViewModel { get; }
     private readonly NavigationInitializationCoordinator _initialization = new();
     private bool _deletePatDialogOpen;
     private bool _reportContentDialogOpen;
@@ -28,6 +29,7 @@ public sealed partial class CommunityPage : Page
     {
         InitializeComponent();
         ViewModel = App.Services.GetRequiredService<CommunityViewModel>();
+        BillingViewModel = App.Services.GetRequiredService<MicrosoftStoreBillingViewModel>();
         DataContext = ViewModel;
     }
 
@@ -47,6 +49,7 @@ public sealed partial class CommunityPage : Page
     {
         _initialization.Deactivate();
         ViewModel.CancelActiveOperation();
+        ArtifactDownloadControl.CancelActiveOperation();
         if (_reportContentDialogOpen)
         {
             _allowReportDialogClose = true;
@@ -76,6 +79,7 @@ public sealed partial class CommunityPage : Page
         if (sender is Selector { SelectedItem: ModPlatformModSummary mod })
         {
             await ViewModel.SelectModAsync(mod).ConfigureAwait(true);
+            await ArtifactDownloadControl.SetArtifactAsync(mod.LatestVersion).ConfigureAwait(true);
         }
     }
 
@@ -105,6 +109,7 @@ public sealed partial class CommunityPage : Page
 
         var passwordCharacters = CommunityPasswordInput.Password.ToCharArray();
         var tokenCharacters = CommunityPatInput.Password.ToCharArray();
+        var authenticated = false;
         CommunityPasswordInput.Password = string.Empty;
         CommunityPatInput.Password = string.Empty;
         try
@@ -117,12 +122,21 @@ public sealed partial class CommunityPage : Page
             if (ViewModel.IsAuthenticated)
             {
                 CommunityUsernameInput.Text = string.Empty;
+                authenticated = true;
             }
         }
         finally
         {
             CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(passwordCharacters.AsSpan()));
             CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(tokenCharacters.AsSpan()));
+        }
+
+        if (authenticated)
+        {
+            await BillingViewModel.RefreshAsync().ConfigureAwait(true);
+            await ArtifactDownloadControl
+                .SetArtifactAsync(ViewModel.SelectedMod?.LatestVersion)
+                .ConfigureAwait(true);
         }
     }
 
@@ -140,6 +154,10 @@ public sealed partial class CommunityPage : Page
                 ViewModel.DeletePatCommand.CanExecute(null))
             {
                 await ViewModel.DeletePatCommand.ExecuteAsync(null).ConfigureAwait(true);
+                await BillingViewModel.RefreshAsync().ConfigureAwait(true);
+                await ArtifactDownloadControl
+                    .SetArtifactAsync(ViewModel.SelectedMod?.LatestVersion)
+                    .ConfigureAwait(true);
             }
         }
         finally

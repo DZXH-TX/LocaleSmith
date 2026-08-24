@@ -92,4 +92,5 @@ public sealed record TranslatedEntry(
 
 public sealed record TranslationBatchResult(
     string TargetLanguage,
-    IReadOnlyList<TranslatedEntry> Entries);
+    IReadOnlyList<TranslatedEntry> Entries,
+    ModelTokenUsage? ModelUsage = null);

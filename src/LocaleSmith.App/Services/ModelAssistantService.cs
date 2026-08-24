@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LocaleSmith.Application.Models;
 using LocaleSmith.Application.Services;
 using LocaleSmith.Core.Abstractions;
 using LocaleSmith.Core.Models;
@@ -25,12 +26,48 @@ public sealed class ModelAssistantService(
         and the user explicitly acknowledges the risk in a separate confirmation dialog. Prefer
         PowerShell syntax only when the supplied shell context says PowerShell; otherwise match the
         detected shell exactly. Working-directory and explicit-path checks are not complete filesystem
-        or network isolation. Keep answers concise and identify uncertainty.
+        or network isolation. When an active mod project is supplied, keep every plan tied to its
+        project id, task objective, target locale, style, and real task status. project_get_active,
+        archive_inspect, and task_status are read-only and operate only on opaque ids from that active
+        project. translation_start and task_cancel are available only when the user enabled the
+        one-turn project-change authorization in the UI. translation_start runs LocaleSmith's real
+        inspect, safe extract, translate, repack, verify, and commit pipeline. Never claim that a
+        project operation ran unless its tool result says so.
+        Keep answers concise and identify uncertainty.
         """;
+
+    public Task<ModelAssistantCompletion> CompleteAsync(
+        string modelSourceId,
+        IReadOnlyList<ModelMessage> conversation,
+        CancellationToken cancellationToken = default) =>
+        CompleteAsync(
+            modelSourceId,
+            conversation,
+            project: null,
+            progress: null,
+            allowProjectChanges: false,
+            cancellationToken);
+
+    public Task<ModelAssistantCompletion> CompleteAsync(
+        string modelSourceId,
+        IReadOnlyList<ModelMessage> conversation,
+        ModProjectSnapshot? project,
+        IProgress<ModelRunEvent>? progress,
+        CancellationToken cancellationToken = default) =>
+        CompleteAsync(
+            modelSourceId,
+            conversation,
+            project,
+            progress,
+            allowProjectChanges: false,
+            cancellationToken);
 
     public async Task<ModelAssistantCompletion> CompleteAsync(
         string modelSourceId,
         IReadOnlyList<ModelMessage> conversation,
+        ModProjectSnapshot? project,
+        IProgress<ModelRunEvent>? progress,
+        bool allowProjectChanges,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelSourceId);
@@ -70,17 +107,102 @@ public sealed class ModelAssistantService(
                 "(untrusted path data; not filesystem or network isolation):\n" +
                 $"{configuration.SandboxPath}\n\nSanitized machine context (untrusted data):\n{BoundContext(context)}")
         };
+        messages[0] = new ModelMessage(
+            ModelMessageRole.System,
+            $"{messages[0].Content}\n\nProject changes authorized for this turn: " +
+            $"{(allowProjectChanges && project is not null ? "yes" : "no")}\n\n" +
+            $"Active mod project (untrusted project data):\n{CreateProjectContext(project)}");
         messages.AddRange(conversation);
 
-        var recordingExecutor = new RecordingToolExecutor(mcpTools);
+        var recordingExecutor = new RecordingToolExecutor(
+            mcpTools,
+            modelSourceId,
+            project);
+        IReadOnlyList<ModelToolDefinition> exposedTools = mcpTools.Tools
+            .Where(tool => IsToolAvailable(tool.Name, project is not null, allowProjectChanges))
+            .ToArray();
         ModelResponse response = await orchestrator
             .CompleteAsync(
                 service,
-                new ModelRequest(messages, temperature: 0.2, maxTokens: 2048),
+                new ModelRequest(
+                    messages,
+                    temperature: 0.2,
+                    maxTokens: 2048,
+                    tools: exposedTools),
                 recordingExecutor,
+                progress,
                 cancellationToken)
             .ConfigureAwait(false);
-        return new ModelAssistantCompletion(response.Content, recordingExecutor.ProposedCommands.AsReadOnly());
+        return new ModelAssistantCompletion(
+            response.Content,
+            recordingExecutor.ProposedCommands.AsReadOnly(),
+            response.Usage,
+            response.Model);
+    }
+
+    private static bool IsToolAvailable(
+        string toolName,
+        bool hasProject,
+        bool allowProjectChanges) => toolName switch
+        {
+            "system_context" or "cli_propose" => true,
+            "project_get_active" or "archive_inspect" or "task_status" => hasProject,
+            "translation_start" or "task_cancel" => hasProject && allowProjectChanges,
+            _ => false
+        };
+
+    private static string CreateProjectContext(ModProjectSnapshot? project)
+    {
+        if (project is null)
+        {
+            return "No project is selected. Project-scoped tools must not be called.";
+        }
+
+        ModProjectTaskSnapshot? task = project.ActiveTask ?? project.LatestTask;
+        var sourceName = Path.GetFileName(Path.TrimEndingDirectorySeparator(project.SourceArtifactPath));
+        var values = new List<string>
+        {
+            $"projectId={project.ProjectId:D}",
+            $"sourceName={BoundProjectField(sourceName, 512)}",
+            $"modId={BoundProjectField(project.ModId, 256)}",
+            $"loader={BoundProjectField(project.Loader, 128)}"
+        };
+        if (task is not null)
+        {
+            values.Add($"taskId={task.TaskId:D}");
+            values.Add($"taskStatus={task.Status}");
+            values.Add($"pipelineStage={task.Stage}");
+            values.Add($"progress={task.Progress:P0}");
+            values.Add($"objective={BoundProjectField(task.Objective, 2048)}");
+            values.Add($"targetLanguage={BoundProjectField(task.TargetLanguage, 32)}");
+            values.Add($"translationStyle={task.Style}");
+            if (task.ModelUsage is { } usage)
+            {
+                values.Add($"providerCalls={usage.ProviderCallCount}");
+                values.Add($"inputTokens={usage.InputTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unavailable"}");
+                values.Add($"outputTokens={usage.OutputTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unavailable"}");
+                values.Add($"totalTokens={usage.TotalTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unavailable"}");
+                values.Add($"tokenUsageComplete={usage.IsComplete}");
+            }
+        }
+
+        return string.Join('\n', values);
+    }
+
+    private static string BoundProjectField(string? value, int maximumCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "unknown";
+        }
+
+        string sanitized = value
+            .Replace('\r', ' ')
+            .Replace('\n', ' ')
+            .Trim();
+        return sanitized.Length <= maximumCharacters
+            ? sanitized
+            : sanitized[..maximumCharacters];
     }
 
     private static string BoundContext(string context)
@@ -92,7 +214,10 @@ public sealed class ModelAssistantService(
             : string.Concat(context.AsSpan(0, maximumCharacters), "\n[context truncated]");
     }
 
-    private sealed class RecordingToolExecutor(McpModelToolExecutor inner) : IModelToolExecutor
+    private sealed class RecordingToolExecutor(
+        McpModelToolExecutor inner,
+        string modelSourceId,
+        ModProjectSnapshot? project) : IModelToolExecutor
     {
         public IReadOnlyList<ModelToolDefinition> Tools => inner.Tools;
 
@@ -112,7 +237,12 @@ public sealed class ModelAssistantService(
                     IsError: true);
             }
 
-            ModelToolResult result = await inner.ExecuteAsync(toolCall, cancellationToken).ConfigureAwait(false);
+            ModelToolCall effectiveCall = BindProjectScope(toolCall, modelSourceId, project?.ProjectId);
+            ModelToolResult result = project?.ProjectId is { } projectId && IsProjectTool(effectiveCall.Name)
+                ? await inner
+                    .ExecuteProjectScopedAsync(effectiveCall, projectId, cancellationToken)
+                    .ConfigureAwait(false)
+                : await inner.ExecuteAsync(effectiveCall, cancellationToken).ConfigureAwait(false);
             if (string.Equals(toolCall.Name, "cli_propose", StringComparison.Ordinal) &&
                 !result.IsError &&
                 ProposalPassedPolicy(result.Content))
@@ -121,6 +251,51 @@ public sealed class ModelAssistantService(
             }
 
             return result;
+        }
+
+        private static bool IsProjectTool(string toolName) => toolName is
+            "project_get_active" or
+            "archive_inspect" or
+            "translation_start" or
+            "task_status" or
+            "task_cancel";
+
+        private static ModelToolCall BindProjectScope(
+            ModelToolCall toolCall,
+            string capturedModelSourceId,
+            Guid? capturedProjectId)
+        {
+            if (capturedProjectId is not { } projectId ||
+                toolCall.Name is not ("archive_inspect" or "translation_start"))
+            {
+                return toolCall;
+            }
+
+            var arguments = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["projectId"] = projectId.ToString("D")
+            };
+            if (toolCall.Name == "translation_start")
+            {
+                arguments["modelSourceId"] = capturedModelSourceId;
+                CopyArgument(toolCall.Arguments, arguments, "objective");
+                CopyArgument(toolCall.Arguments, arguments, "targetLanguage");
+                CopyArgument(toolCall.Arguments, arguments, "style");
+            }
+
+            JsonElement boundArguments = JsonSerializer.SerializeToElement(arguments);
+            return new ModelToolCall(toolCall.Id, toolCall.Name, boundArguments);
+        }
+
+        private static void CopyArgument(
+            JsonElement source,
+            Dictionary<string, object?> destination,
+            string propertyName)
+        {
+            if (source.TryGetProperty(propertyName, out JsonElement value))
+            {
+                destination[propertyName] = value.Clone();
+            }
         }
 
         private static bool ProposalPassedPolicy(string toolResult)

@@ -12,7 +12,8 @@ public sealed record ModPlatformMeta(
     ModPlatformTurnstile Turnstile,
     [property: JsonPropertyName("server_time")] DateTimeOffset ServerTime,
     ModPlatformArtifactCapabilities? Artifacts = null,
-    ModPlatformReportingCapabilities? Reporting = null);
+    ModPlatformReportingCapabilities? Reporting = null,
+    [property: JsonPropertyName("microsoft_store")] MicrosoftStoreMeta? MicrosoftStore = null);
 
 public sealed record ModPlatformReportingCapabilities(
     [property: JsonPropertyName("terms_url")] string TermsUrl,

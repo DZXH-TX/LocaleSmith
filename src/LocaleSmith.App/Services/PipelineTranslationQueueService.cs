@@ -218,7 +218,8 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             result.HardcodedCandidates.ToArray(),
             result.Externalization.ExternalizedCount,
             requestedStyle,
-            targetLanguage);
+            targetLanguage,
+            result.ModelUsage);
     }
 
     private void OnPipelineProgressChanged(object? sender, PipelineProgress progress)
@@ -295,6 +296,7 @@ public sealed class PipelineTranslationQueueService : ITranslationQueueService
             progress.Fraction,
             progress.NextStage,
             progress.Stages?.ToArray(),
-            progress.RollbackStatus);
+            progress.RollbackStatus,
+            progress.ModelUsage);
     }
 }

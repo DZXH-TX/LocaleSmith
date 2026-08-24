@@ -104,21 +104,23 @@ public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
                     "OpenAI-compatible response contained neither message content nor tool calls.");
             }
 
-            int? inputTokens = null;
-            int? outputTokens = null;
-            if (root.TryGetProperty("usage", out var usage))
+            ModelTokenUsage? tokenUsage = null;
+            if (root.TryGetProperty("usage", out var usage) &&
+                usage.ValueKind == System.Text.Json.JsonValueKind.Object)
             {
-                inputTokens = OptionalInt32(usage, "prompt_tokens");
-                outputTokens = OptionalInt32(usage, "completion_tokens");
+                tokenUsage = CreateProviderUsage(
+                    OptionalInt64(usage, "prompt_tokens"),
+                    OptionalInt64(usage, "completion_tokens"),
+                    OptionalInt64(usage, "total_tokens"),
+                    "OpenAI-compatible response usage");
             }
 
             return new ModelResponse(
                 content,
                 OptionalString(root, "model"),
-                inputTokens,
-                outputTokens,
-                toolCalls,
-                reasoningContent);
+                toolCalls: toolCalls,
+                reasoningContent: reasoningContent,
+                usage: tokenUsage);
         }
     }
 
@@ -236,5 +238,21 @@ public sealed class OpenAiCompatibleModelService : HttpModelServiceBase
         }
 
         return result.AsReadOnly();
+    }
+
+    private static ModelTokenUsage? CreateProviderUsage(
+        long? inputTokens,
+        long? outputTokens,
+        long? totalTokens,
+        string description)
+    {
+        try
+        {
+            return ModelTokenUsage.FromProviderResponse(inputTokens, outputTokens, totalTokens);
+        }
+        catch (Exception exception) when (exception is ArgumentException or OverflowException)
+        {
+            throw new ModelServiceException($"{description} contained invalid token counts.", innerException: exception);
+        }
     }
 }

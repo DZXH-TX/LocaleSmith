@@ -35,6 +35,30 @@ public sealed record ModelProviderPreset(
 
 public static class ModelProviderPresets
 {
+    private static readonly HashSet<string> QwenDashScopeHosts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "dashscope.aliyuncs.com",
+        "dashscope-intl.aliyuncs.com",
+        "dashscope-us.aliyuncs.com"
+    };
+
+    private static readonly HashSet<string> QwenWorkspaceRegions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "cn-beijing",
+        "ap-southeast-1",
+        "ap-northeast-1",
+        "eu-central-1",
+        "us-east-1"
+    };
+
+    private static readonly HashSet<string> XiaomiMimoHosts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "api.xiaomimimo.com",
+        "token-plan-cn.xiaomimimo.com",
+        "token-plan-sgp.xiaomimimo.com",
+        "token-plan-ams.xiaomimimo.com"
+    };
+
     public const string DeepSeekId = "deepseek";
     public const string QwenId = "qwen";
     public const string XiaomiMimoId = "xiaomi-mimo";
@@ -143,4 +167,111 @@ public static class ModelProviderPresets
 
     /// <summary>Maps absent or unknown legacy metadata to Custom without changing endpoint or model fields.</summary>
     public static ModelProviderPreset ResolveOrCustom(string? id) => TryGet(id, out var preset) ? preset : Custom;
+
+    /// <summary>
+    /// Resolves persisted or edited preset metadata against the endpoint that will actually receive credentials.
+    /// A named preset is provider identity metadata, so an arbitrary compatible proxy remains Custom even when it
+    /// serves a model with a provider-like name.
+    /// </summary>
+    public static ModelProviderPreset ResolveEffective(
+        ModelProviderKind provider,
+        string? presetId,
+        Uri endpoint)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        var requested = ResolveOrCustom(presetId);
+        return provider == ModelProviderKind.OpenAiCompatible && IsOfficialEndpoint(requested, endpoint)
+            ? requested
+            : Custom;
+    }
+
+    /// <summary>
+    /// Returns whether an HTTPS endpoint is one of the explicitly supported official OpenAI-compatible routes for
+    /// a named preset. Host comparisons use the canonical IDN host and never substring matching.
+    /// </summary>
+    public static bool IsOfficialEndpoint(ModelProviderPreset preset, Uri endpoint)
+    {
+        ArgumentNullException.ThrowIfNull(preset);
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (preset.IsCustom ||
+            !endpoint.IsAbsoluteUri ||
+            !string.Equals(endpoint.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+            !endpoint.IsDefaultPort ||
+            !string.IsNullOrEmpty(endpoint.UserInfo) ||
+            !string.IsNullOrEmpty(endpoint.Query) ||
+            !string.IsNullOrEmpty(endpoint.Fragment))
+        {
+            return false;
+        }
+
+        var hostMatches = preset.Id switch
+        {
+            DeepSeekId => HostEquals(endpoint, "api.deepseek.com"),
+            QwenId => IsOfficialQwenHost(endpoint.IdnHost),
+            XiaomiMimoId => XiaomiMimoHosts.Contains(endpoint.IdnHost),
+            MiniMaxId => HostEquals(endpoint, "api.minimax.io"),
+            DoubaoId => HostEquals(endpoint, "ark.cn-beijing.volces.com"),
+            ZhipuGlmId => HostEquals(endpoint, "open.bigmodel.cn"),
+            KimiId => HostEquals(endpoint, "api.moonshot.cn") || HostEquals(endpoint, "api.moonshot.ai"),
+            OpenAiId => HostEquals(endpoint, "api.openai.com"),
+            _ => false
+        };
+        return hostMatches && HasOfficialOpenAiPath(preset.Id, endpoint.AbsolutePath);
+    }
+
+    /// <summary>
+    /// Custom OpenAI-compatible loopback services may use plaintext HTTP, but the base URI must explicitly select
+    /// their OpenAI-compatible v1 route rather than being mistaken for a provider-native endpoint.
+    /// </summary>
+    public static bool IsSupportedCustomLoopbackEndpoint(Uri endpoint)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (!endpoint.IsAbsoluteUri ||
+            !endpoint.IsLoopback ||
+            !string.Equals(endpoint.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var path = endpoint.AbsolutePath.TrimEnd('/');
+        return path.EndsWith("/v1", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith("/v1/chat/completions", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HostEquals(Uri endpoint, string expected) =>
+        string.Equals(endpoint.IdnHost, expected, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsOfficialQwenHost(string host)
+    {
+        if (QwenDashScopeHosts.Contains(host))
+        {
+            return true;
+        }
+
+        var labels = host.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return labels.Length == 5 &&
+            labels[0].Length > 0 &&
+            QwenWorkspaceRegions.Contains(labels[1]) &&
+            string.Equals(labels[2], "maas", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(labels[3], "aliyuncs", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(labels[4], "com", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasOfficialOpenAiPath(string presetId, string absolutePath)
+    {
+        var path = absolutePath.TrimEnd('/');
+        return presetId switch
+        {
+            DeepSeekId => IsBaseOrChatPath(path, string.Empty) || IsBaseOrChatPath(path, "/v1"),
+            QwenId => IsBaseOrChatPath(path, "/compatible-mode/v1"),
+            XiaomiMimoId or MiniMaxId or KimiId or OpenAiId => IsBaseOrChatPath(path, "/v1"),
+            DoubaoId => IsBaseOrChatPath(path, "/api/v3"),
+            ZhipuGlmId => IsBaseOrChatPath(path, "/api/paas/v4"),
+            _ => false
+        };
+    }
+
+    private static bool IsBaseOrChatPath(string path, string basePath) =>
+        string.Equals(path, basePath, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, $"{basePath}/chat/completions", StringComparison.OrdinalIgnoreCase);
 }

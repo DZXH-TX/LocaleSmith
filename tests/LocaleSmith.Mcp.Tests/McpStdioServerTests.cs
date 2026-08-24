@@ -78,6 +78,33 @@ public sealed class McpStdioServerTests
     }
 
     [Fact]
+    public async Task ProjectToolsRequireAnInjectedAppBackendAndRejectHostPaths()
+    {
+        var backend = new RecordingProjectBackend();
+        using var server = new McpStdioServer(
+            new FixedContextProvider("safe context"),
+            new RecordingPolicy(CliPolicyDecision.Permit(@"C:\Program Files\dotnet\dotnet.exe")),
+            projectBackend: backend);
+        string projectId = backend.ProjectId.ToString("D");
+        var responses = await ExchangeAsync(
+            server,
+            Initialize,
+            Initialized,
+            """{"jsonrpc":"2.0","id":1,"method":"tools/list"}""",
+            """
+            {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"archive.inspect","arguments":{"projectId":"__PROJECT__","sourcePath":"C:\\untrusted.jar"}}}
+            """.Replace("__PROJECT__", projectId, StringComparison.Ordinal));
+
+        JsonElement tools = responses[1].GetProperty("result").GetProperty("tools");
+        Assert.Equal(7, tools.GetArrayLength());
+        Assert.Contains(tools.EnumerateArray(), static tool =>
+            tool.GetProperty("name").GetString() == "translation.start");
+        Assert.True(responses[2].GetProperty("result").GetProperty("isError").GetBoolean());
+        Assert.Contains("Unknown tool argument", responses[2].GetRawText(), StringComparison.Ordinal);
+        Assert.Equal(0, backend.InspectionCount);
+    }
+
+    [Fact]
     public async Task MissingUiApprovalTokenNeverReachesRunner()
     {
         var runner = new RecordingCliRunner();
@@ -363,5 +390,69 @@ public sealed class McpStdioServerTests
                     string.Empty,
                     TimeSpan.FromMilliseconds(10)));
         }
+    }
+
+    private sealed class RecordingProjectBackend : IProjectMcpBackend
+    {
+        public Guid ProjectId { get; } = Guid.NewGuid();
+
+        public int InspectionCount { get; private set; }
+
+        public ValueTask<ProjectMcpSnapshot?> GetActiveProjectAsync(
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<ProjectMcpSnapshot?>(
+                new ProjectMcpSnapshot(ProjectId, "example.jar", null, null, null, null));
+
+        public ValueTask<ProjectMcpSnapshot?> GetProjectAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<ProjectMcpSnapshot?>(
+                projectId == ProjectId
+                    ? new ProjectMcpSnapshot(ProjectId, "example.jar", null, null, null, null)
+                    : null);
+
+        public ValueTask<ArchiveMcpInspection> InspectArchiveAsync(
+            Guid projectId,
+            CancellationToken cancellationToken = default)
+        {
+            InspectionCount++;
+            return ValueTask.FromResult(new ArchiveMcpInspection(
+                projectId,
+                "example.jar",
+                "example",
+                "Fabric",
+                1,
+                0,
+                "none",
+                false,
+                []));
+        }
+
+        public ValueTask<TaskMcpSnapshot> StartTranslationAsync(
+            TranslationMcpStartRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask<TaskMcpSnapshot?> GetTaskAsync(
+            Guid taskId,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<TaskMcpSnapshot?>(null);
+
+        public ValueTask<TaskMcpSnapshot?> GetTaskAsync(
+            Guid projectId,
+            Guid taskId,
+            CancellationToken cancellationToken = default) =>
+            GetTaskAsync(taskId, cancellationToken);
+
+        public ValueTask<TaskMcpSnapshot> CancelTaskAsync(
+            Guid taskId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask<TaskMcpSnapshot> CancelTaskAsync(
+            Guid projectId,
+            Guid taskId,
+            CancellationToken cancellationToken = default) =>
+            CancelTaskAsync(taskId, cancellationToken);
     }
 }

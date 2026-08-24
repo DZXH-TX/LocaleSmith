@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LocaleSmith.Application.Models;
 using LocaleSmith.Application.Services;
 using LocaleSmith.Core.Abstractions;
 using LocaleSmith.Core.Models;
@@ -24,8 +25,13 @@ public sealed class ModelToolOrchestratorTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal("final", response.Content);
-        Assert.Equal(8, response.InputTokens);
-        Assert.Equal(3, response.OutputTokens);
+        Assert.Equal(8L, response.InputTokens);
+        Assert.Equal(3L, response.OutputTokens);
+        Assert.Equal(11L, response.TotalTokens);
+        Assert.Equal(2, response.Usage!.ProviderCallCount);
+        Assert.Equal(2, response.Usage.CallsWithUsage);
+        Assert.Equal(2, response.Usage.CallsWithCompleteUsage);
+        Assert.True(response.Usage.IsComplete);
         Assert.Equal("call-1", Assert.Single(executor.Calls).Id);
         Assert.Equal(2, service.Requests.Count);
         ModelRequest followUp = service.Requests[1];
@@ -60,6 +66,84 @@ public sealed class ModelToolOrchestratorTests
         Assert.Equal("visible final", response.Content);
         Assert.Equal(finalReasoning, response.ReasoningContent);
         Assert.DoesNotContain(firstRoundReasoning, response.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PublishesContentFreeLifecycleEventsAndMarksMissingRoundUsageIncomplete()
+    {
+        const string privateReasoning = "private reasoning C:\\secret\\mod.jar";
+        using var arguments = JsonDocument.Parse("""{"path":"C:\\secret\\mod.jar"}""");
+        var call = new ModelToolCall("call-private", "system_context", arguments.RootElement);
+        var service = new SequenceModelService(
+            new ModelResponse(
+                string.Empty,
+                inputTokens: 3,
+                outputTokens: 1,
+                toolCalls: [call],
+                reasoningContent: privateReasoning),
+            new ModelResponse("visible final"));
+        var progress = new RecordingProgress();
+
+        ModelResponse response = await new ModelToolOrchestrator().CompleteAsync(
+            service,
+            new ModelRequest([new ModelMessage(ModelMessageRole.User, "inspect")]),
+            new RecordingExecutor(),
+            progress,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            [
+                ModelRunEventKind.ModelRoundStarted,
+                ModelRunEventKind.ModelRoundCompleted,
+                ModelRunEventKind.ToolStarted,
+                ModelRunEventKind.ToolCompleted,
+                ModelRunEventKind.ModelRoundStarted,
+                ModelRunEventKind.ModelRoundCompleted,
+                ModelRunEventKind.RunCompleted
+            ],
+            progress.Events.Select(static item => item.Kind));
+        Assert.Equal(Enumerable.Range(1, progress.Events.Count), progress.Events.Select(static item => item.Sequence));
+        Assert.Equal("system_context", progress.Events.Single(item => item.Kind == ModelRunEventKind.ToolStarted).ToolName);
+        Assert.All(progress.Events, item =>
+        {
+            string display = item.ToString();
+            Assert.DoesNotContain(privateReasoning, display, StringComparison.Ordinal);
+            Assert.DoesNotContain(@"C:\secret\mod.jar", display, StringComparison.Ordinal);
+            Assert.DoesNotContain("path", display, StringComparison.Ordinal);
+        });
+        Assert.Equal(2, response.Usage!.ProviderCallCount);
+        Assert.Equal(1, response.Usage.CallsWithUsage);
+        Assert.Equal(1, response.Usage.CallsWithCompleteUsage);
+        Assert.Equal(3L, response.InputTokens);
+        Assert.Equal(1L, response.OutputTokens);
+        Assert.Equal(4L, response.TotalTokens);
+        Assert.False(response.Usage.IsComplete);
+        ModelRunEvent completed = progress.Events[^1];
+        Assert.Same(response.Usage, completed.Usage);
+    }
+
+    [Fact]
+    public async Task ProviderFailurePublishesSafeTerminalEventAndCountsMissingCall()
+    {
+        var progress = new RecordingProgress();
+        var service = new ThrowingModelService();
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new ModelToolOrchestrator().CompleteAsync(
+                service,
+                new ModelRequest([new ModelMessage(ModelMessageRole.User, "inspect")]),
+                new RecordingExecutor(),
+                progress,
+                TestContext.Current.CancellationToken));
+
+        Assert.Contains("credential=secret", exception.Message, StringComparison.Ordinal);
+        ModelRunEvent failed = progress.Events[^1];
+        Assert.Equal(ModelRunEventKind.RunFailed, failed.Kind);
+        Assert.Equal(1, failed.Usage!.ProviderCallCount);
+        Assert.Equal(0, failed.Usage.CallsWithUsage);
+        Assert.Equal(0, failed.Usage.CallsWithCompleteUsage);
+        Assert.False(failed.Usage.IsComplete);
+        Assert.DoesNotContain("credential=secret", failed.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -118,17 +202,22 @@ public sealed class ModelToolOrchestratorTests
             new ModelResponse(string.Empty, toolCalls: [CreateCall("call-1", "system_context")]),
             new ModelResponse("done"));
         var executor = new RecordingExecutor(throwOnExecute: true);
+        var progress = new RecordingProgress();
 
         await new ModelToolOrchestrator().CompleteAsync(
             service,
             new ModelRequest([new ModelMessage(ModelMessageRole.User, "inspect")]),
             executor,
+            progress,
             TestContext.Current.CancellationToken);
 
         ModelMessage result = service.Requests[1].Messages[^1];
         Assert.True(result.ToolResultIsError);
         Assert.Contains(nameof(InvalidOperationException), result.Content, StringComparison.Ordinal);
         Assert.DoesNotContain("credential=secret", result.Content, StringComparison.Ordinal);
+        ModelRunEvent failed = Assert.Single(progress.Events, item => item.Kind == ModelRunEventKind.ToolFailed);
+        Assert.Equal("system_context", failed.ToolName);
+        Assert.DoesNotContain("credential=secret", failed.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -268,6 +357,28 @@ public sealed class ModelToolOrchestratorTests
             Requests.Add(request);
             return Task.FromResult(_responses.Dequeue());
         }
+    }
+
+    private sealed class ThrowingModelService : IModelService
+    {
+        public ModelSource Source { get; } = new(
+            "throwing",
+            "Throwing",
+            ModelProviderKind.Ollama,
+            new Uri("http://127.0.0.1:11434"),
+            "test");
+
+        public Task<ModelResponse> CompleteAsync(
+            ModelRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("credential=secret");
+    }
+
+    private sealed class RecordingProgress : IProgress<ModelRunEvent>
+    {
+        public List<ModelRunEvent> Events { get; } = [];
+
+        public void Report(ModelRunEvent value) => Events.Add(value);
     }
 
     private sealed class GeneratedModelService(Func<int, ModelResponse> factory) : IModelService

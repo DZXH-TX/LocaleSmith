@@ -56,6 +56,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     private string _modelName = "llama3";
     private string? _credentialReference;
     private string? _credentialFingerprint;
+    private bool _applyingPresetDefaults;
     private bool _isDirty;
     private bool _suppressDirtyTracking;
     private ModelProviderKind? _pendingProvider;
@@ -190,12 +191,20 @@ public sealed class ModelSourcesViewModel : ViewModelBase
             MarkDirty();
             if (Provider == ModelProviderKind.OpenAiCompatible)
             {
-                SelectedTokenLimitParameter = value.DefaultTokenLimitParameter;
-                if (!value.IsCustom)
+                _applyingPresetDefaults = true;
+                try
                 {
-                    DisplayName = value.DisplayName;
-                    Endpoint = value.DefaultEndpoint?.AbsoluteUri ?? Endpoint;
-                    ModelName = value.DefaultModelName ?? ModelName;
+                    SelectedTokenLimitParameter = value.DefaultTokenLimitParameter;
+                    if (!value.IsCustom)
+                    {
+                        DisplayName = value.DisplayName;
+                        Endpoint = value.DefaultEndpoint?.AbsoluteUri ?? Endpoint;
+                        ModelName = value.DefaultModelName ?? ModelName;
+                    }
+                }
+                finally
+                {
+                    _applyingPresetDefaults = false;
                 }
             }
         }
@@ -249,7 +258,14 @@ public sealed class ModelSourcesViewModel : ViewModelBase
     public string Endpoint
     {
         get => _endpoint;
-        set => SetEditorProperty(ref _endpoint, value);
+        set
+        {
+            if (SetProperty(ref _endpoint, value))
+            {
+                MarkDirty();
+                ReconcilePresetWithEndpoint(value);
+            }
+        }
     }
 
     public string ModelName
@@ -642,9 +658,14 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsApiKeyRequired));
         OnPropertyChanged(nameof(IsOllama));
         OnPropertyChanged(nameof(IsOpenAiCompatible));
-        var preset = ModelProviderPresets.ResolveOrCustom(profile.PresetId);
+        var configuredPreset = ModelProviderPresets.ResolveOrCustom(profile.PresetId);
+        var preset = ModelProviderPresets.ResolveEffective(
+            profile.Provider,
+            configuredPreset.Id,
+            new Uri(profile.Endpoint, UriKind.Absolute));
         SetPresetWithoutApplyingDefaults(preset);
-        SetTokenLimitParameterWithoutTracking(profile.TokenLimitParameter ?? preset.DefaultTokenLimitParameter);
+        SetTokenLimitParameterWithoutTracking(
+            profile.TokenLimitParameter ?? configuredPreset.DefaultTokenLimitParameter);
         RefreshModelsCommand.NotifyCanExecuteChanged();
         Endpoint = profile.Endpoint;
         ModelName = profile.ModelName;
@@ -707,13 +728,25 @@ public sealed class ModelSourcesViewModel : ViewModelBase
             return false;
         }
 
-        if (endpoint.Scheme == Uri.UriSchemeHttp && !(Provider == ModelProviderKind.Ollama && endpoint.IsLoopback))
+        if (endpoint.Scheme == Uri.UriSchemeHttp && !endpoint.IsLoopback)
         {
             ErrorMessage = Text(
                 "ModelSourceHttpsRequired",
-                "Remote model sources must use HTTPS; HTTP is allowed only for loopback Ollama.");
+                "Remote model sources must use HTTPS; HTTP is allowed only for loopback services.");
             return false;
         }
+
+        if (Provider == ModelProviderKind.OpenAiCompatible &&
+            endpoint.Scheme == Uri.UriSchemeHttp &&
+            !ModelProviderPresets.IsSupportedCustomLoopbackEndpoint(endpoint))
+        {
+            ErrorMessage = Text(
+                "ModelSourceLoopbackOpenAiV1Required",
+                "Loopback HTTP OpenAI-compatible sources must use an explicit /v1 base address.");
+            return false;
+        }
+
+        var effectivePreset = ModelProviderPresets.ResolveEffective(Provider, SelectedPreset.Id, endpoint);
 
         draft = new ModelSourceDraft(
             _editingId,
@@ -723,7 +756,7 @@ public sealed class ModelSourcesViewModel : ViewModelBase
             ModelName.Trim(),
             _credentialReference,
             Provider == ModelProviderKind.OpenAiCompatible
-                ? SelectedPreset.Id
+                ? effectivePreset.Id
                 : ModelProviderPresets.CustomId,
             Provider == ModelProviderKind.OpenAiCompatible
                 ? SelectedTokenLimitParameter
@@ -755,6 +788,25 @@ public sealed class ModelSourcesViewModel : ViewModelBase
         _selectedTokenLimitParameter = parameter;
         OnPropertyChanged(nameof(SelectedTokenLimitParameter));
         OnPropertyChanged(nameof(SelectedTokenLimitParameterOption));
+    }
+
+    private void ReconcilePresetWithEndpoint(string endpointText)
+    {
+        if (_suppressDirtyTracking ||
+            _applyingPresetDefaults ||
+            Provider != ModelProviderKind.OpenAiCompatible ||
+            SelectedPreset.IsCustom ||
+            !Uri.TryCreate(endpointText, UriKind.Absolute, out var endpoint) ||
+            (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps))
+        {
+            return;
+        }
+
+        var effective = ModelProviderPresets.ResolveEffective(Provider, SelectedPreset.Id, endpoint);
+        if (effective.IsCustom)
+        {
+            SetPresetWithoutApplyingDefaults(ModelProviderPresets.Custom);
+        }
     }
 
     private void NotifyPresetProperties()

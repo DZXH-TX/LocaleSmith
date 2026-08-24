@@ -122,3 +122,77 @@ public interface IModPlatformCredentialService
 
     ValueTask<bool> DeleteAsync(CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Authenticated MCTX billing and accelerated-download API. Implementations must never place
+/// service tickets, Microsoft Store ID keys, PATs, or signed download grants in logs, configuration,
+/// telemetry, diagnostics, or persistence. Signed grant URLs may exist only as short-lived request URIs.
+/// </summary>
+public interface IModPlatformBillingClient
+{
+    Task<ModPlatformMeta> GetMetaAsync(CancellationToken cancellationToken = default);
+
+    Task<ModPlatformAuthSession> GetAuthenticatedSessionAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<MicrosoftStoreServiceTicket> RequestMicrosoftStoreServiceTicketAsync(
+        CancellationToken cancellationToken = default);
+
+    Task VerifyMicrosoftStorePurchaseAsync(
+        SecretValue storeIdKey,
+        CancellationToken cancellationToken = default);
+
+    Task<MicrosoftStoreEntitlements> GetEntitlementsAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<ModPlatformDownloadSources> GetDownloadSourcesAsync(
+        Guid versionId,
+        CancellationToken cancellationToken = default);
+
+    Task<ModPlatformAcceleratedDownloadGrant> CreateAcceleratedDownloadGrantAsync(
+        Guid versionId,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>Platform-neutral facade over Windows.Services.Store for testable presentation code.</summary>
+public interface IMicrosoftStorefront
+{
+    Task<MicrosoftStoreProductInfo?> GetSubscriptionAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<MicrosoftStorePurchaseOutcome> RequestSubscriptionPurchaseAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<bool> IsSubscriptionInUserCollectionAsync(
+        CancellationToken cancellationToken = default);
+
+    Task<SecretValue> GetCustomerPurchaseIdAsync(
+        SecretValue serviceTicket,
+        string publisherUserId,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IModPlatformAcceleratedArtifactDownloader
+{
+    Task DownloadAsync(
+        ModPlatformVersion artifact,
+        ModPlatformAcceleratedDownloadGrant initialGrant,
+        Func<CancellationToken, Task<ModPlatformAcceleratedDownloadGrant>> renewGrantAsync,
+        string destinationPath,
+        IProgress<ModPlatformDownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IModPlatformArtifactDownloadCoordinator
+{
+    Task<ModPlatformAccelerationAvailability> GetAccelerationAvailabilityAsync(
+        ModPlatformVersion artifact,
+        CancellationToken cancellationToken = default);
+
+    Task<ModPlatformArtifactDownloadResult> DownloadAsync(
+        ModPlatformVersion artifact,
+        string destinationPath,
+        ModPlatformDownloadRoute requestedRoute,
+        IProgress<ModPlatformDownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default);
+}

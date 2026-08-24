@@ -321,6 +321,44 @@ public sealed class ModelTranslationEngineTests
         Assert.Equal("固定来源", Assert.Single(result.Entries).Variants[0].Text);
     }
 
+    [Fact]
+    public async Task TranslateAsyncAggregatesUsageAcrossChunksAndMarksMissingUsageIncomplete()
+    {
+        var service = new StubModelService(
+            """
+            {"translations":[{"id":"e000001","formal":"译文"}]}
+            """,
+            usageFactory: call => call switch
+            {
+                1 => ModelTokenUsage.FromProviderResponse(10, 2),
+                2 => null,
+                3 => ModelTokenUsage.FromProviderResponse(20, 4),
+                _ => throw new InvalidOperationException("Unexpected provider call.")
+            });
+        using var registry = CreateRegistry(service);
+        var engine = new ModelTranslationEngine(
+            registry,
+            new ModelTranslationEngineOptions { MaxEntriesPerRequest = 1 });
+
+        TranslationBatchResult result = await engine.TranslateAsync(
+            new TranslationBatchRequest(
+            [
+                new TranslationEntry("first.txt", null, "one"),
+                new TranslationEntry("second.txt", null, "two"),
+                new TranslationEntry("third.txt", null, "three")
+            ]),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, result.Entries.Count);
+        Assert.Equal(3, result.ModelUsage!.ProviderCallCount);
+        Assert.Equal(2, result.ModelUsage.CallsWithUsage);
+        Assert.Equal(2, result.ModelUsage.CallsWithCompleteUsage);
+        Assert.Equal(30L, result.ModelUsage.InputTokens);
+        Assert.Equal(6L, result.ModelUsage.OutputTokens);
+        Assert.Equal(36L, result.ModelUsage.TotalTokens);
+        Assert.False(result.ModelUsage.IsComplete);
+    }
+
     private static ModelServiceRegistry CreateRegistry(IModelService service)
     {
         var registry = new ModelServiceRegistry();
@@ -328,7 +366,10 @@ public sealed class ModelTranslationEngineTests
         return registry;
     }
 
-    private sealed class StubModelService(string response, string id = "test") : IModelService
+    private sealed class StubModelService(
+        string response,
+        string id = "test",
+        Func<int, ModelTokenUsage?>? usageFactory = null) : IModelService
     {
         public ModelSource Source { get; } = new(
             id,
@@ -351,7 +392,7 @@ public sealed class ModelTranslationEngineTests
             RequestCount++;
             LastRequest = request;
             Requests.Add(request);
-            return Task.FromResult(new ModelResponse(response));
+            return Task.FromResult(new ModelResponse(response, usage: usageFactory?.Invoke(RequestCount)));
         }
     }
 }
