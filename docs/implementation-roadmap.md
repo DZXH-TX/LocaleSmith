@@ -166,7 +166,7 @@ App 组合根具有 project backend。选中模组项目时暴露三个只读工
 
 完整重命名改变了 package payload、PRI、可执行文件和 Rust DLL 名称；此前的开发包大小、哈希、registration 与 AppsFolder 启动结果不再代表当前源码。重命名后的 MSIX 必须重新构建、解包检查、签名并执行安装/启动 smoke。
 
-当前测试 Publisher 为 `CN=CR Tech, O=CR Tech, C=CN, S=重庆市, L=两江新区, E=xinghedaoze@gmail.com`，SignPath 测试证书 thumbprint 为 `4D5E3819A4A3694A6E0A3BC4F24926054552A349`。Subject 与 manifest 精确匹配；该证书是自签名测试证书，只用于签名流水线验证，不得描述成微软商店生产身份。
+当前 Dev manifest Publisher 为 `CN=LocaleSmith Development`，未签名验证包不携带证书。未来侧载证书 Subject 必须精确匹配该值；历史 SignPath 身份与当前 Dev/Store manifest 不兼容，不能继续使用。仓库不记录个人证书 Subject、邮箱、thumbprint 或私钥材料。
 
 生产 Gate：
 

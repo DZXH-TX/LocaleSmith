@@ -627,6 +627,11 @@ public sealed class DashboardViewModelTests
         try
         {
             await viewModel.EnqueuePackagesAsync([input], TestContext.Current.CancellationToken);
+
+            Assert.Empty(queue.Pending);
+            Assert.Contains("no longer available", viewModel.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+
+            await viewModel.EnqueuePackagesAsync([input], TestContext.Current.CancellationToken);
             Assert.Equal("one", Assert.Single(queue.Pending).Request.ModelSourceId);
         }
         finally

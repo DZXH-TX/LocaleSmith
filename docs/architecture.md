@@ -197,7 +197,7 @@ App 组合根注入 `ProjectMcpBackend`。助手选中项目后增加三个只�
 - manifest 使用 `Windows.FullTrustApplication`/`runFullTrust`；MSIX 身份不是 AppContainer。打包桌面应用在这里仍是 full-trust Host。
 - `Package.appxmanifest` 的下一版 Store 源码版本为 `1.2.0.0`、Identity Name 为 `CRTech.LocaleSmith`；开发 manifest 使用同版本 `CRTech.LocaleSmith.Dev`。WAP 的空 `PackageFlavor` 默认 `Development`，只有显式 `Store` 才选择 Partner Center manifest。两者均可生成未签名审计件，但只有 Store 认证后的正式包可以描述为发布件。
 - WAP 把 XBF/MRT 合并到包根 `resources.pri`，包内 App EXE 不是可抽离的 unpackaged 交付物。CI/local 门禁使用 `Rebuild`、`makepri dump` 与 publish-to-payload 全量哈希比较，避免复用旧 schema/程序集。
-- 测试 Publisher 为 `CN=CR Tech, O=CR Tech, C=CN, S=重庆市, L=两江新区, E=xinghedaoze@gmail.com`，与 SignPath 测试证书 Subject 精确匹配；证书 thumbprint 为 `4D5E3819A4A3694A6E0A3BC4F24926054552A349`。该证书是自签名测试证书，不是微软商店发布身份。
+- 当前 Dev manifest Publisher 为 `CN=LocaleSmith Development`，未签名验证包不携带证书。若以后侧载签名，测试证书 Subject 必须精确匹配该值。历史 SignPath 身份与当前 Dev/Store manifest 均不匹配，不能继续使用；仓库不记录个人证书 Subject、邮箱、thumbprint 或私钥材料。
 
 生产发布仍需可信签名/时间戳、干净机安装/升级/卸载、真实 provider、Minecraft loader/version、WinUI 键盘/读屏/高对比度，以及 x64 之外架构的验证。MSIX 签名要求见 [MSIX package signing overview](https://learn.microsoft.com/windows/msix/package/signing-package-overview)。
 

@@ -49,9 +49,9 @@ WinUI/MSIX Host 是 full-trust desktop process，并非 AppContainer。Rust 与�
 | T02 | Tampering | 修改 AES 配置或丢失 master key | AES-256-GCM tag/AAD、长度上限、临时文件/重新解密验证和原子替换；master key 在 Credential Manager | 同用户恶意进程仍可读 credential 或改进程内状态 |
 | T03 | Tampering | 模型源配置提交失败后留下错误/孤儿 Key | save/delete/切换 provider 使用补偿事务；恢复旧 credential；临时字符缓冲清零 | 补偿本身也可能失败，此时返回聚合错误并要求重新加载/人工恢复 |
 | T04 | Disclosure | 翻译缓存跨包、跨模型或跨 prompt 错复用 | v2 key 包含原包身份、目标语言、捕获的 source id 和契约版本；旧缓存安全 miss；产物 commit 后才写缓存 | 当前缓存不是保密存储；同用户可读取/删除，删除只导致重译 |
-| T05 | Disclosure | 切换 provider 时把旧对话发给新 provider | 选择变化会取消进行中的助手请求并清空旧会话；每次发送捕获 source snapshot | 已发送给旧 provider 的内容无法撤回；云端保留策略不由本应用控制 |
+| T05 | Disclosure | 切换 provider 时把旧对话发给新 provider | 会话按 `ProjectId + ModelSourceId` 分键保存并切换；选择变化取消进行中请求，每次发送只使用当前键捕获的 source/session snapshot | 旧会话会保留在进程内直到用户显式清除或应用退出；已发送内容无法撤回，云端保留策略不由本应用控制 |
 | T06 | EoP | Zip Slip、UNC/ADS、device name、symlink/junction 逃逸 | 预检/规范化、containment、reparse/ADS 拒绝、资源上限、目录不可变快照、事务回滚 | 同进程解析器漏洞仍可能影响 Host |
-| T07 | Tampering | 修改签名 JAR 后继续携带旧签名 | 默认阻断；用户显式选择 unsigned copy 时移除失效签名材料；保留原输入/证据 | 当前不做 `jarsigner` 密码学验证或重签；不能保留原 signer |
+| T07 | Tampering | 修改签名 JAR 后继续携带旧签名 | App 流水线自动生成明确的 unsigned copy，并移除签名块、`SIG-*` 与失效 manifest 摘要；原输入/证据保留；底层调用方仍可选择阻断策略 | 当前不做 `jarsigner` 密码学验证或重签；不能保留原 signer；App 当前没有额外用户确认开关 |
 | T08 | Tampering | 错把路径/反射键等常量改成翻译 key | 仅精确 `Component.literal(String)` matcher；控制流/异常边界检查；重解析和 staging 验证；整作业回滚 | 结构验证不等于真实游戏语义，仍需 loader/version 矩阵 |
 | T09 | EoP | 模型直接执行命令或伪造“已执行” | 只暴露 `system_context`、`cli_propose`；无 `cli_execute`；tool proposal 转入独立 UI 确认 | 用户仍可能被模型的理由社会工程学诱导 |
 | T10 | EoP/Disclosure | shell injection、危险参数或 secret argv 绕过 | high-risk interpreter 拒绝；动态 allowlist；绝对 blacklist；禁止 chaining/redirection/substitution/env expansion；root-relative/junction/malformed path fail closed；credential marker 在批准前拒绝 | regex 不是完备 shell 安全边界；允许程序可能有未知危险参数或未识别寻址方式 |
