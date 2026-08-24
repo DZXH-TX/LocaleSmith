@@ -1067,10 +1067,7 @@ public sealed class DashboardViewModel : ViewModelBase, IDisposable
     {
         ArgumentNullException.ThrowIfNull(paths);
         ErrorMessage = null;
-        if (!await _modelSelectionTask.WaitAsync(cancellationToken).ConfigureAwait(true))
-        {
-            return;
-        }
+        _ = await _modelSelectionTask.WaitAsync(cancellationToken).ConfigureAwait(true);
 
         var selectedSource = _modelSelectionService.SelectedSource;
         if (selectedSource is null ||
@@ -1319,8 +1316,8 @@ public sealed class DashboardViewModel : ViewModelBase, IDisposable
             if (version == _modelSelectionVersion)
             {
                 _requestedModelSourceId = null;
-                IsModelSelectionPending = false;
                 _modelSelectionTask = Task.FromResult(true);
+                IsModelSelectionPending = false;
             }
         }
     }

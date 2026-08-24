@@ -29,7 +29,7 @@ dotnet restore LocaleSmith.slnx
 dotnet build LocaleSmith.slnx --configuration Release --no-restore
 ```
 
-`dotnet build LocaleSmith.slnx` 不生成 WAP/MSIX。只有修改 `packaging/` 或发布配置时，才需要在安装了 Desktop Bridge/WAP targets 的 Visual Studio Developer PowerShell 中额外验证 `packaging/LocaleSmith.Package/LocaleSmith.Package.wapproj`，并在 Pull Request 中记录实际命令和结果。
+`dotnet build LocaleSmith.slnx` 不生成 WAP/MSIX。修改 App、`packaging/` 或发布配置时，需要在安装 Desktop Bridge/WAP targets 的 Visual Studio Developer PowerShell 中按 `packaging/README.md` 还原两个 `win-x64` 输入并执行 WAP `Rebuild`。默认 `PackageFlavor=Development`；只有正式提交准备才显式使用 `Store`。PR 必须记录未签名状态、Identity、版本、包大小/SHA-256 与 `.github/scripts/Test-MsixPackage.ps1` 结果，不得复用旧 payload。
 
 ## 实现约定
 
@@ -38,6 +38,8 @@ dotnet build LocaleSmith.slnx --configuration Release --no-restore
 - 保持依赖方向：WinUI View 负责呈现与输入，Presentation 保持可测试，Application 编排事务，Infrastructure 实现外部服务，NativeInterop 是托管 C ABI 的唯一入口。
 - 不得原地修改用户输入。归档、缓存和输出变更必须保持现有的安全路径检查、暂存、验证、原子提交、取消与回滚边界。
 - 模型和 MCP 工具不得授权命令执行、扩大到任意主机路径，或暴露凭据和 Provider 私有数据。CLI 仍需独立策略复核、命令绑定的一次性批准和用户明确确认。
+- Provider 私有 `reasoning_content` / `reasoning_details` 只能作为同源工具循环协议状态；不得进入可见消息、跨 Provider 会话或日志。新增预设必须有官方端点、Token 参数、模型目录与多轮工具回放契约测试。
+- Store PFN 与 unpackaged/Dev 的配置、Credential prefix、默认路径和安全锁必须保持隔离；只有正式身份可以运行 legacy 数据/secret migration。
 - 修改 Rust FFI 时，保持 panic 不越过 ABI、所有权与释放函数配对，并为 `unsafe` 假设提供可验证依据。
 - 修改界面文案时，同步 `zh-CN`、`en-US`、`ja-JP`、`fr-FR`、`ru-RU` 五套 `.resw` key。面向用户的长期文档变更应同步中文与英文 README。
 - 不提交生成的构建产物、测试结果、真实用户样本、私钥、证书或秘密配置。
@@ -71,6 +73,8 @@ Pull Request 应保持单一目的，并包含：
 - 变更目的、用户影响和关联 Issue；
 - 主要实现选择，以及兼容性或安全边界是否变化；
 - 实际运行的验证命令与结果；
+- 功能清单、用户可见行为、配置/schema 和兼容性影响；
+- 若涉及 MSIX，列出 Development/Store flavor、未签名 payload 审计与尚未执行的签名/干净机/Store 测试；
 - UI 变更的前后截图和键盘/高对比度等相关验收；
 - 涉及 Minecraft 内容时的游戏版本、Loader、输入类型与模型来源；
 - 需要维护者重点复核的已知限制、迁移或后续工作。

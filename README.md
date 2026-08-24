@@ -67,7 +67,7 @@
 | **专业提示与术语** | 自动区分模组、资源包与光影包，使用独立领域提示；简体中文任务附带各自的专业术语对照表。 |
 | **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
 | **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
-| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；Ollama 与支持 `/models` 的 OpenAI-compatible 服务可显式刷新模型列表，始终保留手填回退。每个模型源还可设置单次响应 Tokens 与翻译分批字符目标。 |
+| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；Ollama 与支持 `/models` 的 OpenAI-compatible 服务可显式刷新模型列表，始终保留手填回退。每个模型源还可设置单次响应 Tokens 与翻译分批字符目标；需要跨工具轮次连续思考的 Provider 会在协议层私下回放推理状态，不显示到 UI。 |
 | **联机模组社区** | 可搜索和分页浏览公开模组与讨论；使用保存在 Windows Credential Manager 中的 PAT 发帖、回复和举报，并可直接查看服务条款与社区规范。 |
 | **Microsoft 订阅与安全加速** | 使用 Windows 原生 Microsoft Store 购买界面、MCTX 后端权威权益核验与一次性下载 grant；加速不可用时始终保留并回退默认下载源。 |
 | **持久化诊断日志** | 日志目录可写时，每次翻译都会尝试通过有界后台写入器持久化一对 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
@@ -121,7 +121,7 @@ LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应�
 
 左侧导航中的“日志”页按翻译作业列出持久化记录，并默认显示 Debug 视图；切换到 All levels 可查看包含细粒度进度在内的完整级别记录。日志是最大限度的后台诊断功能：目录正常可写且写入器有容量时，作业会创建一对 `.debug.log` / `.all.log` 文件并增量刷新到磁盘；慢设备或队列已满时可能跳过文件或丢弃部分诊断条目，但不会阻塞翻译。进程异常退出后，已经成功刷新的内容仍可用于定位最后一个阶段。
 
-默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
+正式 Store 包的默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`；unpackaged/Dev 包使用隔离的 `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations`，配置、凭据、Sandbox 与安全锁也不会和正式版混用。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
 
 ## 快速开始
 
@@ -231,6 +231,8 @@ App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模�
 
 当前公开正式版本为 `v1.1.0`，Store 程序包版本为 `1.1.0.0`，产品 ID 为 `9NP8V6WQNGT0`，并使用 Partner Center 分配的 Identity `CRTech.LocaleSmith`。Microsoft Store 负责正式分发和自动更新；GitHub Release 中的 x64 MSIX 已通过 Microsoft Marketplace 签名链、可信时间戳、程序包 Identity、架构与 SHA-256 校验，不需要历史开发包使用的自签名测试证书。公开程序包声明 `runFullTrust` 桌面功能，模型提出的命令仍必须经过策略复核与用户明确确认。
 
+当前源码准备下一版 `1.2.0.0`，但尚未作为正式版发布。WAP 默认生成隔离的未签名 `CRTech.LocaleSmith.Dev` 验证包；只有显式 `PackageFlavor=Store` 才生成正式 Identity 的未签名提交候选。两种包都必须通过解包、PRI、版本和全 payload 哈希审计，未签名包不等同于 Store 发布件。
+
 正式 Identity `CRTech.LocaleSmith` 不会原位升级早期的 `LocaleSmith.Desktop` / `JaxI18n.Desktop` 开发包，Windows 会暂时并列安装。切换时请关闭旧程序；新程序会继续使用用户级 `%LOCALAPPDATA%\LocaleSmith`，并只读检查仍已注册的旧包重定向数据。确认新版本工作正常后再卸载旧开发包。
 
 </details>
@@ -241,9 +243,9 @@ App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模�
 
 | 检查项 | 基线 |
 | --- | --- |
-| .NET Release | `807 / 807` tests，`0` warnings，`0` errors |
+| .NET Release | `854 / 854` tests，`0` warnings，`0` errors |
 | Rust | `28 / 28` tests，`rustfmt` 与 `clippy -D warnings` 通过 |
-| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `661` 个 key，完全对齐 |
+| 五语言资源 | `zh-CN` / `en-US` / `ja-JP` / `fr-FR` / `ru-RU` 各 `676` 个 key，完全对齐 |
 | 源码安全审计 | 本地路径、归档、CLI、凭据和迁移回归门通过；GitHub CodeQL 结果以当前提交的远端重扫为准，不在 README 中宣称零告警 |
 
 这些结果证明当前自动化覆盖的源码行为，不替代外部渗透测试、真实 Provider 验证或 Minecraft / Loader 运行时兼容测试。
