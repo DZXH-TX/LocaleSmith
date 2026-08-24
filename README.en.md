@@ -41,6 +41,7 @@
     <a href="#project-overview">Project Overview</a> ·
     <a href="#core-capabilities">Core Capabilities</a> ·
     <a href="#supported-scope">Supported Scope</a> ·
+    <a href="#known-limitations">Known Limitations</a> ·
     <a href="#processing-pipeline">Processing Pipeline</a> ·
     <a href="#quick-start">Quick Start</a> ·
     <a href="#security-boundaries">Security Boundaries</a> ·
@@ -50,6 +51,16 @@
 
 > [!IMPORTANT]
 > **LocaleSmith v1.1.0 is officially available from [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0).** Installing from the Store is recommended so that dependencies and future updates are handled automatically; the [GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) also provides the production MSIX signed by Microsoft Marketplace, with no development test certificate required.
+
+## Thirty-second overview
+
+| Focus | Actual behavior |
+| --- | --- |
+| **Scan before modifying** | The native Rust core parses JAR / ZIP paths, Loader metadata, signature evidence, and language resources; original inputs remain read-only. |
+| **Translate only new content** | Content hashes reuse translations while EntryIds, placeholders, and structure are validated; failure/cancellation never commits a partial artifact. |
+| **Beyond lang files** | Handles resource/shader language files and structurally proven `Component.literal` externalization; unsafe candidates are reported or skipped. |
+| **Choice with control** | Ollama, OpenAI-compatible, and Anthropic; explicit model refresh and Token/batch budgets, with private reasoning replayed only inside the same provider protocol loop. |
+| **Credential and execution boundaries** | API keys stay in Credential Manager and configuration uses AES-256-GCM; models can propose commands, but policy and explicit user confirmation still gate execution. |
 
 ## Project Overview
 
@@ -90,6 +101,19 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 | Output | One target language and one translation style selected for the current job; resource names inside the package use lowercase Minecraft locales such as `ja_jp` |
 | Platform | Windows x64, minimum Windows 10 1809 |
 
+## Known Limitations
+
+| Limitation | Current boundary |
+| --- | --- |
+| Quest/script formats | FTB Quests `.snbt`, Better Questing, KubeJS, and CraftTweaker `.zs` are outside the current translation scope. |
+| Modpack containers | `.mrpack` and similar modpack formats are not processed as one input; use multi-select Add package for folders containing several JAR/ZIP files. |
+| Project persistence | Mod projects, tasks, and project-scoped assistant sessions live only for the current process and are not restored after restart. |
+| One output per job | A job freezes one target language and one style; enqueue separate jobs for other languages or styles. |
+| Archive recompression | ZIP streams, extra fields, entry order/comments, and original signatures are not guaranteed byte-for-byte identical. |
+| Bytecode subset | This is not a general Java rewriter; candidates that exceed narrow `ldc` capacity are safely skipped rather than receiving incomplete control-flow/StackMap rewrites. |
+| Runtime matrix | Automated validation is not real in-game certification across Minecraft and Loader versions; test the intended target matrix. |
+| Platform | Current deliverables are Windows x64 only, with no Linux, macOS, or ARM64 build. |
+
 ## Processing Pipeline
 
 ```mermaid
@@ -121,7 +145,7 @@ Local automation covers the capability/PAT/scope/entitlement refusal matrix, pur
 
 The “Logs” page in the left navigation lists persistent records by translation job and displays the Debug view by default; switch to All levels to inspect records across all log levels, including fine-grained progress. Logging is a best-effort background diagnostic feature: when the directory is writable and the writer has capacity, a job creates a pair of `.debug.log` / `.all.log` files and incrementally flushes them to disk. On slow devices or when the queue is full, files or individual diagnostic entries may be skipped, but translation is never blocked. After an abnormal process exit, content that was successfully flushed remains available for identifying the last recorded stage.
 
-The production Store package defaults to `%LOCALAPPDATA%\LocaleSmith\logs\translations`; unpackaged and Dev packages use the isolated `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations` root, with separate settings, credentials, Sandbox, and security locks. During first-run onboarding and from the “Settings” page, you can browse for or manually enter a local directory. Once saved, a change takes effect with the next translation and is written to the encrypted configuration when the application closes, together with the last valid settings for language, theme, workspace, and other options. The application retains and lists only the latest 500 sessions; cleanup matches only LocaleSmith's own naming format and does not delete other files in the directory. Logs record only the task ID, package file name, stage, progress, result, and error type. They do not record API keys, full prompts, or the parent directory of a user-selected path. Common bearer, token, and API key patterns are redacted again before being written to disk.
+The production Store package uses the logical `%LOCALAPPDATA%\LocaleSmith\logs\translations` default; unpackaged and Dev packages use the isolated `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations` root, with separate settings, credentials, Sandbox, and security locks. Windows may physically virtualize registered MSIX data under each PFN's `LocalCache\Local`, which remains package-isolated. During first-run onboarding and from the “Settings” page, you can browse for or manually enter a local directory. Once saved, a change takes effect with the next translation and is written to the encrypted configuration when the application closes, together with the last valid settings for language, theme, workspace, and other options. The application retains and lists only the latest 500 sessions; cleanup matches only LocaleSmith's own naming format and does not delete other files in the directory. Logs record only the task ID, package file name, stage, progress, result, and error type. They do not record API keys, full prompts, or the parent directory of a user-selected path. Common bearer, token, and API key patterns are redacted again before being written to disk.
 
 ## Quick Start
 

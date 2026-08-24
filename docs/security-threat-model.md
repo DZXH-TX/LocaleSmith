@@ -87,6 +87,7 @@ WinUI/MSIX Host 是 full-trust desktop process，并非 AppContainer。Rust 与�
 - provider Key：每 source 独立 reference，适配器发送前才读取；不存入 ViewModel、翻译缓存、CLI 环境或 system prompt。
 - 凭据写/删与配置提交通过 `SemaphoreSlim` 串行，并用无取消的补偿路径恢复旧值；补偿临时值用可变 `char[]` 并在 finally 清零。
 - production/Dev 使用不同 credential target prefix 和不同文件锁根；Dev 不能通过 `MigratingSecretStore` 读取 JaxI18n 或 Store 凭据。schema 必须在 1..4，未知版本在任何字段归一化前拒绝且不保存。
+- registered MSIX 的 AppData 物理写入允许由 Windows 保持在各 PFN 的 LocalCache；不申请 `unvirtualizedResources`，因此不会为跨包共享文件扩大 restricted capability。unpackaged Dev 仍使用独立的用户级 `LocaleSmith.Dev`。
 
 Windows Credential Manager 是 at-rest/当前用户边界，不是抵抗同用户恶意进程的保险库。不能通过“再套 AES”消除这个事实。
 

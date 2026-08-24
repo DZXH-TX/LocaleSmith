@@ -41,6 +41,7 @@
     <a href="#项目概览">项目概览</a> ·
     <a href="#核心能力">核心能力</a> ·
     <a href="#支持范围">支持范围</a> ·
+    <a href="#已知限制">已知限制</a> ·
     <a href="#处理流程">处理流程</a> ·
     <a href="#快速开始">快速开始</a> ·
     <a href="#安全边界">安全边界</a> ·
@@ -50,6 +51,16 @@
 
 > [!IMPORTANT]
 > **LocaleSmith v1.1.0 已在 [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) 正式上架。** 推荐通过商店安装，以自动处理依赖和后续更新；[GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) 同时提供经 Microsoft Marketplace 签名的正式 MSIX，无需安装开发测试证书。
+
+## 三十秒了解
+
+| 重点 | 实际行为 |
+| --- | --- |
+| **先扫描，再改包** | Rust 原生核心解析 JAR / ZIP / Loader 元数据、路径、签名证据与语言资源；原始输入始终只读。 |
+| **只翻新增内容** | 按内容哈希复用译文，逐项校验 EntryId、占位符和结构；失败/取消不提交半成品。 |
+| **不仅是 lang 文件** | 支持资源包、光影包语言文件与经结构证明的 `Component.literal` 精确外部化；不安全候选只报告或跳过。 |
+| **模型可选且可控** | Ollama、OpenAI-compatible、Anthropic；显式刷新模型列表、设置 Token/分批预算，私有推理只在同源协议轮次回放。 |
+| **凭据和执行有边界** | API Key 在 Credential Manager，配置 AES-256-GCM；模型只能提议命令，执行仍需策略复核和用户确认。 |
 
 ## 项目概览
 
@@ -90,6 +101,19 @@
 | 输出 | 当前作业选择的一种目标语言与一种翻译风格；包内资源名使用小写 Minecraft locale，如 `ja_jp` |
 | 平台 | Windows x64，最低 Windows 10 1809 |
 
+## 已知限制
+
+| 限制 | 当前边界 |
+| --- | --- |
+| 任务书与脚本 | FTB Quests `.snbt`、Better Questing、KubeJS、CraftTweaker `.zs` 不在当前翻译范围。 |
+| 整合包容器 | `.mrpack` 等整合包格式尚未作为单个输入处理；含多个 JAR/ZIP 的目录应使用“添加包”多选。 |
+| 项目持久化 | 模组项目、任务与助手项目会话只驻留当前进程，重启后不恢复。 |
+| 单作业输出 | 一个作业只冻结并输出一种目标语言与一种风格；其他语言/风格需单独入队。 |
+| 归档重压缩 | 不保证 ZIP 压缩流、extra field、条目顺序、注释或原签名在字节级保持不变。 |
+| 字节码范围 | 不是通用 Java 重写器；窄 `ldc` 容量不足等候选会安全跳过，不做不完整的控制流/StackMap 重写。 |
+| 运行时矩阵 | 自动化不等于真实 Minecraft/Loader 游戏内兼容认证，仍需按目标版本实测。 |
+| 平台 | 当前仅提供 Windows x64，不提供 Linux、macOS 或 ARM64 成品。 |
+
 ## 处理流程
 
 ```mermaid
@@ -121,7 +145,7 @@ LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应�
 
 左侧导航中的“日志”页按翻译作业列出持久化记录，并默认显示 Debug 视图；切换到 All levels 可查看包含细粒度进度在内的完整级别记录。日志是最大限度的后台诊断功能：目录正常可写且写入器有容量时，作业会创建一对 `.debug.log` / `.all.log` 文件并增量刷新到磁盘；慢设备或队列已满时可能跳过文件或丢弃部分诊断条目，但不会阻塞翻译。进程异常退出后，已经成功刷新的内容仍可用于定位最后一个阶段。
 
-正式 Store 包的默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`；unpackaged/Dev 包使用隔离的 `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations`，配置、凭据、Sandbox 与安全锁也不会和正式版混用。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
+正式 Store 包的逻辑默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`；unpackaged/Dev 包使用隔离的 `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations`，配置、凭据、Sandbox 与安全锁也不会和正式版混用。registered MSIX 的物理文件可能由 Windows 放入各自 PFN 的 `LocalCache\Local`，仍保持包间隔离。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
 
 ## 快速开始
 

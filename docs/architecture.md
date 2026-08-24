@@ -168,6 +168,7 @@ App 组合根注入 `ProjectMcpBackend`。助手选中项目后增加三个只�
 - 每个云模型源使用独立 credential reference；UI/ViewModel 只持“是否配置”和短指纹，不显示明文 Key。
 - 模型源新增/编辑/切换 Ollama/删除时，凭据写入或删除与加密配置提交组成补偿式事务。配置保存失败时恢复上一 credential；临时 `char[]` 在 finally 中用 `CryptographicOperations.ZeroMemory` 清理。
 - 只有完整 PFN `CRTech.LocaleSmith_pxtspj1qm7b2r` 能使用生产根 `%LOCALAPPDATA%\LocaleSmith` 与凭据前缀 `LocaleSmith`。unpackaged、`CRTech.LocaleSmith.Dev` 及其他身份一律使用 `%LOCALAPPDATA%\LocaleSmith.Dev` / `LocaleSmith.Dev`；语言 bootstrap、配置、translation memory、日志、Sandbox、CLI audit 和安全锁共用同一 channel-aware root。
+- 上述是逻辑 LocalAppData 根。registered MSIX 的物理写入可由 Windows 放入各自 PFN 的 `LocalCache\Local`；PFN 仍提供隔离。manifest 不申请 `unvirtualizedResources`，避免为共享 AppData 扩大 restricted capability；unpackaged Dev 直接写用户级 `LocaleSmith.Dev`。
 - Dev 不运行旧 JaxI18n/历史 package 数据与凭据迁移。生产迁移保留只读发现、复制后不删除源数据；schema 只允许 1..4，未知未来或非正版本在任何字段归一化前 fail closed。
 - Credential Manager 保护静态存储和跨账户访问，但不能抵御控制同一 Windows 用户会话的恶意进程、调试器或进程内注入。
 

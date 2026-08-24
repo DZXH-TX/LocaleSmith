@@ -21,6 +21,8 @@ WAP 使用 `PackageFlavor` 明确区分开发验证与 Store 提交：
 - unpackaged 与所有 Dev/Test Identity 使用 `%LOCALAPPDATA%\LocaleSmith.Dev` 与前缀 `LocaleSmith.Dev`；
 - Dev 不读取或迁移正式/旧版配置与凭据；生产迁移仍是只读导入且不删除旧数据。
 
+这里描述的是应用选择的逻辑 LocalAppData 根。Windows 对 registered desktop package 可能把 AppData 物理写入该 PFN 的 `LocalCache\Local`；这仍由独立 PFN 隔离。项目不声明 `unvirtualizedResources`，不会为了开发测试关闭系统虚拟化或扩大 restricted capability。unpackaged 运行则直接使用用户级 `%LOCALAPPDATA%\LocaleSmith.Dev`。
+
 这条隔离避免新开发版 schema 改写已安装旧 Store 版的共享设置。截图中的 `Unsupported settings schema 4` 正是旧 `1.1.0.0`（schema 3）读取了开发版写入的 schema 4 所致；正式 `1.2.0.0` 支持 schema 4。
 
 ## Payload 合同
