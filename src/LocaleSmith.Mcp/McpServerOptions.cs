@@ -17,6 +17,8 @@ public sealed class McpServerOptions
 
     public bool EnableCliExecution { get; init; }
 
+    public string ServerVersion { get; init; } = "0.1.0";
+
     internal void Validate()
     {
         if (MaximumMessageBytes is < 256 or > 4 * 1024 * 1024)
@@ -52,6 +54,15 @@ public sealed class McpServerOptions
             throw new ArgumentOutOfRangeException(
                 nameof(MaximumConcurrentToolCalls),
                 "The concurrent tool-call limit must be between 1 and 32.");
+        }
+
+        if (string.IsNullOrWhiteSpace(ServerVersion) ||
+            ServerVersion.Length > 128 ||
+            ServerVersion.Any(char.IsWhiteSpace))
+        {
+            throw new ArgumentException(
+                "The MCP server version must be a non-empty value of at most 128 characters without whitespace.",
+                nameof(ServerVersion));
         }
     }
 }

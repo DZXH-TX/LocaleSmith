@@ -143,6 +143,29 @@ jobs:
 
           Write-Output "Validated $($resultFiles.Count) test projects and $totalTests discovered tests."
 
+      - name: Pack MCP tool for validation
+        run: |
+          $packageVersion = "0.0.0-ci.$env:GITHUB_RUN_NUMBER"
+          dotnet pack src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj `
+            --configuration Release `
+            --no-restore `
+            --output artifacts/package-validation `
+            -p:Version=$packageVersion `
+            -p:PackageVersion=$packageVersion `
+            -p:ContinuousIntegrationBuild=true `
+            -p:RepositoryCommit=${{ github.sha }}
+          if ($LASTEXITCODE -ne 0) {
+            throw "MCP tool pack failed with exit code $LASTEXITCODE."
+          }
+          "PACKAGE_VALIDATION_VERSION=$packageVersion" >> $env:GITHUB_ENV
+
+      - name: Smoke-test MCP tool package
+        run: |
+          ./.github/scripts/Test-McpToolPackage.ps1 `
+            -PackageDirectory artifacts/package-validation `
+            -PackageVersion $env:PACKAGE_VALIDATION_VERSION `
+            -InstallDirectory artifacts/package-validation-install
+
       - name: Upload .NET test results
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
