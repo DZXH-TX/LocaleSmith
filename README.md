@@ -20,7 +20,7 @@
     <a href="./rust-toolchain.toml"><img alt="Rust 1.97.1" src="https://img.shields.io/badge/Rust-1.97.1-000000?style=flat-square&logo=rust&logoColor=white" /></a>
     <img alt="Windows 10 1809+" src="https://img.shields.io/badge/Windows-10%201809%2B-0078D4?style=flat-square" />
     <img alt="WinUI 3" src="https://img.shields.io/badge/UI-WinUI%203-0078D4?style=flat-square" />
-    <a href="https://apps.microsoft.com/detail/9NP8V6WQNGT0"><img alt="Microsoft Store v1.0.0" src="https://img.shields.io/badge/Microsoft%20Store-v1.0.0-0078D4?style=flat-square&logo=microsoft&logoColor=white" /></a>
+    <a href="https://apps.microsoft.com/detail/9NP8V6WQNGT0"><img alt="Microsoft Store v1.1.0" src="https://img.shields.io/badge/Microsoft%20Store-v1.1.0-0078D4?style=flat-square&logo=microsoft&logoColor=white" /></a>
   </p>
 
   <p>
@@ -34,7 +34,7 @@
   <p>
     <a href="https://apps.microsoft.com/detail/9NP8V6WQNGT0"><strong>从 Microsoft Store 免费获取</strong></a>
     ·
-    <a href="https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.0.0">GitHub Release v1.0.0</a>
+    <a href="https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0">GitHub Release v1.1.0</a>
   </p>
 
   <p>
@@ -49,7 +49,7 @@
 </div>
 
 > [!IMPORTANT]
-> **LocaleSmith v1.0.0 已在 [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) 正式上架。** 推荐通过商店安装，以自动处理依赖和后续更新；[GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.0.0) 同时提供经 Microsoft Marketplace 签名的正式 MSIX，无需安装开发测试证书。
+> **LocaleSmith v1.1.0 已在 [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) 正式上架。** 推荐通过商店安装，以自动处理依赖和后续更新；[GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) 同时提供经 Microsoft Marketplace 签名的正式 MSIX，无需安装开发测试证书。
 
 ## 项目概览
 
@@ -113,9 +113,9 @@ flowchart LR
 | 渠道 | 说明 |
 | --- | --- |
 | [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) | 推荐方式；免费获取并由商店处理安装、框架依赖与后续更新。产品 ID：`9NP8V6WQNGT0`。 |
-| [GitHub Release v1.0.0](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.0.0) | 提供 Microsoft Marketplace 签名的 `CRTech.LocaleSmith_1.0.0.0_x64.Msix`，适用于需要直接下载安装包的场景。 |
+| [GitHub Release v1.1.0](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) | 提供 Microsoft Marketplace 签名的 `CRTech.LocaleSmith_1.1.0.0_x64.Msix`，适用于需要直接下载安装包的场景。 |
 
-GitHub MSIX 的 SHA-256 为 `2C66F5645C2BF957719467F9AB415450CF1B6A620C10CF13381EC307FD8B10EE`。正式版支持 Windows x64，最低系统版本为 Windows 10 1809（Build 17763）。
+GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C50B96FBBA84F64`。正式版支持 Windows x64，最低系统版本为 Windows 10 1809（Build 17763）。
 
 ### 开发环境要求
 
@@ -209,7 +209,7 @@ MCP stdio Host 只暴露 `system.context` 与 `cli.propose`，不暴露 `cli.exe
 <details>
 <summary><strong>MSIX 程序包状态</strong></summary>
 
-当前公开正式版本为 `v1.0.0`，Store 程序包版本为 `1.0.0.0`，产品 ID 为 `9NP8V6WQNGT0`，并使用 Partner Center 分配的 Identity `CRTech.LocaleSmith`。Microsoft Store 负责正式分发和自动更新；GitHub Release 中的 x64 MSIX 已通过 Microsoft Marketplace 签名链、可信时间戳、程序包 Identity、架构与 SHA-256 校验，不需要历史开发包使用的自签名测试证书。公开程序包声明 `runFullTrust` 桌面功能，模型提出的命令仍必须经过策略复核与用户明确确认。
+当前公开正式版本为 `v1.1.0`，Store 程序包版本为 `1.1.0.0`，产品 ID 为 `9NP8V6WQNGT0`，并使用 Partner Center 分配的 Identity `CRTech.LocaleSmith`。Microsoft Store 负责正式分发和自动更新；GitHub Release 中的 x64 MSIX 已通过 Microsoft Marketplace 签名链、可信时间戳、程序包 Identity、架构与 SHA-256 校验，不需要历史开发包使用的自签名测试证书。公开程序包声明 `runFullTrust` 桌面功能，模型提出的命令仍必须经过策略复核与用户明确确认。
 
 正式 Identity `CRTech.LocaleSmith` 不会原位升级早期的 `LocaleSmith.Desktop` / `JaxI18n.Desktop` 开发包，Windows 会暂时并列安装。切换时请关闭旧程序；新程序会继续使用用户级 `%LOCALAPPDATA%\LocaleSmith`，并只读检查仍已注册的旧包重定向数据。确认新版本工作正常后再卸载旧开发包。
 

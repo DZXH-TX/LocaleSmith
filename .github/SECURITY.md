@@ -4,12 +4,12 @@
 
 ## 支持版本（Supported Versions）
 
-LocaleSmith 已发布 `v1.0.0` 正式版。Microsoft Store 与同版本 GitHub
+LocaleSmith 已发布 `v1.1.0` 正式版。Microsoft Store 与同版本 GitHub
 Release 是当前受支持的正式分发，`main` 默认分支的最新提交同时接受安全报告。
 
 | 对象 | 安全支持状态 |
 | --- | --- |
-| `v1.0.0` 正式版（Microsoft Store / GitHub Release） | ✅ 支持 |
+| `v1.1.0` 正式版（Microsoft Store / GitHub Release） | ✅ 支持 |
 | `main` 默认分支的最新提交 | ✅ 支持 |
 | 更早版本、历史提交、预览构建与非官方构建 | ❌ 不提供持续安全更新 |
 
