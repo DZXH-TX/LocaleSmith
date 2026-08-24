@@ -1,0 +1,97 @@
+name: 建议与功能请求 / Feature request
+description: 提议新能力、体验改进或兼容性扩展
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的建议。请先描述真实问题和使用场景，再提出具体方案。
+
+        安全漏洞不得作为功能请求公开提交，请改为阅读[安全政策](https://github.com/DZXH-TX/LocaleSmith/security/policy)并使用私密报告入口。
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue、Discussion 和路线图，未发现相同建议。
+          required: true
+        - label: 我已确认本请求不包含未公开的安全漏洞或敏感资料。
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与使用场景
+      description: 谁在什么情况下遇到什么限制？现有流程为什么不足？
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 描述期望的行为、交互或接口；可以包含简短示例。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target_area
+    attributes:
+      label: 目标区域
+      options:
+        - 归档扫描、解包或重建
+        - 翻译流水线、缓存或输出
+        - Minecraft / Loader / 资源格式兼容性
+        - 模型 Provider 或模型助手
+        - MCP 或 CLI
+        - WinUI 界面、导航或本地化
+        - 设置、日志或凭据
+        - 安装、打包或更新
+        - 文档或贡献者体验
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_outcome
+    attributes:
+      label: 可验收结果
+      description: 用可观察的结果说明何时可以认为该功能已经完成。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 已考虑的替代方案
+      description: 说明现有变通方式、其他设计，以及它们为何不合适。
+
+  - type: textarea
+    id: compatibility_security
+    attributes:
+      label: 兼容性与安全影响
+      description: 说明对旧版本、归档格式、模型数据、凭据、CLI 权限、性能或迁移的影响；如果没有，也请写明“未发现”。
+    validations:
+      required: true
+
+  - type: input
+    id: minecraft_context
+    attributes:
+      label: Minecraft / Loader / Provider 范围
+      description: 如果建议只适用于特定 Minecraft、Loader、输入类型或模型 Provider，请在此说明。
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: 补充资料
+      description: 可添加脱敏截图、草图、规范链接或相关 Issue；不要上传秘密或受限制的第三方内容。
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 贡献意愿
+      options:
+        - label: 如果方案获得认可，我愿意协助实现或测试。

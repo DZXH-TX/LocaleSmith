@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞（私密报告） / Security vulnerability
+    url: https://github.com/DZXH-TX/LocaleSmith/security/policy
+    about: 请先阅读安全政策，并使用其中的 Private Vulnerability Reporting；请勿公开漏洞细节。
+  - name: 使用帮助与一般讨论 / Questions and discussions
+    url: https://github.com/DZXH-TX/LocaleSmith/discussions
+    about: 使用帮助、方案交流和尚未成形的想法请前往 Discussions。

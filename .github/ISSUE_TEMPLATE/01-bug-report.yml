@@ -1,0 +1,143 @@
+name: 软件缺陷报告 / Bug report
+description: 报告可复现的软件错误、崩溃或行为回归
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你帮助改进 LocaleSmith。请只提供脱敏、可合法共享的最小复现资料。
+
+        **可能涉及安全漏洞？请停止填写公开 Issue，改为从 [安全政策](https://github.com/DZXH-TX/LocaleSmith/security/policy) 进入私密报告。**
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue 和 Discussion，未发现相同报告。
+          required: true
+        - label: 我已确认这不是需要私密披露的安全漏洞。
+          required: true
+
+  - type: input
+    id: affected_version
+    attributes:
+      label: 受影响版本或提交
+      description: 请提供应用版本、程序包版本或完整 commit SHA。
+      placeholder: 例如 1.1.0.0 或 c920c58...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_source
+    attributes:
+      label: 安装或构建来源
+      options:
+        - Microsoft Store
+        - GitHub Release
+        - main 分支源码构建
+        - 其他分支、Fork 或非官方构建
+    validations:
+      required: true
+
+  - type: input
+    id: windows_environment
+    attributes:
+      label: Windows 环境
+      description: 请填写 Windows 版本、Build 和架构。
+      placeholder: 例如 Windows 11 24H2 (Build 26100), x64
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: 受影响区域
+      options:
+        - 归档扫描、解包或重建
+        - 翻译流水线、缓存或输出
+        - 模型 Provider 或模型助手
+        - MCP 或 CLI
+        - WinUI 界面、导航或本地化
+        - 设置、日志或凭据
+        - 安装、打包或更新
+        - 其他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: input_type
+    attributes:
+      label: 输入类型
+      options:
+        - JAR
+        - ZIP
+        - 展开后的目录
+        - 不适用
+    validations:
+      required: true
+
+  - type: input
+    id: minecraft_context
+    attributes:
+      label: Minecraft / Loader 信息
+      description: 如果相关，请填写 Minecraft 版本、Loader 名称和版本。
+      placeholder: 例如 Minecraft 1.21.1, NeoForge 21.1.x
+
+  - type: input
+    id: provider_context
+    attributes:
+      label: 模型 Provider 信息
+      description: 如果相关，请只填写 Provider、模型名和本地/云端类型；不要填写 API Key、端点凭据或完整请求。
+      placeholder: 例如 Ollama + qwen3，本地
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 清楚说明发生了什么，以及问题对你的影响。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 最小复现步骤
+      description: 使用脱敏或自行构造的数据，列出从干净状态开始的完整步骤。
+      placeholder: |
+        1. 打开……
+        2. 选择……
+        3. 执行……
+        4. 观察到……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 脱敏日志、截图或补充信息
+      description: 可拖入截图或粘贴最小日志片段。删除访问令牌、API Key、用户内容、私人路径和命令参数中的敏感值。
+
+  - type: checkboxes
+    id: data_safety
+    attributes:
+      label: 数据安全确认
+      options:
+        - label: 我确认本 Issue 不包含秘密、真实用户归档、受限制内容、私人路径或其他敏感信息。
+          required: true
