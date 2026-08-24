@@ -6,9 +6,10 @@
 
 - 联合功能基线：`02c34a4`（已进入 `origin/main`，当时远端 Build and Test 与 CodeQL 成功）。
 - 打包与状态隔离补强：`c2a6f7d`。
-- 最终二进制源码提交：`2d087426fc5c9c31206bb0de0798800ce298c22e`。
+- 本地 MSIX 二进制验证提交：`2d087426fc5c9c31206bb0de0798800ce298c22e`。
+- PR #12 squash merge 与 MCP 0.1.1 发布提交：`1f3f3d9a7ca5950da381a34565f517f9dd045183`。
 - App FileVersion `1.2.0.0`，ProductVersion `1.2.0+2d087426…`。
-- MCP Host FileVersion `0.1.1.0`，ProductVersion `0.1.1+2d087426…`。
+- 已发布 MCP Host FileVersion `0.1.1.0`，ProductVersion `0.1.1+1f3f3d9a…`。
 
 ## 自动化验证
 
@@ -54,7 +55,7 @@ dotnet pack src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj `
   -PackageVersion 0.1.1 ...
 ```
 
-结果：
+本地预合并复现结果（提交 `2d087426`）：
 
 - `CRTech.LocaleSmith.McpHost.0.1.1.nupkg`
 - 433,456 bytes
@@ -62,7 +63,12 @@ dotnet pack src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj `
 - 本地工具安装与 initialize/tools smoke 通过；服务版本 `0.1.1`
 - 独立 Host 仍只有 `system.context`、`cli.propose`
 
-远端发布必须由指向上述源码提交、且已可从 `main` 到达的 `mcp-v0.1.1` tag 触发；本地包验证本身不能替代 Publish GitHub Package workflow 与 Packages 页面回读。
+远端发布结果：
+
+- `mcp-v0.1.1` 指向 `origin/main` 的 squash merge `1f3f3d9a`；
+- [Publish GitHub Package run 32784059982](https://github.com/DZXH-TX/LocaleSmith/actions/runs/32784059982) 成功完成测试、pack、安装 smoke、artifact 上传与 GitHub Packages 推送；run 从创建到更新约 59 秒，其中 publish job 为 55 秒；
+- Actions artifact ZIP `localesmith-mcp-nuget-0.1.1` 为 430,797 bytes；下载并解包后其中唯一的 nupkg 为 433,460 bytes，SHA-256 `B740AECC8D6B4242F478F1B48503AFD4675E2BA0B0C233B00AC09B2D5815D87D`，nuspec `RepositoryCommit` 与 ProductVersion 均绑定 `1f3f3d9a…`；
+- [GitHub Packages 页面](https://github.com/DZXH-TX/LocaleSmith/pkgs/nuget/CRTech.LocaleSmith.McpHost) 已回读为 `0.1.1`“最新”，安装命令固定 `--version 0.1.1`，`0.1.0` 保留为历史版本。
 
 ## 未签名 MSIX 1.2.0.0
 
