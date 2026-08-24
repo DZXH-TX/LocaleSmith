@@ -1,6 +1,6 @@
 # LocaleSmith | 译匠 实施路线图与当前状态
 
-> 状态日：2026-08-24
+> 状态日：2026-08-25
 > 本文用“已实现 / 有限实现 / 待完成”区分源码事实与发布目标。本文当前源码自动化基线为 .NET Release **855/855**、Rust **28/28**。
 
 ## 1. 当前里程碑总览
@@ -15,7 +15,7 @@
 | P5 硬编码 inventory | 已实现 | Rust `ldc`/`ldc_w` 引用扫描与类型化候选 | 更广 javac/Kotlin/obfuscation corpus |
 | P6 字节码改写 | 有限实现 | 精确 Mojang `Component.literal(String)` → `translatable(String)`；`en_us` fallback；本作业所选目标风格；重扫/回滚 | 不是通用重写器；真实 Minecraft/loader/version matrix 未完成 |
 | P7 模型工具/MCP/CLI | 有限实现 | 三 provider native tool loop；App 项目上下文提供三个只读工具，两个写工具受当前消息一次性用户授权；全部绑定捕获的 ProjectId/模型源；独立 stdio Host 仍仅 `system.context`/`cli.propose`；`translation.start` 复用真实事务队列；UI 独立 CLI 确认；敏感参数/路径 fail-closed；Low IL restricted token/private desktop/Job | 项目工作区未跨重启持久化；非 AppContainer；网络/用户可读文件未隔离；无独立 Broker/MIC sandbox provisioning |
-| P8 WinUI UX/多语言 | 已实现可用界面 | onboarding、Dashboard 模组项目、Assistant、model sources、settings、CLI confirmation；按 `ProjectId + ModelSourceId` 隔离会话；确定性模型/工具活动；Provider usage 明确完整性；zh-CN/en-US key 对齐；UI UX Pro Max 设计约束 | provider 上下文超限显式报错，不承诺自动压缩；完整键盘/Narrator/高对比/缩放人工验收、pseudo locale |
+| P8 WinUI UX/多语言 | 已实现可用界面 | onboarding、Dashboard 模组项目、Assistant、model sources、settings、CLI confirmation；按 `ProjectId + ModelSourceId` 隔离会话；确定性模型/工具活动；Provider usage 明确完整性；zh-CN/en-US/ja-JP/fr-FR/ru-RU key 对齐；UI UX Pro Max 设计约束 | provider 上下文超限显式报错，不承诺自动压缩；完整键盘/Narrator/高对比/缩放人工验收、pseudo locale |
 | P9 MSIX 发布 | 未签名 payload 已验证 | version 1.2.0.0；默认 Dev Identity、显式 Store flavor、x64 WAP、五语言 PRI、App/Rust/MCP Host、makepri 与全 payload 哈希审计 | Store 签名/时间戳、干净机正式安装升级卸载、真实购买恢复、ARM64 |
 
 ## 2. 已完成的可执行基线
@@ -156,7 +156,7 @@ App 组合根具有 project backend。选中模组项目时暴露三个只读工
 - 无鼠标完成 onboarding、导入、翻译、取消和 CLI 拒绝/确认；
 - Narrator 名称/角色/状态、错误焦点和实时区域；
 - 100%/200% 缩放、窄窗口、长 CJK/英文、高对比度；
-- pseudo localization 和至少一次人工双语 manifest/PRI 检查。
+- pseudo localization 和至少一次人工五语言 manifest/PRI 检查。
 
 ## 6. MSIX 与发布路线
 
@@ -172,7 +172,7 @@ App 组合根具有 project backend。选中模组项目时暴露三个只读工
 
 - 生产 Publisher/证书 Subject 匹配，可信链和 timestamp；签名材料不入仓库/普通 runner；
 - 干净 x64 Windows 的安装、首次启动、升级、修复、卸载；
-- Rust DLL、MCP Host、双语 PRI 和运行时依赖在最终 payload 验证；
+- Rust DLL、MCP Host、五语言 PRI 和运行时依赖在最终 payload 验证；
 - SBOM、license、secret scan、NuGet/Cargo 漏洞门；
 - ARM64 只有在 .NET/Rust/MCP 对应 RID 及同等验证完成后才加入。
 
@@ -182,9 +182,9 @@ App 组合根具有 project backend。选中模组项目时暴露三个只读工
 
 ```powershell
 cargo fmt --manifest-path native/localesmith_core/Cargo.toml --all -- --check
-cargo clippy --manifest-path native/localesmith_core/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/localesmith_core/Cargo.toml --all-targets
-cargo build --manifest-path native/localesmith_core/Cargo.toml --release
+cargo clippy --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets --all-features -- -D warnings
+cargo test --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets
+cargo build --manifest-path native/localesmith_core/Cargo.toml --locked --release
 dotnet build LocaleSmith.slnx -c Release --no-restore
 dotnet test LocaleSmith.slnx -c Release --no-build --no-restore
 dotnet format LocaleSmith.slnx --verify-no-changes --no-restore

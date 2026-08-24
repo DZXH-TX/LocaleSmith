@@ -168,7 +168,7 @@ The standalone stdio MCP Host is maintained as the `CRTech.LocaleSmith.McpHost` 
 | .NET SDK | `10.0.302`, pinned by `global.json` |
 | Rust | Repository toolchain `1.97.1` (MSVC), including `rustfmt` and `clippy` |
 | Windows SDK | `10.0.26100`, with MSVC / C++ build tools installed |
-| UI dependencies | Windows App SDK `2.3.1` and CommunityToolkit.Mvvm `8.4.2`, restored through NuGet |
+| UI dependencies | Windows App SDK `2.3.1` and CommunityToolkit.Mvvm `8.4.2` are restored through NuGet; running the unpackaged WinUI app also requires Windows App Runtime `2.3.1` to be registered |
 | MSIX build | Requires Visual Studio Developer PowerShell with Desktop Bridge / WAP targets |
 
 ### Build from source
@@ -179,7 +179,7 @@ Build the Rust release DLL first, then restore and build the .NET solution:
 git clone https://github.com/DZXH-TX/LocaleSmith.git
 Set-Location LocaleSmith
 
-cargo build --manifest-path native/localesmith_core/Cargo.toml --release
+cargo build --manifest-path native/localesmith_core/Cargo.toml --locked --release
 dotnet restore LocaleSmith.slnx
 dotnet build LocaleSmith.slnx -c Release
 ```
@@ -192,8 +192,8 @@ dotnet build LocaleSmith.slnx -c Release
 
 ```powershell
 cargo fmt --manifest-path native/localesmith_core/Cargo.toml --all -- --check
-cargo clippy --manifest-path native/localesmith_core/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/localesmith_core/Cargo.toml --all-targets
+cargo clippy --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets --all-features -- -D warnings
+cargo test --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets
 
 dotnet test LocaleSmith.slnx -c Release
 dotnet format LocaleSmith.slnx --verify-no-changes --no-restore

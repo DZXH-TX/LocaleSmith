@@ -168,7 +168,7 @@ GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C5
 | .NET SDK | `10.0.302`，由 `global.json` 固定 |
 | Rust | 仓库工具链 `1.97.1`（MSVC），包含 `rustfmt` 与 `clippy` |
 | Windows SDK | `10.0.26100`，并安装 MSVC / C++ 构建工具 |
-| UI 依赖 | Windows App SDK `2.3.1`、CommunityToolkit.Mvvm `8.4.2`，由 NuGet 还原 |
+| UI 依赖 | Windows App SDK `2.3.1`、CommunityToolkit.Mvvm `8.4.2` 由 NuGet 还原；运行 unpackaged WinUI 应用前还需注册 Windows App Runtime `2.3.1` |
 | MSIX 构建 | 需要包含 Desktop Bridge / WAP targets 的 Visual Studio Developer PowerShell |
 
 ### 从源码构建
@@ -179,7 +179,7 @@ GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C5
 git clone https://github.com/DZXH-TX/LocaleSmith.git
 Set-Location LocaleSmith
 
-cargo build --manifest-path native/localesmith_core/Cargo.toml --release
+cargo build --manifest-path native/localesmith_core/Cargo.toml --locked --release
 dotnet restore LocaleSmith.slnx
 dotnet build LocaleSmith.slnx -c Release
 ```
@@ -192,8 +192,8 @@ dotnet build LocaleSmith.slnx -c Release
 
 ```powershell
 cargo fmt --manifest-path native/localesmith_core/Cargo.toml --all -- --check
-cargo clippy --manifest-path native/localesmith_core/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --manifest-path native/localesmith_core/Cargo.toml --all-targets
+cargo clippy --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets --all-features -- -D warnings
+cargo test --manifest-path native/localesmith_core/Cargo.toml --locked --all-targets
 
 dotnet test LocaleSmith.slnx -c Release
 dotnet format LocaleSmith.slnx --verify-no-changes --no-restore

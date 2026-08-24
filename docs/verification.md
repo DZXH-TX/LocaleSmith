@@ -6,9 +6,9 @@
 
 - 联合功能基线：`02c34a4`（已进入 `origin/main`，当时远端 Build and Test 与 CodeQL 成功）。
 - 打包与状态隔离补强：`c2a6f7d`。
-- 最终二进制源码提交：`1b2433c7eebf8870fd8fa70f3d1cd351e090c549`。
-- App FileVersion `1.2.0.0`，ProductVersion `1.2.0+1b2433c7…`。
-- MCP Host FileVersion `0.1.1.0`，ProductVersion `0.1.1+1b2433c7…`。
+- 最终二进制源码提交：`2d087426fc5c9c31206bb0de0798800ce298c22e`。
+- App FileVersion `1.2.0.0`，ProductVersion `1.2.0+2d087426…`。
+- MCP Host FileVersion `0.1.1.0`，ProductVersion `0.1.1+2d087426…`。
 
 ## 自动化验证
 
@@ -57,23 +57,23 @@ dotnet pack src/LocaleSmith.McpHost/LocaleSmith.McpHost.csproj `
 结果：
 
 - `CRTech.LocaleSmith.McpHost.0.1.1.nupkg`
-- 433,497 bytes
-- SHA-256 `4776699DCAF1F6680F8223DF216566D869DAF83DE936DC6B775B6ED63B18EDCC`
+- 433,456 bytes
+- SHA-256 `7DCFCA13D53CDB0382437057496F6B8C9C3B32237B38684D0D0C553679069346`
 - 本地工具安装与 initialize/tools smoke 通过；服务版本 `0.1.1`
 - 独立 Host 仍只有 `system.context`、`cli.propose`
 
-GitHub Packages 当前仍显示 `0.1.0`，因为远端只有 `mcp-v0.1.0` tag。最终 PR 合并后必须创建 `mcp-v0.1.1`，等待 Publish GitHub Package workflow 成功，并回读 Packages 页面确认。
+远端发布必须由指向上述源码提交、且已可从 `main` 到达的 `mcp-v0.1.1` tag 触发；本地包验证本身不能替代 Publish GitHub Package workflow 与 Packages 页面回读。
 
 ## 未签名 MSIX 1.2.0.0
 
 WAP 构建顺序：Rust Release → App RID restore → MCP Host RID restore → WAP `/t:Rebuild`。一次在 NuGet 漏洞扫描的无 RID restore 后直接运行 WAP，按预期触发 `NETSDK1047`；重新紧邻执行两个 `-r win-x64` restore 后成功。这证明不能把普通 solution restore 当成 WAP RID restore，也不能在 WAP 命令上追加 `/restore`。
 
-最终产物位于 `artifacts/msix/1.2.0-unsigned-1b2433c7-final/`：
+最终产物位于 `artifacts/msix/pr12-2d087426/`：
 
 | Flavor | Identity | Bytes | SHA-256 |
 | --- | --- | ---: | --- |
-| Development | `CRTech.LocaleSmith.Dev` | 104,041,786 | `2AF1E9CEEFB35DEBDF2AF446326E71C80526DE0ABD9913969F3C3F4393C41EE3` |
-| Store candidate | `CRTech.LocaleSmith` | 104,041,810 | `6C78EF1908C8A2C56B069403B6925537BC6688B3608DEFE04C9D16A7FC53ED91` |
+| Development | `CRTech.LocaleSmith.Dev` | 104,041,801 | `FEB127CAC070C25063E113B14357DCE6728CB0BF08A2A6CD4B00C6D82EA476B2` |
+| Store candidate | `CRTech.LocaleSmith` | 104,041,820 | `6BDAB472D853031AB347F90003501BF377DE7BAFC42649C9A0CB4C4E8BEB4AA0` |
 
 `.github/scripts/Test-MsixPackage.ps1` 对两种 flavor 均通过：
 
@@ -81,15 +81,15 @@ WAP 构建顺序：Rust Release → App RID restore → MCP Host RID restore →
 - `AppxSignature.p7x` 不存在，Authenticode 状态 `NotSigned`；
 - root `resources.pri` 分别为 340,152 / 340,136 bytes；`makepri dump` 找到 App、MainWindow、2 Controls、Dialog、7 Pages 与 Theme 共 13 个 XBF；
 - App、Application、Archive、Core、Infrastructure、Mcp、NativeInterop、Presentation、Rust DLL 与 MCP Host 的文件集合和 SHA-256 与当前 publish 输入一致；
-- 两种包的 App DLL SHA-256 均为 `6CC9428F38B13B1F66B8EB587E164CE25D5A23F55E1C084FC238FC66C5632184`；
-- MCP Host EXE SHA-256 均为 `F46A64E58960808F419349F843727D8B320DE3A57701EB37ABDF7BCC6E372725`；
+- 两种包的 App DLL SHA-256 均为 `EA59A0B3413A06A54FD70BF3FBB097A7EDE40C66BF71827D85F4B55CB952F5C8`；
+- MCP Host EXE SHA-256 均为 `E54B5BFF3FB85EE03441A01A6DE3C7CA229B713C41F2C074453CBA2B5CA89F2F`；
 - 四个 PNG、Windows App Runtime/VCLibs 依赖存在，payload 无证书或私钥材料。
 
 ## Development MSIX 启动 smoke
 
 - 使用 loose layout 注册 `CRTech.LocaleSmith.Dev_1.2.0.0_x64__4rqmcnsyrpbqt`；未替换 Store `CRTech.LocaleSmith 1.1.0.0`。
 - AUMID：`CRTech.LocaleSmith.Dev_4rqmcnsyrpbqt!App`。
-- AppsFolder 启动后的进程来自当前 WAP layout，窗口标题“译匠”，响应正常，ProductVersion 为 `1.2.0+1b2433c7…`。
+- AppsFolder 启动后的进程来自最终 Development MSIX 的独立解包目录，窗口标题“译匠”，响应正常，ProductVersion 为 `1.2.0+2d087426…`。
 - production `%LOCALAPPDATA%\LocaleSmith\settings.localesmithcfg` 的时间戳与 SHA-256 在 smoke 前后不变。
 - Windows 对 registered desktop package 的 AppData 写入会执行 MSIX virtualization；Dev 逻辑根 `%LOCALAPPDATA%\LocaleSmith.Dev` 的物理文件位于 Dev PFN 的 `LocalCache\Local\LocaleSmith.Dev`，与 production 隔离。未声明 `unvirtualizedResources`，避免为测试包扩大 restricted capability。
 
