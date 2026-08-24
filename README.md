@@ -38,19 +38,17 @@
   </p>
 
   <p>
+    <a href="#快速开始">快速开始</a> ·
     <a href="#项目概览">项目概览</a> ·
     <a href="#核心能力">核心能力</a> ·
     <a href="#支持范围">支持范围</a> ·
     <a href="#已知限制">已知限制</a> ·
     <a href="#处理流程">处理流程</a> ·
-    <a href="#快速开始">快速开始</a> ·
+    <a href="#从源码构建">从源码构建</a> ·
     <a href="#安全边界">安全边界</a> ·
     <a href="#参与贡献">参与贡献</a>
   </p>
 </div>
-
-> [!IMPORTANT]
-> **LocaleSmith v1.1.0 已在 [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) 正式上架。** 推荐通过商店安装，以自动处理依赖和后续更新；[GitHub Release](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) 同时提供经 Microsoft Marketplace 签名的正式 MSIX，无需安装开发测试证书。
 
 ## 三十秒了解
 
@@ -62,6 +60,41 @@
 | **模型可选且可控** | Ollama、OpenAI-compatible、Anthropic；显式刷新模型列表、设置 Token/分批预算，私有推理只在同源协议轮次回放。 |
 | **凭据和执行有边界** | API Key 在 Credential Manager，配置 AES-256-GCM；模型只能提议命令，执行仍需策略复核和用户确认。 |
 
+## 快速开始
+
+### 安装
+
+> [!IMPORTANT]
+> **推荐通过 Microsoft Store 安装**，商店会自动处理框架依赖与后续更新。
+
+<table>
+<tr>
+<th width="180">渠道</th>
+<th>说明</th>
+</tr>
+<tr>
+<td><a href="https://apps.microsoft.com/detail/9NP8V6WQNGT0"><b>Microsoft Store</b></a><br /><sub>推荐</sub></td>
+<td>免费获取，自动安装依赖与更新。产品 ID <code>9NP8V6WQNGT0</code></td>
+</tr>
+<tr>
+<td><a href="https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0"><b>GitHub Release v1.1.0</b></a></td>
+<td>经 Microsoft Marketplace 签名的 <code>CRTech.LocaleSmith_1.1.0.0_x64.Msix</code>，<b>无需安装开发测试证书</b></td>
+</tr>
+</table>
+
+<sub>MSIX 校验和（SHA-256）：<code>A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C50B96FBBA84F64</code>　·　系统要求：Windows 10 1809（Build 17763）及以上，x64</sub>
+
+### 三步上手
+
+```text
+1. 添加包    →  选择 JAR / ZIP 或单个展开目录；多归档目录使用“添加包”多选
+2. 配置模型  →  选择本地 Ollama 或云端预设；仅云端服务需要对应 API Key
+3. 开始翻译  →  选择目标语言与一种风格后入队；产物写入当前 Workspace 的 LocaleSmith.Output
+```
+
+> [!NOTE]
+> 独立 stdio MCP Host `CRTech.LocaleSmith.McpHost` 已发布 `0.1.1`，仅暴露 `system.context` 与 `cli.propose`。安装、GitHub Packages 鉴权与客户端配置见[包 README](./.github/package-readmes/LocaleSmith.McpHost.md)。
+
 ## 项目概览
 
 **LocaleSmith | 译匠**，面向 Minecraft: Java Edition 模组、资源包与光影包，将**安全扫描、增量翻译、结构验证和事务重建**整合进一个 Windows 原生桌面工作台。
@@ -70,36 +103,66 @@
 
 ## 核心能力
 
+<details open>
+<summary><b>翻译与流水线</b></summary>
+
+<br />
+
 | 能力 | 说明 |
 | --- | --- |
-| **安全归档扫描** | 识别路径穿越、Loader 元数据、语言资源、签名证据与受支持的 Java 字符串引用。 |
-| **增量翻译流水线** | 按内容哈希复用译文，校验占位符与结构，并在失败时回滚整个作业。 |
-| **模组项目同步** | Dashboard 将同一规范化源 artifact 作为一个进程内模组项目，向助手同步任务目标、进度、状态与产物；当前不会跨应用重启持久化项目。 |
-| **专业提示与术语** | 自动区分模组、资源包与光影包，使用独立领域提示；简体中文任务附带各自的专业术语对照表。 |
-| **多目标语言** | 首批支持简体中文、英语、日语、法语与俄语；语言目录集中定义，可继续扩展。 |
-| **多模型接入** | 统一支持 Ollama、OpenAI-compatible Chat Completions 与 Anthropic Messages。 |
-| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM 与 Kimi 等预设会同步填充服务地址和模型名，并选择推荐的补全 Token 参数；Ollama 与支持 `/models` 的 OpenAI-compatible 服务可显式刷新模型列表，始终保留手填回退。每个模型源还可设置单次响应 Tokens 与翻译分批字符目标；需要跨工具轮次连续思考的 Provider 会在协议层私下回放推理状态，不显示到 UI。 |
-| **联机模组社区** | 可搜索和分页浏览公开模组与讨论；使用保存在 Windows Credential Manager 中的 PAT 发帖、回复和举报，并可直接查看服务条款与社区规范。 |
-| **Microsoft 订阅与安全加速** | 使用 Windows 原生 Microsoft Store 购买界面、MCTX 后端权威权益核验与一次性下载 grant；加速不可用时始终保留并回退默认下载源。 |
-| **持久化诊断日志** | 日志目录可写时，每次翻译都会尝试通过有界后台写入器持久化一对 Debug 与 All levels `.log`；可在左侧“日志”页查看并在引导或设置中修改目录。 |
-| **原生桌面体验** | 提供首次引导、处理队列、模型助手、模型源管理、日志、设置和 CLI 风险确认。 |
-| **模型活动与真实用量** | 助手显示由程序产生的模型轮次与工具活动，不展示私有推理；Provider 返回的 Token usage 会贯穿助手与翻译任务，失败/取消前已完成的调用也会保留，缺失或不完整时明确标记且绝不估算。 |
-| **凭据与配置保护** | API Key 存入 Windows Credential Manager，其他配置使用 AES-256-GCM 加密。 |
-| **受控 MCP / CLI** | App 内助手仅在有活动模组项目时增加受限项目工具；独立 stdio Host 仍只能读取安全上下文和提出命令，CLI 执行必须经过策略复核和用户明确确认。 |
+| **安全归档扫描** | 识别路径穿越、Loader 元数据、语言资源、签名证据与受支持的 Java 字符串引用 |
+| **增量翻译流水线** | 按内容哈希复用译文，校验占位符与结构，失败时回滚整个作业 |
+| **专业提示与术语** | 自动区分模组、资源包与光影包并使用独立领域提示；简体中文任务附带专业术语对照表 |
+| **多目标语言** | 简体中文、英语、日语、法语、俄语；语言目录集中定义，可继续扩展 |
+| **模组项目同步** | Dashboard 将同一规范化源 artifact 作为一个进程内模组项目，向助手同步任务目标、进度、状态与产物 |
+
+</details>
+
+<details open>
+<summary><b>模型接入</b></summary>
+
+<br />
+
+| 能力 | 说明 |
+| --- | --- |
+| **三类协议** | Ollama · OpenAI-compatible Chat Completions · Anthropic Messages |
+| **提供方预设** | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM、Kimi，自动填充服务地址、模型名与推荐 Token 参数 |
+| **模型列表刷新** | Ollama 与支持 `/models` 的 OpenAI 兼容服务可显式拉取列表，并始终保留手填回退 |
+| **预算与私有推理** | 每个模型源可设置单次响应 Tokens 与翻译分批字符目标；需要连续推理的 Provider 只在同源协议轮次私下回放状态 |
+| **真实用量统计** | 只展示 Provider 返回的 Token usage；失败/取消前已完成调用仍保留，缺失或不完整时明确标记，**绝不用字符数估算** |
+
+</details>
+
+<details>
+<summary><b>桌面体验与运维</b></summary>
+
+<br />
+
+| 能力 | 说明 |
+| --- | --- |
+| **原生桌面体验** | 首次引导、处理队列、模型助手、模型源管理、日志、设置与 CLI 风险确认 |
+| **持久化诊断日志** | 日志目录可写且写入器有容量时，翻译会尝试持久化一对 Debug / All levels `.log`；可在“日志”页查看，目录可改 |
+| **凭据与配置保护** | API Key 存入 Windows Credential Manager，其他配置使用 AES-256-GCM 加密 |
+| **受控 MCP / CLI** | 助手仅在有活动项目时获得受限项目工具；命令执行必须经策略复核与用户明确确认 |
+| **联机模组社区** | 可搜索浏览公开模组与讨论，使用 Credential Manager 中的 PAT 发帖、回复与举报 |
+| **Microsoft 订阅与安全加速** | 使用原生 Store 购买界面、后端权威权益与一次性下载 grant；不可用时安全回退默认下载源 |
+
+</details>
 
 ## 支持范围
 
-| 类别 | 当前支持 |
-| --- | --- |
-| 输入 | JAR、ZIP、展开后的单个模组/资源包/光影包目录；含多个 JAR/ZIP 的容器目录需通过“添加包”多选归档 |
-| Loader 元数据 | Fabric、Forge、NeoForge、Quilt、Legacy Forge |
-| 文本资源 | Minecraft 语言 JSON、Legacy `.lang`、光影包 `shaders/lang/*.lang`、`pack.txt`、受支持的 `pack.mcmeta` 显示文本 |
-| 字节码 | 经结构证明的 `Component.literal(String)` 精确模式；其他候选仅报告、不改写 |
-| 模型接口 | Ollama、OpenAI-compatible Chat Completions、Anthropic Messages |
-| 模型预设 | DeepSeek、Qwen、Xiaomi MiMo、MiniMax、OpenAI、豆包、智谱 GLM、Kimi，以及自定义入口 |
-| 目标语言 | `zh_CN`、`en_US`、`ja_JP`、`fr_FR`、`ru_RU` |
-| 输出 | 当前作业选择的一种目标语言与一种翻译风格；包内资源名使用小写 Minecraft locale，如 `ja_jp` |
-| 平台 | Windows x64，最低 Windows 10 1809 |
+<table>
+<tr><th width="140">类别</th><th>当前支持</th></tr>
+<tr><td><b>输入</b></td><td>JAR、ZIP、展开后的单个模组 / 资源包 / 光影包目录<br /><sub>含多个 JAR/ZIP 的容器目录需通过“添加包”多选归档</sub></td></tr>
+<tr><td><b>Loader 元数据</b></td><td>Fabric · Forge · NeoForge · Quilt · Legacy Forge</td></tr>
+<tr><td><b>文本资源</b></td><td>Minecraft 语言 JSON · Legacy <code>.lang</code> · 光影包 <code>shaders/lang/*.lang</code> · <code>pack.txt</code> · 受支持的 <code>pack.mcmeta</code> 显示文本</td></tr>
+<tr><td><b>字节码</b></td><td>经结构证明的 <code>Component.literal(String)</code> 精确模式<br /><sub>其他候选仅报告、不改写</sub></td></tr>
+<tr><td><b>模型接口</b></td><td>Ollama · OpenAI-compatible Chat Completions · Anthropic Messages</td></tr>
+<tr><td><b>模型预设</b></td><td>DeepSeek · Qwen · Xiaomi MiMo · MiniMax · OpenAI · 豆包 · 智谱 GLM · Kimi · 自定义入口</td></tr>
+<tr><td><b>目标语言</b></td><td><code>zh_CN</code> · <code>en_US</code> · <code>ja_JP</code> · <code>fr_FR</code> · <code>ru_RU</code></td></tr>
+<tr><td><b>输出</b></td><td>每个作业一种目标语言 + 一种翻译风格；包内资源名使用小写 locale，如 <code>ja_jp</code></td></tr>
+<tr><td><b>平台</b></td><td>Windows x64，最低 Windows 10 1809</td></tr>
+</table>
 
 ## 已知限制
 
@@ -133,13 +196,45 @@ Dashboard 添加源 artifact 时，会按规范化源路径在当前进程内注
 
 ## Microsoft Store 订阅与国内加速
 
-LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应用内订阅、显示 Microsoft 购买界面，并通过主窗口 HWND 绑定桌面模态 UI。Partner Center 配置为月度自动续费、符合资格的新订阅用户 7 天免费试用、全球 US$4.99/月基础价格档位并由 Store 本地化、中国市场配置 CNY 30.00/月；客户端界面只显示 Store 为当前区域返回的实际续费价，不向中国用户硬编码展示美元基础档位。订阅由 Microsoft 计费，可在 [Microsoft 服务和订阅](https://account.microsoft.com/services) 中管理或取消；[隐私政策](https://dow.dzxh-tx.cn/privacy) 保持可发现。Microsoft Store 不支持“首月 CNY 24、以后 CNY 30”的原生 introductory price，客户端不会伪造该优惠。
+LocaleSmith 本体免费；国内下载加速是独立、可选的 Microsoft Store 订阅。
 
-购买、恢复与刷新都要求先用现有 LocaleSmith/MCTX 账号和含 `downloads:accelerated` scope 的 PAT 登录。`Succeeded` 或 `AlreadyPurchased` 只会启动 `service-ticket → Store ID key → backend verify → entitlements`，不会直接解锁；只有后端返回精确的 `domestic_download_acceleration` 有效权益才可进入下一步。缺少 `microsoft_store_billing_v1` / `accelerated_downloads_v1`、PAT、scope、有效权益或后端新鲜核验时，购买或加速入口失败关闭。
+<details>
+<summary><b>订阅说明与定价</b></summary>
 
-下载源发现只接受后端返回的相对默认源和 `additional_source` 判定；客户端不硬编码对象存储主机、bucket、对象 key 或长期 URL。一次性 GET/HEAD 签名 URL 只在内存和对应 HTTPS 请求中短暂存在，不进入日志、配置、诊断、剪贴板、toast、遥测或断点 sidecar；对象存储请求不携带 PAT、Cookie、Authorization、Referer 或代理凭据，也不跟随重定向。传输使用独立 HEAD 取得强 ETag，最多四路 Range + If-Range 下载，grant 过期时重新完成全套后端门控并续签，最终按 API 的 size 与 SHA-256 验证；任何授权、对象存储或完整性异常都会安全回退原有同源默认下载器。
+<br />
 
-本地自动化已覆盖 capability/PAT/scope/权益拒绝矩阵、购买状态机、过期/取消/退款/试用结束、跨设备恢复、账号暂停、核验陈旧、秘密请求正文、GET/HEAD 分离、精确 HTTPS origin、四路 Range、续签续传、无秘密断点元数据、SHA-256 与默认源回退。网站源码契约和 replica worker 已统一使用唯一权益 `domestic_download_acceleration`，但尚未验证真实 Partner Center 商品、购买/续费/退款/跨设备恢复、Microsoft recurrence/service ticket、真实 PostgreSQL/Redis 权益联调或 RainS3 私有桶 E2E，也未在本次工作中启用或部署生产加速。
+| 项目 | 当前配置 |
+| --- | --- |
+| 计费方 | Microsoft（Partner Center） |
+| 周期 | 月度自动续费 |
+| 试用 | 符合资格的新订阅用户 7 天免费 |
+| 全球基础档 | US$4.99 / 月，由 Store 按区域本地化 |
+| 中国市场 | CNY 30.00 / 月 |
+| 管理与取消 | [Microsoft 服务和订阅](https://account.microsoft.com/services) |
+
+客户端通过 `Windows.Services.Store.StoreContext` 显示 Microsoft 购买界面，并**只显示 Store 为当前区域返回的实际续费价**。上述档位是 Partner Center 当前配置，不是客户端硬编码承诺；Microsoft Store 不支持“首月 CNY 24、以后 CNY 30”的原生 introductory price，LocaleSmith 不会伪造该优惠。[隐私政策](https://dow.dzxh-tx.cn/privacy) 保持可发现。
+
+</details>
+
+<details>
+<summary><b>权益核验与下载链路</b></summary>
+
+<br />
+
+购买、恢复与刷新都要求现有 LocaleSmith/MCTX 账号，以及含 `downloads:accelerated` scope 的 PAT。`Succeeded` 或 `AlreadyPurchased` **不会直接解锁**，只会启动：
+
+```text
+service-ticket → Store ID key → backend verify → entitlements
+```
+
+只有后端返回精确的 `domestic_download_acceleration` 有效权益才可继续。缺少 `microsoft_store_billing_v1` / `accelerated_downloads_v1`、PAT、scope、有效权益或后端新鲜核验时，入口失败关闭。
+
+下载源发现只接受 API 返回的相对默认源和 `additional_source` 判定。一次性 GET/HEAD URL 不落盘、不进入日志/配置/诊断/剪贴板/toast/遥测/断点 sidecar；对象存储请求不携带 PAT、Cookie、Authorization、Referer 或代理凭据，也不跟随重定向。传输使用强 ETag、最多四路 Range + If-Range，grant 过期时重新完成后端门控并续签，最终核对 API size 与 SHA-256；任何授权、存储或完整性异常都会安全回退原有同源下载器。
+
+</details>
+
+> [!WARNING]
+> **当前状态**：本地自动化已覆盖拒绝矩阵、购买状态机、过期/取消/退款/试用结束、跨设备恢复、四路 Range、续签续传、SHA-256 与默认源回退；但尚未验证真实 Partner Center 商品、真实购买/续费/退款、Microsoft recurrence/service ticket、真实 PostgreSQL/Redis 权益联调或 RainS3 私有桶 E2E，**也未启用或部署生产加速**。
 
 ## 翻译日志与持久化设置
 
@@ -147,18 +242,7 @@ LocaleSmith 使用 `Windows.Services.Store.StoreContext` 读取隐藏的父应�
 
 正式 Store 包的逻辑默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`；unpackaged/Dev 包使用隔离的 `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations`，配置、凭据、Sandbox 与安全锁也不会和正式版混用。registered MSIX 的物理文件可能由 Windows 放入各自 PFN 的 `LocalCache\Local`，仍保持包间隔离。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
 
-## 快速开始
-
-### 安装正式版
-
-| 渠道 | 说明 |
-| --- | --- |
-| [Microsoft Store](https://apps.microsoft.com/detail/9NP8V6WQNGT0) | 推荐方式；免费获取并由商店处理安装、框架依赖与后续更新。产品 ID：`9NP8V6WQNGT0`。 |
-| [GitHub Release v1.1.0](https://github.com/DZXH-TX/LocaleSmith/releases/tag/v1.1.0) | 提供 Microsoft Marketplace 签名的 `CRTech.LocaleSmith_1.1.0.0_x64.Msix`，适用于需要直接下载安装包的场景。 |
-
-GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C50B96FBBA84F64`。正式版支持 Windows x64，最低系统版本为 Windows 10 1809（Build 17763）。
-
-独立 stdio MCP Host 以 .NET 工具包 `CRTech.LocaleSmith.McpHost` 维护；当前源码包版本为 `0.1.1`。它仍只暴露 `system.context` 与 `cli.propose`，不包含 App 专属项目/文件工具。安装、GitHub Packages 鉴权与客户端配置见[包 README](./.github/package-readmes/LocaleSmith.McpHost.md)。
+## 从源码构建
 
 ### 开发环境要求
 
@@ -171,7 +255,7 @@ GitHub MSIX 的 SHA-256 为 `A2F24B73D4B20C9255DE32F3A6949251067ADFC53A24A4732C5
 | UI 依赖 | Windows App SDK `2.3.1`、CommunityToolkit.Mvvm `8.4.2` 由 NuGet 还原；运行 unpackaged WinUI 应用前还需注册 Windows App Runtime `2.3.1` |
 | MSIX 构建 | 需要包含 Desktop Bridge / WAP targets 的 Visual Studio Developer PowerShell |
 
-### 从源码构建
+### 构建
 
 先生成 Rust release DLL，再还原并构建 .NET solution：
 
@@ -276,16 +360,40 @@ App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模�
 
 ## 参与贡献
 
-欢迎提交 Pull Request。提交代码前，请至少运行与改动相关的 Rust / .NET 验证门，并清楚说明目标 Minecraft 版本、Loader、输入类型和模型来源。
+欢迎提交 Pull Request。提交前请：
+
+- [ ] 运行与改动相关的 Rust / .NET 验证门
+- [ ] 说明目标 Minecraft 版本与 Loader
+- [ ] 说明输入类型（JAR / ZIP / 目录）与模型来源
+- [ ] 如使用了对项目有实质影响的 AI 辅助，在 PR 中如实说明
+
+另见：[行为准则](./.github/CODE_OF_CONDUCT.md) · [贡献指南](./.github/CONTRIBUTING.md) · [安全策略](./.github/SECURITY.md)
 
 ## 开源许可
 
 本项目依据 [Apache License 2.0](./LICENSE) 开源。
 
-## 人工智能使用声明
+<details>
+<summary><b>人工智能使用声明</b></summary>
+
+<br />
 
 本项目允许在需求分析、代码与文档草拟、重构建议、测试设计和本地化等环节使用生成式人工智能工具。所有 AI 辅助产出必须经过人工审阅、必要测试以及安全与许可核验后方可提交；维护者和贡献者仍对其提交内容的正确性、安全性、合规性和可维护性承担完整责任，AI 输出不构成事实、法律或专业保证。
 
 使用 AI 工具时，不得向未经授权的外部服务上传密钥、凭据、个人信息、未公开源码或受限制的第三方内容，并应遵守相应服务条款与第三方许可证。对项目有实质影响的 AI 辅助内容，贡献者应在 Pull Request 中如实说明；本声明不改变 Apache License 2.0 下的许可、版权与贡献归属。
 
-Copyright © 2026 **DZXH-TX（道泽星河-天仙）**（版权所有者与许可人）。
+</details>
+
+<br />
+
+<div align="center">
+
+Copyright © 2026 **DZXH-TX（道泽星河-天仙）**
+
+<sub>版权所有者与许可人</sub>
+
+<br />
+
+[项目主页](https://github.com/DZXH-TX/LocaleSmith) · [Issues](https://github.com/DZXH-TX/LocaleSmith/issues) · [讨论区](https://github.com/DZXH-TX/LocaleSmith/discussions)
+
+</div>
