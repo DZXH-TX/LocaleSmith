@@ -39,11 +39,10 @@
 
   <p>
     <a href="#quick-start">Quick Start</a> ·
-    <a href="#project-overview">Project Overview</a> ·
     <a href="#core-capabilities">Core Capabilities</a> ·
     <a href="#supported-scope">Supported Scope</a> ·
-    <a href="#known-limitations">Known Limitations</a> ·
     <a href="#processing-pipeline">Processing Pipeline</a> ·
+    <a href="#logs-and-data-persistence">Logs &amp; Data</a> ·
     <a href="#build-from-source">Build from Source</a> ·
     <a href="#security-boundaries">Security Boundaries</a> ·
     <a href="#contributing">Contributing</a>
@@ -179,29 +178,52 @@ The project combines a native Rust scanning core with a .NET 10 / WinUI 3 deskto
 
 ## Processing Pipeline
 
+Every translation job follows the same transactional pipeline. The source remains read-only, and only a fully validated result is written to `LocaleSmith.Output`.
+
 ```mermaid
 flowchart LR
-    A["Import<br/>JAR / ZIP / Folder"] --> B["Secure scan<br/>Paths / Metadata / Resources"]
-    B --> C["Extraction and planning<br/>Incremental cache"]
-    C --> D["Model translation<br/>Target language + Formal / Tone"]
-    D --> E["Validation and rebuilding<br/>Transactional rollback"]
-    E --> F["Output<br/>LocaleSmith.Output"]
+    A["1 · Import<br/>JAR / ZIP / Directory"] --> B["2 · Scan<br/>Paths / Metadata / Resources"]
+    B --> C["3 · Plan<br/>Extract / Incremental cache"]
+    C --> D["4 · Translate<br/>Target language / One style"]
+    D --> E["5 · Validate<br/>Rebuild / Roll back on failure"]
+    E --> F["6 · Output<br/>LocaleSmith.Output"]
 ```
 
-Each job captures the user's selected target language, model source, one translation style, response Token budget, and source-character batch target when it is queued. The character target controls batching for large packages and never truncates one value; HTTP responses remain protected by a fixed, non-configurable 16 MiB safety limit. Language resources prefer `en_us`, `en_gb`, or another existing locale that differs from the target language as source text; for example, if English is the target but the package contains only Japanese, LocaleSmith generates `en_us` from the Japanese source. The other style can be queued separately and can reuse corresponding translations already cached under the same source-text hash.
+<details open>
+<summary><strong>Job rules</strong></summary>
 
-When a source artifact is added from the Dashboard, LocaleSmith registers or reuses a process-local mod project by normalized source path and synchronizes the active project and its translation tasks with the assistant. The assistant keeps a separate conversation and draft for every `ProjectId + ModelSourceId` pair. Switching projects or model sources restores only the matching session: one mod's history is not mixed into another mod, and history from one provider is not sent to a different provider. The project workspace is currently memory-only and is not restored after the application restarts.
+| Rule | Actual behavior |
+| --- | --- |
+| **Configuration snapshot** | Queueing a job freezes its target language, model source, translation style, response Token budget, and source-character batch target. |
+| **Batching and ceiling** | The character target controls batching for large packages without truncating a single value; HTTP responses remain protected by a fixed, non-configurable 16 MiB limit. |
+| **Source-locale selection** | LocaleSmith prefers `en_us`, `en_gb`, or another existing locale that differs from the target; for example, a Japanese-only package can provide the source for a generated `en_us`. |
+| **Styles and caching** | Each job processes one style. Other styles are queued separately and can reuse the corresponding translation for the same source-text hash. |
 
-The assistant's processing view contains only deterministic lifecycle events for model-round start/completion, tool start/completion/failure, and the final run state. Events exclude message content, tool arguments/results, paths, commands, exception text, and private `reasoning_content`. Provider-reported token usage is aggregated into assistant responses and translation tasks; completed provider rounds remain visible when a task later fails or is cancelled, while an in-flight call without usage is marked partial or unavailable. A total is shown only when the provider reports it or when both provider-reported input and output counts are present, with no character-count or heuristic estimate.
+</details>
+
+<details>
+<summary><strong>Projects, assistant sessions, and usage</strong></summary>
+
+| Topic | Isolation and display rules |
+| --- | --- |
+| **Mod projects** | The Dashboard registers or reuses a process-local project by normalized source path and synchronizes the active project and its translation tasks with the assistant. The workspace is memory-only and is not restored after restart. |
+| **Assistant sessions** | Every `ProjectId + ModelSourceId` pair has its own conversation and draft. Switching projects or model sources never mixes histories or sends one provider's history to another. |
+| **Processing view** | Only deterministic model-round events, tool states, and the final run state are shown. Message content, tool arguments or results, paths, commands, exception text, and private `reasoning_content` are excluded. |
+| **Token usage** | Only provider-reported usage is aggregated. A total appears only when the provider reports it or supplies both input and output counts. Usage from completed rounds survives later failure or cancellation; an in-flight call without usage is marked partial or unavailable, never estimated from characters. |
+
+</details>
 
 ## Microsoft Store Subscription and Domestic Acceleration
 
-LocaleSmith itself is free. Domestic download acceleration is a separate, optional Microsoft Store subscription.
+LocaleSmith itself is free. Domestic download acceleration is a separate, optional monthly Microsoft Store subscription.
+
+> [!WARNING]
+> **Production acceleration is not enabled.** Local automation covers refusal paths, the purchase state machine, expiry / cancellation / refund / trial end, cross-device restore, four-way Range transfers, re-signing and resume, SHA-256, and default-source fallback.
+>
+> Live validation is still required for the Partner Center product and real purchase / renewal / refund flows, Microsoft recurrence / service tickets, PostgreSQL / Redis entitlement integration, and private RainS3 E2E.
 
 <details>
-<summary><b>Subscription and pricing</b></summary>
-
-<br />
+<summary><strong>Pricing, trial, and management</strong></summary>
 
 | Item | Current configuration |
 | --- | --- |
@@ -212,35 +234,70 @@ LocaleSmith itself is free. Domestic download acceleration is a separate, option
 | China market | CNY 30.00/month |
 | Manage or cancel | [Microsoft Services & subscriptions](https://account.microsoft.com/services) |
 
-The client uses `Windows.Services.Store.StoreContext` for Microsoft purchase UI and **shows only the actual renewal price returned for the current region**. These tiers describe the current Partner Center configuration, not a hard-coded client promise. Microsoft Store does not support a native “CNY 24 first month, then CNY 30” introductory price, and LocaleSmith does not simulate one. The [privacy policy](https://dow.dzxh-tx.cn/privacy) remains discoverable.
+- The client uses `Windows.Services.Store.StoreContext` for the purchase UI and **shows only the actual renewal price returned for the current region**.
+- The table reflects the current Partner Center configuration, not a price promise hard-coded into the client.
+- Microsoft Store does not support a native “CNY 24 first month, then CNY 30” introductory price, and LocaleSmith does not simulate one.
+
+[View the privacy policy](https://dow.dzxh-tx.cn/privacy)
 
 </details>
 
 <details>
-<summary><b>Entitlement verification and download path</b></summary>
+<summary><strong>Entitlement verification and download path</strong></summary>
 
-<br />
-
-Purchase, restore, and refresh require the existing LocaleSmith/MCTX account and a PAT with `downloads:accelerated`. `Succeeded` and `AlreadyPurchased` **never unlock locally**; they only start:
+Purchase, restore, and refresh require an existing LocaleSmith / MCTX account and a PAT with the `downloads:accelerated` scope. `Succeeded` and `AlreadyPurchased` **never unlock acceleration locally**; they only start backend verification:
 
 ```text
 service-ticket → Store ID key → backend verify → entitlements
 ```
 
-Only an exact, usable `domestic_download_acceleration` backend entitlement can proceed. Missing `microsoft_store_billing_v1` / `accelerated_downloads_v1`, PAT, scope, entitlement, or fresh backend verification fails closed.
+Only an exact, usable `domestic_download_acceleration` backend entitlement can proceed. Missing `microsoft_store_billing_v1` / `accelerated_downloads_v1`, PAT, scope, entitlement, or fresh backend verification always fails closed.
 
-Source discovery accepts only the relative default source and `additional_source` decision returned by the API. One-time GET/HEAD URLs are never persisted or written to logs, configuration, diagnostics, clipboard, toasts, telemetry, or resume sidecars. Storage requests carry no PAT, Cookie, Authorization, Referer, or proxy credentials and do not follow redirects. Transfers use a strong ETag, up to four Range + If-Range requests, full re-authorization and re-signing on grant expiry, and final API size/SHA-256 verification; authorization, storage, or integrity failure safely falls back to the existing same-origin downloader.
+| Stage | Security behavior |
+| --- | --- |
+| **Source discovery** | Accepts only the relative default source and `additional_source` decision returned by the API. |
+| **Secret isolation** | One-time GET / HEAD URLs never enter disk, logs, configuration, diagnostics, the clipboard, toasts, telemetry, or resume sidecars. Storage requests carry no PAT, Cookie, Authorization, Referer, or proxy credentials and never follow redirects. |
+| **Resume and verification** | Uses a strong ETag, up to four Range requests, and `If-Range`; grant expiry triggers full backend re-authorization and re-signing, followed by final API size and SHA-256 checks. |
+| **Safe fallback** | Any authorization, storage, or integrity failure falls back to the existing same-origin downloader. |
 
 </details>
 
-> [!WARNING]
-> **Current status:** local automation covers refusal paths, the purchase state machine, expiry/cancellation/refund/trial end, cross-device restore, four-way ranges, re-sign/resume, SHA-256, and default-source fallback. Real Partner Center products, live purchase/renewal/refund, Microsoft recurrence/service tickets, PostgreSQL/Redis entitlement integration, and private RainS3 E2E remain unverified, and **production acceleration has not been enabled or deployed**.
+## Logs and Data Persistence
 
-## Translation Logs and Persistent Settings
+> [!NOTE]
+> Logging is a **best-effort** background diagnostic channel, not part of the translation transaction. A slow disk, unwritable directory, or full writer queue can make logs incomplete, but never blocks translation.
 
-The “Logs” page in the left navigation lists persistent records by translation job and displays the Debug view by default; switch to All levels to inspect records across all log levels, including fine-grained progress. Logging is a best-effort background diagnostic feature: when the directory is writable and the writer has capacity, a job creates a pair of `.debug.log` / `.all.log` files and incrementally flushes them to disk. On slow devices or when the queue is full, files or individual diagnostic entries may be skipped, but translation is never blocked. After an abnormal process exit, content that was successfully flushed remains available for identifying the last recorded stage.
+### Viewing and retention
 
-The production Store package uses the logical `%LOCALAPPDATA%\LocaleSmith\logs\translations` default; unpackaged and Dev packages use the isolated `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations` root, with separate settings, credentials, Sandbox, and security locks. Windows may physically virtualize registered MSIX data under each PFN's `LocalCache\Local`, which remains package-isolated. During first-run onboarding and from the “Settings” page, you can browse for or manually enter a local directory. Once saved, a change takes effect with the next translation and is written to the encrypted configuration when the application closes, together with the last valid settings for language, theme, workspace, and other options. The application retains and lists only the latest 500 sessions; cleanup matches only LocaleSmith's own naming format and does not delete other files in the directory. Logs record only the task ID, package file name, stage, progress, result, and error type. They do not record API keys, full prompts, or the parent directory of a user-selected path. Common bearer, token, and API key patterns are redacted again before being written to disk.
+| Item | Behavior |
+| --- | --- |
+| **Logs page** | Lists records by translation job. Debug is the default view; switch to All levels for every log level, including fine-grained progress. |
+| **Log files** | When conditions allow, each job creates a `.debug.log` / `.all.log` pair and incrementally flushes it to disk. Content flushed before an abnormal exit remains useful for locating the final recorded stage. |
+| **Retention** | Retains and lists the latest 500 sessions. Cleanup matches only LocaleSmith's own naming format and never deletes unrelated files from the directory. |
+| **Privacy** | Records only task ID, package file name, stage, progress, result, and error type. API keys, full prompts, and the parent directory of a selected path are excluded; common Bearer / Token / API Key patterns are redacted again before disk writes. |
+
+<details>
+<summary><strong>Directories, settings, and process-local data</strong></summary>
+
+#### Default directories
+
+| Runtime | Logical default directory |
+| --- | --- |
+| **Microsoft Store** | `%LOCALAPPDATA%\LocaleSmith\logs\translations` |
+| **Unpackaged / Dev** | `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations` |
+
+Windows may physically map registered MSIX data under each package family's `LocalCache\Local`; production and development packages remain isolated.
+
+#### What persists
+
+| Data | Persistence behavior |
+| --- | --- |
+| **Log directory** | Can be browsed or changed to another local directory during first-run onboarding or from Settings; a saved change applies to the next translation. |
+| **Language, theme, workspace, and other settings** | The last valid values are written to encrypted configuration when the application closes. |
+| **Configuration, credentials, Sandbox, and security locks** | Production and Unpackaged / Dev builds use isolated storage spaces. |
+| **Mod projects, tasks, and assistant sessions** | Remain process-local and in memory only; they are not restored after the application restarts. |
+
+</details>
 
 ## Build from Source
 
@@ -304,44 +361,63 @@ packaging/                  x64 WAP / MSIX manifest, five-language resources, an
 
 ## Security Boundaries
 
-The following principles are part of product behavior, not optional configuration:
+> [!IMPORTANT]
+> The following boundaries are fixed product behavior, not options that can be disabled.
 
-- **Models cannot authorize command execution.** Provider tool loops may use only the safe-context, project, and command-proposal tools explicitly exposed for the current session. The user must still review the complete command, acknowledge the risk, and explicitly approve it.
-- **Signed JARs produce an explicit unsigned copy by default.** The original JAR / ZIP always remains unchanged. The application translation queue removes signature blocks, `SIG-*`, and stale manifest digest claims only from an independent output; low-level callers may still choose complete blocking, and the project never impersonates the original signature or hashes.
-- **The CLI does not search the process PATH.** No process executable is trusted by default; any future explicit allowlist must use approved absolute paths. The private CLI sandbox defaults to `%LOCALAPPDATA%\LocaleSmith\CliSandbox`, with reparse points checked both before and after creation.
-- **The client carries no Cloudflare origin key.** `api.dzxh-tx.cn` uses ordinary server TLS validated by the Windows trust store. Authenticated Origin Pulls authenticates only the Cloudflare-to-origin connection; its certificate and private key must not enter the application, MSIX, or repository.
-- **Store and download grants are secrets.** PATs, Entra service tickets, Microsoft Store ID keys, and signed GET/HEAD URLs are not logged, persisted, added to telemetry, or included in diagnostics or resume metadata. The client contains no Entra client secret, and object-storage requests never carry MCTX Authorization or cookies.
-- **Low IL is not the same as AppContainer.** A restricted token, private desktop, and Job Object reduce the execution surface, but do not automatically block network access or prevent access to files permitted by the current user's ACLs.
+| Boundary | Fixed behavior |
+| --- | --- |
+| **Command authorization** | A model can only propose a command. The user must review the full command, acknowledge the risk, and explicitly approve execution. |
+| **Signed archives** | The source JAR / ZIP remains read-only. The translation queue creates an explicit unsigned copy only in independent output and never impersonates the original signature or hashes. |
+| **CLI discovery** | The process `PATH` is never searched and process executables are not trusted by default. Any allowlist must use an approved absolute path. The private sandbox is `%LOCALAPPDATA%\LocaleSmith\CliSandbox`, with reparse points checked before and after creation. |
+| **Cloudflare origin identity** | The client uses the system trust store for ordinary server TLS on `api.dzxh-tx.cn`. Authenticated Origin Pulls authenticates only Cloudflare to the origin; its certificate and private key must never enter the application, MSIX, or repository. |
+| **Store and download secrets** | PATs, Entra service tickets, Store ID keys, and pre-signed GET / HEAD URLs never enter logs, configuration, telemetry, diagnostics, or persistent resume metadata. The client contains no Entra client secret, and storage requests carry no MCTX Authorization / Cookie. |
+| **Low IL capability boundary** | A restricted token, private desktop, and Job Object reduce the execution surface. They do not automatically block networking or prevent reads allowed by the current user's ACLs. |
 
 <details>
 <summary><strong>Exact scope of bytecode externalization</strong></summary>
 
-Currently, LocaleSmith rewrites only structurally proven, immediately adjacent `ldc` / `ldc_w` strings and Mojang `Component.literal(String):MutableComponent` static calls, converting them into exact `translatable(String)` references. The implementation preserves instruction length and rescans for validation before committing. Patterns that cross branch or exception boundaries, unknown opcodes, obfuscated code, and all other inexact patterns are never rewritten. This is not a general-purpose Java bytecode rewriter, and coverage of a real-world Minecraft / Loader compatibility matrix is not yet available.
+- **Match scope:** only structurally proven, immediately adjacent `ldc` / `ldc_w` strings and Mojang `Component.literal(String):MutableComponent` static calls are converted into exact `translatable(String)` references.
+- **Commit validation:** instruction length is preserved and the result is rescanned before commit.
+- **Skip policy:** branch or exception boundaries, unknown opcodes, obfuscated code, and every inexact pattern are left unchanged.
+- **Capability boundary:** this is not a general-purpose Java bytecode rewriter and does not claim coverage of a real-world Minecraft / Loader compatibility matrix.
 
 </details>
 
 <details>
 <summary><strong>Archive rebuilding and signatures</strong></summary>
 
-The original input always remains unchanged, and every structural or behavioral change occurs only in a transactional working copy and independent output. JSON / lang / manifest content, Java classes, Loader metadata, services, and resource references are checked before an atomic commit; failures do not publish a partial artifact. ZIP / JAR files are still recompressed, so byte-for-byte preservation of streams, extra fields, comments, ordering, or Loader behavior compatibility is not guaranteed. A precompiled JAR reports only static bytecode and resource validation and is never described as “source compilation passed.” When source plus a Gradle / build entry is present, the current pipeline fails closed because no genuinely isolated build executor exists, and it never launches scripts from the archive directly.
+- **Read-only source:** every change occurs only in a transactional working copy and independent output.
+- **Signature handling:** the translation queue removes signature blocks, `SIG-*`, and stale manifest digest claims only from independent output; low-level callers may still choose complete blocking.
+- **Atomic commit:** JSON / lang / manifest content, Java classes, Loader metadata, services, and resource references must all validate before commit. Failures never publish a partial artifact.
+- **Recompression differences:** byte-for-byte preservation of ZIP / JAR streams, extra fields, comments, ordering, or Loader behavior is not guaranteed.
+- **Build claims:** a precompiled JAR reports only static bytecode and resource validation, never “source compilation passed.” Inputs with source and a Gradle / build entry fail closed because no genuinely isolated build executor exists, and archive scripts are never launched directly.
 
 </details>
 
 <details>
 <summary><strong>Model tool and CLI isolation</strong></summary>
 
-The in-app assistant always retains `system.context` and `cli.propose`. Selecting a mod project adds `project.get_active`, `archive.inspect`, and `task.status`; `translation.start` and `task.cancel` are exposed only after the user checks the one-turn “allow this message to change the project” authorization. Every project tool is bound to the `ProjectId` captured for that turn, accepts only opaque project/task IDs, and never accepts an arbitrary host path. `translation.start` is also forced to use the model source selected for the assistant turn and reuses the real inspect, safe-extract, translate, repack, verify, and commit transaction pipeline. The standalone `LocaleSmith.McpHost` has no App project backend, so its stdio catalog still contains only `system.context` and `cli.propose`. No entry point exposes `cli.execute`; executable commands still require policy revalidation, a one-time confirmation token, and explicit user approval. Kimi's private `reasoning_content` is replayed within bounds only inside the same Kimi tool loop; it never enters the activity timeline or user-visible content and is never sent to another provider.
+| Area | Boundary |
+| --- | --- |
+| **Base tools** | The in-app assistant always retains `system.context` and `cli.propose`. |
+| **Read-only project tools** | Selecting an active project adds `project.get_active`, `archive.inspect`, and `task.status`. |
+| **Project mutation tools** | `translation.start` / `task.cancel` are exposed only after the user grants one-turn permission for the current message to change the project. |
+| **Project binding** | Every project tool is bound to the `ProjectId` captured for that turn, accepts only opaque project / task IDs, and never accepts arbitrary host paths. `translation.start` is forced to use the selected model source and reuses the inspect, safe-extract, translate, repack, verify, and commit transaction pipeline. |
+| **Standalone MCP Host** | It has no App project backend, so its stdio catalog contains only `system.context` and `cli.propose`. |
+| **CLI execution** | No entry point exposes `cli.execute`; commands still require policy revalidation, a one-time confirmation token, and explicit user approval. |
+| **Private reasoning** | Kimi `reasoning_content` is replayed within bounds only in the same Kimi tool loop. It never enters the activity timeline or user-visible content and is never sent to another provider. |
 
 </details>
 
 <details>
 <summary><strong>MSIX package status</strong></summary>
 
-The current public release is `v1.1.0`; its Store package version is `1.1.0.0`, its product ID is `9NP8V6WQNGT0`, and it uses the Partner Center identity `CRTech.LocaleSmith`. Microsoft Store provides the production distribution and automatic updates. The x64 MSIX attached to the GitHub Release has been verified for its Microsoft Marketplace signature chain, trusted timestamp, package identity, architecture, and SHA-256, and it does not require the self-signed test certificate used by historical development packages. The public package declares the `runFullTrust` desktop capability; commands proposed by a model still require policy revalidation and explicit user confirmation.
-
-The current source prepares the next `1.2.0.0` package but does not present it as a public release. WAP defaults to an isolated, unsigned `CRTech.LocaleSmith.Dev` validation package; an unsigned Store-identity submission candidate is produced only with explicit `PackageFlavor=Store`. Both flavors must pass unpacking, PRI, version, and complete payload-hash audits. An unsigned package is not a Store release.
-
-The official `CRTech.LocaleSmith` identity cannot update the earlier `LocaleSmith.Desktop` / `JaxI18n.Desktop` development packages in place, so Windows temporarily installs them side by side. Close the older application during the transition. The new application continues to use the per-user `%LOCALAPPDATA%\LocaleSmith` root and performs read-only discovery of redirected data belonging to any still-registered legacy package. Uninstall the development package only after confirming that the official-identity build works correctly.
+| Status | Details |
+| --- | --- |
+| **Public release** | `v1.1.0`; Store package `1.1.0.0`, product ID `9NP8V6WQNGT0`, identity `CRTech.LocaleSmith`. Microsoft Store provides distribution and automatic updates. |
+| **Signature and capability** | The GitHub Release x64 MSIX has passed Marketplace signature-chain, trusted-timestamp, identity, architecture, and SHA-256 verification and needs no historical self-signed test certificate. The package declares `runFullTrust`; model-proposed commands still require policy revalidation and user approval. |
+| **Next package source** | The source prepares `1.2.0.0`, which is not yet a public release. WAP defaults to an unsigned, isolated `CRTech.LocaleSmith.Dev` validation package; only explicit `PackageFlavor=Store` produces an unsigned submission candidate with the production identity. Both require unpacking, PRI, version, and full payload-hash audits. An unsigned package is not a Store release. |
+| **Legacy development package migration** | The production identity cannot update `LocaleSmith.Desktop` / `JaxI18n.Desktop` in place, so Windows temporarily installs them side by side. Close the older app during transition; the new app continues to use `%LOCALAPPDATA%\LocaleSmith` and read-only discovers redirected data from still-registered legacy packages. Uninstall a legacy package only after confirming the production-identity build works. |
 
 </details>
 
