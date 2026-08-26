@@ -39,11 +39,10 @@
 
   <p>
     <a href="#快速开始">快速开始</a> ·
-    <a href="#项目概览">项目概览</a> ·
     <a href="#核心能力">核心能力</a> ·
     <a href="#支持范围">支持范围</a> ·
-    <a href="#已知限制">已知限制</a> ·
     <a href="#处理流程">处理流程</a> ·
+    <a href="#日志与数据持久化">日志与数据</a> ·
     <a href="#从源码构建">从源码构建</a> ·
     <a href="#安全边界">安全边界</a> ·
     <a href="#参与贡献">参与贡献</a>
@@ -179,29 +178,52 @@
 
 ## 处理流程
 
+每个翻译作业都经过同一条事务流水线。原始输入始终只读，只有完整验证通过的结果才会进入 `LocaleSmith.Output`。
+
 ```mermaid
 flowchart LR
-    A["导入<br/>JAR / ZIP / 文件夹"] --> B["安全扫描<br/>路径 / 元数据 / 资源"]
-    B --> C["提取与规划<br/>增量缓存"]
-    C --> D["模型翻译<br/>目标语言 + 正式版 / 语气版"]
-    D --> E["验证与重建<br/>事务回滚"]
-    E --> F["输出<br/>LocaleSmith.Output"]
+    A["1 · 导入<br/>JAR / ZIP / 目录"] --> B["2 · 扫描<br/>路径 / 元数据 / 资源"]
+    B --> C["3 · 规划<br/>提取 / 增量缓存"]
+    C --> D["4 · 翻译<br/>目标语言 / 一种风格"]
+    D --> E["5 · 验证<br/>重建 / 失败回滚"]
+    E --> F["6 · 输出<br/>LocaleSmith.Output"]
 ```
 
-每个作业会在入队时冻结用户选择的目标语言、模型源、一种翻译风格、单次响应 Token 预算和每批原文字符目标。字符目标只控制大型包分批，不截断单条文本；HTTP 响应体仍受不可关闭的固定 16 MiB 安全上限保护。语言资源优先使用非目标语言的 `en_us`、`en_gb` 或其他现有 locale 作为源文；例如目标为英语但包内只有日语时，会从日语生成 `en_us`。另一种风格可以单独入队，并复用相同原文哈希下已经缓存的对应译文。
+<details open>
+<summary><strong>作业规则</strong></summary>
 
-Dashboard 添加源 artifact 时，会按规范化源路径在当前进程内注册或复用一个模组项目，并把活动项目及其翻译任务同步到助手。助手为每个 `ProjectId + ModelSourceId` 组合保存独立会话和草稿；切换项目或模型源只恢复对应会话，不会把一个模组的历史混入另一个模组，也不会把上一 Provider 的历史发送给新 Provider。项目工作区当前仅驻留内存，应用重启后不会恢复。
+| 规则 | 实际行为 |
+| --- | --- |
+| **配置快照** | 入队时固定目标语言、模型源、翻译风格、单次响应 Token 预算和分批字符目标。 |
+| **分批与上限** | 字符目标只控制大型包分批，不截断单条文本；HTTP 响应仍受不可关闭的固定 16 MiB 上限保护。 |
+| **源语言选择** | 优先从目标语言以外的 `en_us`、`en_gb` 或其他现有 locale 取源文；例如仅有日语时可生成 `en_us`。 |
+| **风格与缓存** | 每个作业只处理一种风格；其他风格需单独入队，并按原文哈希复用对应译文。 |
 
-助手的“处理过程”只显示确定性的模型轮次开始/完成、工具开始/完成/失败与运行终态；事件不包含消息正文、工具参数/结果、路径、命令、异常文本或私有 `reasoning_content`。Provider 报告的 Token usage 会汇总到助手答复和翻译任务；任务失败或取消时，已完成 Provider 轮次的用量仍会保留，在途调用未返回 usage 时则标记为部分/不可用。只有 Provider 给出 total，或同时给出 input/output 时才显示可计算总数，不用字符数或其他启发式估算。
+</details>
+
+<details>
+<summary><strong>项目、助手与用量统计</strong></summary>
+
+| 主题 | 隔离与显示规则 |
+| --- | --- |
+| **模组项目** | Dashboard 按规范化源路径在当前进程内注册或复用项目，并向助手同步活动项目与翻译任务。项目工作区仅驻留内存，重启后不恢复。 |
+| **助手会话** | 每个 `ProjectId + ModelSourceId` 组合拥有独立会话和草稿；切换项目或模型源不会串用历史，也不会把上一 Provider 的历史发送给新 Provider。 |
+| **处理过程** | 只显示确定性的模型轮次、工具状态与运行终态；不包含消息正文、工具参数或结果、路径、命令、异常文本和私有 `reasoning_content`。 |
+| **Token 用量** | 只汇总 Provider 返回的 usage。只有 Provider 给出 total，或同时给出 input / output，才显示可计算总数；失败或取消前已完成轮次的用量仍会保留，在途调用缺少 usage 时标记为部分或不可用，绝不用字符数估算。 |
+
+</details>
 
 ## Microsoft Store 订阅与国内加速
 
-LocaleSmith 本体免费；国内下载加速是独立、可选的 Microsoft Store 订阅。
+LocaleSmith 本体免费。国内下载加速是独立、可选的 Microsoft Store 月度订阅。
+
+> [!WARNING]
+> **生产加速尚未启用。** 本地自动化已覆盖拒绝矩阵、购买状态机、过期 / 取消 / 退款 / 试用结束、跨设备恢复、四路 Range、续签续传、SHA-256 与默认源回退。
+>
+> 仍待真实环境验证：Partner Center 商品与真实购买 / 续费 / 退款、Microsoft recurrence / service ticket、PostgreSQL / Redis 权益联调，以及 RainS3 私有桶 E2E。
 
 <details>
-<summary><b>订阅说明与定价</b></summary>
-
-<br />
+<summary><strong>价格、试用与管理</strong></summary>
 
 | 项目 | 当前配置 |
 | --- | --- |
@@ -212,35 +234,70 @@ LocaleSmith 本体免费；国内下载加速是独立、可选的 Microsoft Sto
 | 中国市场 | CNY 30.00 / 月 |
 | 管理与取消 | [Microsoft 服务和订阅](https://account.microsoft.com/services) |
 
-客户端通过 `Windows.Services.Store.StoreContext` 显示 Microsoft 购买界面，并**只显示 Store 为当前区域返回的实际续费价**。上述档位是 Partner Center 当前配置，不是客户端硬编码承诺；Microsoft Store 不支持“首月 CNY 24、以后 CNY 30”的原生 introductory price，LocaleSmith 不会伪造该优惠。[隐私政策](https://dow.dzxh-tx.cn/privacy) 保持可发现。
+- 客户端通过 `Windows.Services.Store.StoreContext` 显示购买界面，并且**只展示 Store 为当前区域返回的实际续费价**。
+- 表中档位是 Partner Center 当前配置，不是客户端硬编码的价格承诺。
+- Microsoft Store 不支持“首月 CNY 24、以后 CNY 30”的原生 introductory price，LocaleSmith 不会伪造该优惠。
+
+[查看隐私政策](https://dow.dzxh-tx.cn/privacy)
 
 </details>
 
 <details>
-<summary><b>权益核验与下载链路</b></summary>
+<summary><strong>权益核验与下载链路</strong></summary>
 
-<br />
-
-购买、恢复与刷新都要求现有 LocaleSmith/MCTX 账号，以及含 `downloads:accelerated` scope 的 PAT。`Succeeded` 或 `AlreadyPurchased` **不会直接解锁**，只会启动：
+购买、恢复与刷新必须具备现有 LocaleSmith / MCTX 账号，以及含 `downloads:accelerated` scope 的 PAT。`Succeeded` 或 `AlreadyPurchased` **不会直接解锁加速**，只会启动后端核验：
 
 ```text
 service-ticket → Store ID key → backend verify → entitlements
 ```
 
-只有后端返回精确的 `domestic_download_acceleration` 有效权益才可继续。缺少 `microsoft_store_billing_v1` / `accelerated_downloads_v1`、PAT、scope、有效权益或后端新鲜核验时，入口失败关闭。
+只有后端返回精确且有效的 `domestic_download_acceleration` 权益才可继续。缺少 `microsoft_store_billing_v1` / `accelerated_downloads_v1`、PAT、scope、有效权益或后端新鲜核验时，入口都会失败关闭。
 
-下载源发现只接受 API 返回的相对默认源和 `additional_source` 判定。一次性 GET/HEAD URL 不落盘、不进入日志/配置/诊断/剪贴板/toast/遥测/断点 sidecar；对象存储请求不携带 PAT、Cookie、Authorization、Referer 或代理凭据，也不跟随重定向。传输使用强 ETag、最多四路 Range + If-Range，grant 过期时重新完成后端门控并续签，最终核对 API size 与 SHA-256；任何授权、存储或完整性异常都会安全回退原有同源下载器。
+| 环节 | 安全行为 |
+| --- | --- |
+| **来源发现** | 只接受 API 返回的相对默认源和 `additional_source` 判定。 |
+| **秘密隔离** | 一次性 GET / HEAD URL 不进入磁盘、日志、配置、诊断、剪贴板、toast、遥测或断点 sidecar；对象存储请求不携带 PAT、Cookie、Authorization、Referer 或代理凭据，也不跟随重定向。 |
+| **续传与校验** | 使用强 ETag、最多四路 Range 和 `If-Range`；grant 过期时重新完成后端门控并续签，最终核对 API size 与 SHA-256。 |
+| **安全回退** | 任一授权、存储或完整性检查失败，都会回退原有同源下载器。 |
 
 </details>
 
-> [!WARNING]
-> **当前状态**：本地自动化已覆盖拒绝矩阵、购买状态机、过期/取消/退款/试用结束、跨设备恢复、四路 Range、续签续传、SHA-256 与默认源回退；但尚未验证真实 Partner Center 商品、真实购买/续费/退款、Microsoft recurrence/service ticket、真实 PostgreSQL/Redis 权益联调或 RainS3 私有桶 E2E，**也未启用或部署生产加速**。
+## 日志与数据持久化
 
-## 翻译日志与持久化设置
+> [!NOTE]
+> 日志是**尽力而为**的后台诊断通道，不参与翻译事务。磁盘缓慢、目录不可写或写入队列已满时，日志可能不完整，但翻译不会因此阻塞。
 
-左侧导航中的“日志”页按翻译作业列出持久化记录，并默认显示 Debug 视图；切换到 All levels 可查看包含细粒度进度在内的完整级别记录。日志是最大限度的后台诊断功能：目录正常可写且写入器有容量时，作业会创建一对 `.debug.log` / `.all.log` 文件并增量刷新到磁盘；慢设备或队列已满时可能跳过文件或丢弃部分诊断条目，但不会阻塞翻译。进程异常退出后，已经成功刷新的内容仍可用于定位最后一个阶段。
+### 查看与保留
 
-正式 Store 包的逻辑默认目录为 `%LOCALAPPDATA%\LocaleSmith\logs\translations`；unpackaged/Dev 包使用隔离的 `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations`，配置、凭据、Sandbox 与安全锁也不会和正式版混用。registered MSIX 的物理文件可能由 Windows 放入各自 PFN 的 `LocalCache\Local`，仍保持包间隔离。首次引导和“设置”页都可以浏览或手动修改为本地目录；更改保存后从下一次翻译起生效，并会在软件关闭时与语言、主题、工作区等最后一次有效设置一起写入加密配置。程序只保留并列出最新 500 次会话；清理仅匹配 LocaleSmith 自有命名格式，不删除目录内的其他文件。日志仅记录任务 ID、包文件名、阶段、进度、结果与错误类型，不写入 API Key、完整提示词或用户选择路径的父目录；常见 Bearer / Token / API Key 形式还会在写盘前再次脱敏。
+| 项目 | 行为 |
+| --- | --- |
+| **日志页** | 按翻译作业列出记录；默认显示 Debug，切换到 All levels 可查看包含细粒度进度的完整级别。 |
+| **日志文件** | 条件允许时，每个作业创建一对 `.debug.log` / `.all.log`，并增量刷新到磁盘；异常退出前已刷新的内容仍可用于定位最后阶段。 |
+| **保留策略** | 最多保留并列出最近 500 次会话；清理只匹配 LocaleSmith 自有命名格式，不删除目录中的其他文件。 |
+| **隐私保护** | 只记录任务 ID、包文件名、阶段、进度、结果和错误类型；不记录 API Key、完整提示词或所选路径的父目录，常见 Bearer / Token / API Key 形式会在写盘前再次脱敏。 |
+
+<details>
+<summary><strong>目录、设置与进程内数据</strong></summary>
+
+#### 默认目录
+
+| 运行方式 | 逻辑默认目录 |
+| --- | --- |
+| **Microsoft Store** | `%LOCALAPPDATA%\LocaleSmith\logs\translations` |
+| **Unpackaged / Dev** | `%LOCALAPPDATA%\LocaleSmith.Dev\logs\translations` |
+
+Registered MSIX 的物理文件可能由 Windows 映射到对应 PFN 的 `LocalCache\Local`，但正式版与开发版仍保持隔离。
+
+#### 哪些数据会保留
+
+| 数据 | 持久化方式 |
+| --- | --- |
+| **日志目录** | 可在首次引导或“设置”页浏览、修改为本地目录；保存后从下一次翻译起生效。 |
+| **语言、主题与工作区等设置** | 软件关闭时，将最后一次有效值写入加密配置。 |
+| **配置、凭据、Sandbox 与安全锁** | 正式版与 Unpackaged / Dev 版使用彼此隔离的存储空间。 |
+| **模组项目、任务与助手会话** | 当前只驻留进程内存；应用重启后不会恢复。 |
+
+</details>
 
 ## 从源码构建
 
@@ -304,44 +361,63 @@ packaging/                  x64 WAP / MSIX manifest、五语言资源和图标
 
 ## 安全边界
 
-以下原则是产品行为的一部分，而不是可选配置：
+> [!IMPORTANT]
+> 下列边界属于固定产品行为，不是可关闭的选项。
 
-- **模型不能授权命令执行。** Provider 工具循环可使用当前明确暴露的安全上下文、项目工具和命令提议工具，但完整命令仍需用户查看、勾选风险确认并批准。
-- **签名 JAR 默认只生成明确的 unsigned 副本。** 原 JAR / ZIP 始终保持不动；应用翻译队列只在独立输出中移除签名块、`SIG-*` 与失效的 manifest 摘要声明，底层调用仍可选择完全阻断，且项目绝不冒充原签名或哈希。
-- **CLI 不搜索进程 PATH。** 默认不信任任何进程型可执行文件；后续显式白名单必须使用已批准的绝对路径。私有 CLI 沙箱默认位于 `%LOCALAPPDATA%\LocaleSmith\CliSandbox`，并在创建前后检查重解析点。
-- **客户端不携带 Cloudflare 源站密钥。** `api.dzxh-tx.cn` 使用系统信任库完成普通服务器 TLS 验证；Authenticated Origin Pulls 只认证 Cloudflare 到源站的连接，其证书和私钥不得进入应用、MSIX 或仓库。
-- **Store 与下载 grant 都是秘密。** PAT、Entra service ticket、Microsoft Store ID key 和预签名 GET/HEAD URL 不写日志、配置、遥测、诊断包或持久化断点；客户端不含 Entra client secret，对象存储请求也绝不携带 MCTX Authorization/Cookie。
-- **Low IL 不等于 AppContainer。** 受限 token、私有 desktop 与 Job Object 会缩小执行面，但不会自动阻断网络，也不能阻止读取当前用户 ACL 已允许的文件。
+| 边界 | 固定行为 |
+| --- | --- |
+| **命令授权** | 模型只能提议命令。完整命令必须由用户查看、确认风险并明确批准。 |
+| **签名归档** | 原 JAR / ZIP 保持只读；翻译队列只在独立输出中生成明确的 unsigned 副本，绝不冒充原签名或哈希。 |
+| **CLI 发现** | 不搜索进程 `PATH`，也不默认信任进程型可执行文件；白名单只能使用已批准的绝对路径。私有沙箱位于 `%LOCALAPPDATA%\LocaleSmith\CliSandbox`，创建前后都会检查重解析点。 |
+| **Cloudflare 源站身份** | 客户端只使用系统信任库验证 `api.dzxh-tx.cn` 的普通服务器 TLS。Authenticated Origin Pulls 只认证 Cloudflare 到源站的连接，其证书和私钥不得进入应用、MSIX 或仓库。 |
+| **Store 与下载秘密** | PAT、Entra service ticket、Store ID key 和预签名 GET / HEAD URL 不写入日志、配置、遥测、诊断包或持久化断点。客户端不含 Entra client secret，对象存储请求也不携带 MCTX Authorization / Cookie。 |
+| **Low IL 能力边界** | 受限 token、私有 desktop 与 Job Object 只缩小执行面；它们不会自动断网，也不能阻止读取当前用户 ACL 已允许的文件。 |
 
 <details>
 <summary><strong>字节码外部化的精确范围</strong></summary>
 
-当前只改写经结构证明、紧邻出现的 `ldc` / `ldc_w` 字符串与 Mojang `Component.literal(String):MutableComponent` 静态调用，并转换为精确的 `translatable(String)` 引用。实现会保持指令长度，在提交前重新扫描验证；分支或异常边界、未知 opcode、混淆代码及任何不精确模式都不会被改写。这不是通用 Java 字节码重写器，也尚未覆盖真实 Minecraft / Loader 兼容矩阵。
+- **匹配范围**：只处理经结构证明、紧邻出现的 `ldc` / `ldc_w` 字符串与 Mojang `Component.literal(String):MutableComponent` 静态调用，并转换为精确的 `translatable(String)` 引用。
+- **提交验证**：保持指令长度，并在提交前重新扫描。
+- **跳过策略**：分支或异常边界、未知 opcode、混淆代码和任何不精确模式都不会改写。
+- **能力边界**：这不是通用 Java 字节码重写器，也不代表已覆盖真实 Minecraft / Loader 兼容矩阵。
 
 </details>
 
 <details>
 <summary><strong>归档重建与签名</strong></summary>
 
-原输入始终保持不动，所有结构和行为调整只发生在事务工作副本与独立输出中；逐项验证 JSON / lang / manifest、Java class、Loader、服务及资源引用后才会原子提交，失败不会发布半成品。不过 ZIP / JAR 会被重新压缩，因此不保证压缩流、extra field、条目注释、顺序或 Loader 行为兼容性在字节级完全一致。预编译 JAR 只报告静态字节码与资源验证，绝不声称“源码编译通过”；若输入含源码和 Gradle / build 入口，当前因没有真正隔离的构建器而失败关闭，且不会直接执行归档内脚本。
+- **只读输入**：所有调整只发生在事务工作副本和独立输出中。
+- **签名处理**：翻译队列只在独立输出中移除签名块、`SIG-*` 与失效的 manifest 摘要声明；底层调用仍可选择完全阻断。
+- **原子提交**：JSON / lang / manifest、Java class、Loader、服务和资源引用逐项验证通过后才提交；失败不发布半成品。
+- **重压缩差异**：不保证 ZIP / JAR 的压缩流、extra field、条目注释、顺序或 Loader 行为在字节级完全一致。
+- **构建声明**：预编译 JAR 只报告静态字节码与资源验证，绝不宣称“源码编译通过”。含源码和 Gradle / build 入口的输入会因缺少真正隔离的构建器而失败关闭，应用也不会直接执行归档内脚本。
 
 </details>
 
 <details>
 <summary><strong>模型工具与 CLI 隔离</strong></summary>
 
-App 内助手始终保留 `system.context` 与 `cli.propose`；选中活动模组项目后会增加 `project.get_active`、`archive.inspect` 与 `task.status`，而 `translation.start` / `task.cancel` 只有在用户勾选“允许此条消息更改项目”的一次性授权后才会暴露。所有项目工具都绑定本轮捕获的 `ProjectId`，只接受项目/任务的不透明 ID，不接受任意主机路径；`translation.start` 还会强制使用本轮助手所选模型源，并复用真实的检查、安全解包、翻译、重打包、验证与提交事务流水线。独立 `LocaleSmith.McpHost` 没有 App project backend，因此其 stdio 目录仍只有 `system.context` 与 `cli.propose`。任何入口都不暴露 `cli.execute`；允许执行的命令仍需策略复核、一次性确认 token 与用户明确批准。Kimi 的私有 `reasoning_content` 仅在同一 Kimi 工具循环内有界回放，不进入活动时间线或用户可见内容，也不会发送给其他 Provider。
+| 区域 | 边界 |
+| --- | --- |
+| **基础工具** | App 内助手始终保留 `system.context` 与 `cli.propose`。 |
+| **项目只读工具** | 选中活动项目后增加 `project.get_active`、`archive.inspect` 与 `task.status`。 |
+| **项目写入工具** | `translation.start` / `task.cancel` 只在用户为当前消息授予一次性项目更改权限后暴露。 |
+| **项目绑定** | 所有项目工具都绑定本轮捕获的 `ProjectId`，只接受不透明的项目 / 任务 ID，不接受任意主机路径。`translation.start` 还会强制使用本轮选择的模型源，并复用检查、安全解包、翻译、重打包、验证与提交事务流水线。 |
+| **独立 MCP Host** | 没有 App project backend，因此 stdio 目录只有 `system.context` 与 `cli.propose`。 |
+| **CLI 执行** | 任何入口都不暴露 `cli.execute`；命令仍需策略复核、一次性确认 token 与用户明确批准。 |
+| **私有推理** | Kimi 的 `reasoning_content` 只在同一 Kimi 工具循环内有界回放，不进入活动时间线或用户可见内容，也不会发送给其他 Provider。 |
 
 </details>
 
 <details>
 <summary><strong>MSIX 程序包状态</strong></summary>
 
-当前公开正式版本为 `v1.1.0`，Store 程序包版本为 `1.1.0.0`，产品 ID 为 `9NP8V6WQNGT0`，并使用 Partner Center 分配的 Identity `CRTech.LocaleSmith`。Microsoft Store 负责正式分发和自动更新；GitHub Release 中的 x64 MSIX 已通过 Microsoft Marketplace 签名链、可信时间戳、程序包 Identity、架构与 SHA-256 校验，不需要历史开发包使用的自签名测试证书。公开程序包声明 `runFullTrust` 桌面功能，模型提出的命令仍必须经过策略复核与用户明确确认。
-
-当前源码准备下一版 `1.2.0.0`，但尚未作为正式版发布。WAP 默认生成隔离的未签名 `CRTech.LocaleSmith.Dev` 验证包；只有显式 `PackageFlavor=Store` 才生成正式 Identity 的未签名提交候选。两种包都必须通过解包、PRI、版本和全 payload 哈希审计，未签名包不等同于 Store 发布件。
-
-正式 Identity `CRTech.LocaleSmith` 不会原位升级早期的 `LocaleSmith.Desktop` / `JaxI18n.Desktop` 开发包，Windows 会暂时并列安装。切换时请关闭旧程序；新程序会继续使用用户级 `%LOCALAPPDATA%\LocaleSmith`，并只读检查仍已注册的旧包重定向数据。确认新版本工作正常后再卸载旧开发包。
+| 状态 | 说明 |
+| --- | --- |
+| **公开正式版** | `v1.1.0`；Store 包版本 `1.1.0.0`，产品 ID `9NP8V6WQNGT0`，Identity `CRTech.LocaleSmith`。Microsoft Store 负责分发与自动更新。 |
+| **签名与能力** | GitHub Release 的 x64 MSIX 已通过 Marketplace 签名链、可信时间戳、Identity、架构与 SHA-256 校验，无需历史开发包的自签名测试证书。程序包声明 `runFullTrust`，模型命令仍需策略复核和用户批准。 |
+| **下一版源码** | 当前准备 `1.2.0.0`，尚未正式发布。WAP 默认生成未签名的隔离验证包 `CRTech.LocaleSmith.Dev`；只有显式 `PackageFlavor=Store` 才生成正式 Identity 的未签名提交候选。两者都需通过解包、PRI、版本和全 payload 哈希审计，未签名包不等同于 Store 发布件。 |
+| **旧开发包迁移** | 正式 Identity 不会原位升级 `LocaleSmith.Desktop` / `JaxI18n.Desktop`，Windows 会暂时并列安装。切换前关闭旧程序；新程序继续使用 `%LOCALAPPDATA%\LocaleSmith`，并只读检查仍已注册的旧包重定向数据。确认正常后再卸载旧开发包。 |
 
 </details>
 
